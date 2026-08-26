@@ -1,121 +1,189 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
+import { useState, type FormEvent } from 'react'
+import { useAuth } from './auth/useAuth.ts'
+import { getClientConfiguration } from './config.ts'
+import { getSupabaseClient } from './lib/supabase.ts'
 import './App.css'
 
-function App() {
-  const [count, setCount] = useState(0)
+interface AppProps {
+  appName: string
+}
+
+function App({ appName }: AppProps) {
+  const { isLoading, initializationError, session, user } = useAuth()
+
+  if (isLoading) {
+    return <LoadingScreen appName={appName} />
+  }
+
+  if (initializationError) {
+    return (
+      <main className="auth-page">
+        <section className="auth-card" aria-labelledby="auth-error-title">
+          <p className="eyebrow">{appName}</p>
+          <h1 id="auth-error-title">We could not verify your session</h1>
+          <p className="auth-card__copy">{initializationError}</p>
+          <p className="auth-card__hint">Refresh the page to try again.</p>
+        </section>
+      </main>
+    )
+  }
+
+  if (!session || !user) {
+    return <SignInScreen appName={appName} />
+  }
+
+  return <AuthenticatedShell appName={appName} email={user.email ?? ''} />
+}
+
+function LoadingScreen({ appName }: AppProps) {
+  return (
+    <main className="auth-page">
+      <section className="auth-card" aria-live="polite">
+        <p className="eyebrow">{appName}</p>
+        <h1>Checking your session</h1>
+        <p className="auth-card__copy">One moment while we securely sign you in.</p>
+      </section>
+    </main>
+  )
+}
+
+function SignInScreen({ appName }: AppProps) {
+  const [email, setEmail] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    const normalizedEmail = email.trim()
+    if (!normalizedEmail) {
+      setErrorMessage('Enter your email address to receive a sign-in link.')
+      return
+    }
+
+    setIsSubmitting(true)
+    setErrorMessage(null)
+    setSuccessMessage(null)
+
+    const { error } = await getSupabaseClient().auth.signInWithOtp({
+      email: normalizedEmail,
+      options: {
+        emailRedirectTo: getClientConfiguration().siteUrl,
+        shouldCreateUser: false,
+      },
+    })
+
+    setIsSubmitting(false)
+
+    if (error) {
+      setErrorMessage(error.message)
+      return
+    }
+
+    setSuccessMessage(`We sent a secure sign-in link to ${normalizedEmail}.`)
+  }
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
+    <main className="auth-page">
+      <section className="auth-card" aria-labelledby="sign-in-title">
+        <p className="eyebrow">{appName}</p>
+        <h1 id="sign-in-title">Sign in with email</h1>
+        <p className="auth-card__copy">
+          Enter the email address associated with your invitation. We will send
+          you a one-time sign-in link.
+        </p>
+        <form className="sign-in-form" onSubmit={handleSubmit}>
+          <label htmlFor="email">Email address</label>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            disabled={isSubmitting}
+            required
+          />
+          <button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? 'Sending sign-in link...' : 'Email me a sign-in link'}
+          </button>
+        </form>
+        {errorMessage && (
+          <p className="form-message form-message--error" role="alert">
+            {errorMessage}
           </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
+        )}
+        {successMessage && (
+          <p className="form-message form-message--success" aria-live="polite">
+            {successMessage}
+          </p>
+        )}
       </section>
+    </main>
+  )
+}
 
-      <div className="ticks"></div>
+function AuthenticatedShell({
+  appName,
+  email,
+}: {
+  appName: string
+  email: string
+}) {
+  const { signOut } = useAuth()
+  const [isSigningOut, setIsSigningOut] = useState(false)
+  const [signOutError, setSignOutError] = useState<string | null>(null)
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+  async function handleSignOut() {
+    setIsSigningOut(true)
+    setSignOutError(null)
+
+    try {
+      await signOut()
+    } catch (error) {
+      setSignOutError(
+        error instanceof Error
+          ? error.message
+          : 'We could not sign you out. Please try again.',
+      )
+      setIsSigningOut(false)
+    }
+  }
+
+  return (
+    <main className="app-shell">
+      <header className="app-shell__header">
+        <div>
+          <p className="eyebrow">{appName}</p>
+          <h1>Welcome</h1>
         </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
+        <div className="app-shell__account">
+          <span>{email}</span>
+          <button
+            className="button button--secondary"
+            type="button"
+            onClick={handleSignOut}
+            disabled={isSigningOut}
+          >
+            {isSigningOut ? 'Signing out...' : 'Sign out'}
+          </button>
         </div>
+      </header>
+      <section className="app-shell__content" aria-labelledby="workspace-title">
+        <p className="eyebrow">Protected workspace</p>
+        <h2 id="workspace-title">You are signed in</h2>
+        <p>
+          This is the authenticated starting point for your application. Add
+          product features here knowing that only invited users can reach them.
+        </p>
+        {signOutError && (
+          <p className="form-message form-message--error" role="alert">
+            {signOutError}
+          </p>
+        )}
       </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+    </main>
   )
 }
 
