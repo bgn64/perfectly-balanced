@@ -30,6 +30,8 @@ jobs:
     steps:
       - name: Check out the deployment revision
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -40,7 +42,33 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Determine Supabase deployment changes
+        id: supabase_changes
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            echo "migrations=true" >> "$GITHUB_OUTPUT"
+            echo "functions=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if git diff --quiet "$BASE_SHA" HEAD -- supabase/migrations; then
+            echo "migrations=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "migrations=true" >> "$GITHUB_OUTPUT"
+          fi
+
+          if git diff --quiet "$BASE_SHA" HEAD -- supabase/functions supabase/config.toml; then
+            echo "functions=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "functions=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Set up Supabase CLI
+        if: steps.supabase_changes.outputs.migrations == 'true' || steps.supabase_changes.outputs.functions == 'true'
         uses: supabase/setup-cli@v1
         with:
           version: latest
@@ -52,12 +80,15 @@ jobs:
         run: npx --yes vercel@latest build --prod --token="$VERCEL_TOKEN"
 
       - name: Link Supabase production project
+        if: steps.supabase_changes.outputs.migrations == 'true' || steps.supabase_changes.outputs.functions == 'true'
         run: supabase link --project-ref "$SUPABASE_PROJECT_ID"
 
       - name: Apply Supabase migrations
+        if: steps.supabase_changes.outputs.migrations == 'true'
         run: supabase db push
 
       - name: Deploy Supabase Edge Functions
+        if: steps.supabase_changes.outputs.functions == 'true'
         run: supabase functions deploy --project-ref "$SUPABASE_PROJECT_ID"
 
       - name: Deploy the prebuilt output
