@@ -6,7 +6,23 @@ import {
   jsonResponse,
   logExternalServiceError,
 } from '../_shared/http.ts'
-import { getAuthenticatedUser } from '../_shared/supabase.ts'
+import {
+  getAuthenticatedUser,
+  getServiceRoleClient,
+} from '../_shared/supabase.ts'
+
+interface LinkTokenRequest {
+  itemId?: string
+}
+
+function isLinkTokenRequest(value: unknown): value is LinkTokenRequest {
+  if (typeof value !== 'object' || value === null) {
+    return false
+  }
+
+  const { itemId } = value as Record<string, unknown>
+  return itemId === undefined || (typeof itemId === 'string' && itemId.length > 0)
+}
 
 Deno.serve(async (request) => {
   const corsResponse = handleCors(request)
@@ -22,22 +38,36 @@ Deno.serve(async (request) => {
   try {
     const user = await getAuthenticatedUser(request)
     const configuration = getPlaidConfiguration()
-    const response = await getPlaidClient(configuration).linkTokenCreate({
+    const body: unknown = await request.json()
+
+    if (!isLinkTokenRequest(body)) {
+      throw new HttpError(400, 'The Link request is invalid.')
+    }
+
+    const commonRequest = {
       client_name: configuration.clientName,
       country_codes: configuration.countryCodes,
-      language: 'en',
-      products: [Products.Transactions],
+      language: 'en' as const,
       redirect_uri: configuration.redirectUri,
-      transactions: {
-        days_requested: 30,
-      },
       user: {
         client_user_id: user.id,
       },
-    })
+      webhook: configuration.webhookUrl,
+    }
+    const plaid = getPlaidClient(configuration)
+    const response = body.itemId
+      ? await createUpdateLinkToken(plaid, commonRequest, body.itemId, user.id)
+      : await plaid.linkTokenCreate({
+          ...commonRequest,
+          products: [Products.Transactions],
+          transactions: {
+            days_requested: 90,
+          },
+        })
 
     return jsonResponse(request, 200, {
       linkToken: response.data.link_token,
+      isUpdateMode: Boolean(body.itemId),
     })
   } catch (error) {
     if (error instanceof HttpError) {
@@ -50,3 +80,41 @@ Deno.serve(async (request) => {
     })
   }
 })
+
+async function createUpdateLinkToken(
+  plaid: ReturnType<typeof getPlaidClient>,
+  commonRequest: {
+    client_name: string
+    country_codes: ReturnType<typeof getPlaidConfiguration>['countryCodes']
+    language: 'en'
+    redirect_uri: string
+    user: {
+      client_user_id: string
+    }
+    webhook: string
+  },
+  itemId: string,
+  userId: string,
+) {
+  const { data, error } = await getServiceRoleClient().rpc(
+    'get_plaid_item_token_for_user',
+    {
+      p_item_id: itemId,
+      p_user_id: userId,
+    },
+  )
+
+  if (
+    error ||
+    !Array.isArray(data) ||
+    data.length !== 1 ||
+    typeof data[0]?.access_token !== 'string'
+  ) {
+    throw new HttpError(404, 'The bank connection that needs repair was not found.')
+  }
+
+  return plaid.linkTokenCreate({
+    ...commonRequest,
+    access_token: data[0].access_token,
+  })
+}

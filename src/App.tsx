@@ -37,7 +37,6 @@ function App({ appName }: AppProps) {
     <AuthenticatedShell
       appName={appName}
       email={user.email ?? ''}
-      userId={user.id}
     />
   )
 }
@@ -134,11 +133,9 @@ function SignInScreen({ appName }: AppProps) {
 function AuthenticatedShell({
   appName,
   email,
-  userId,
 }: {
   appName: string
   email: string
-  userId: string
 }) {
   const { signOut } = useAuth()
   const [isSigningOut, setIsSigningOut] = useState(false)
@@ -192,7 +189,7 @@ function AuthenticatedShell({
           </p>
         )}
       </section>
-      <TransactionsPanel userId={userId} />
+      <TransactionsPanel />
     </main>
   )
 }

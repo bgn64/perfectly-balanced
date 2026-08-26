@@ -11,6 +11,7 @@ interface PlaidConfigurationValues {
   clientName: string
   countryCodes: CountryCode[]
   redirectUri: string
+  webhookUrl: string
 }
 
 function requiredEnvironmentValue(name: string): string {
@@ -40,6 +41,22 @@ function countryCodes(): CountryCode[] {
   return values
 }
 
+function requiredHttpsUrl(name: string): string {
+  const value = requiredEnvironmentValue(name)
+
+  try {
+    const url = new URL(value)
+
+    if (url.protocol !== 'https:' || url.search || url.hash) {
+      throw new Error()
+    }
+  } catch {
+    throw new Error(`${name} must be an HTTPS URL without a query or fragment.`)
+  }
+
+  return value
+}
+
 export function getPlaidConfiguration(): PlaidConfigurationValues {
   const environment = requiredEnvironmentValue('PLAID_ENVIRONMENT')
 
@@ -47,20 +64,13 @@ export function getPlaidConfiguration(): PlaidConfigurationValues {
     throw new Error('PLAID_ENVIRONMENT must be production for this live integration.')
   }
 
-  const redirectUri = requiredEnvironmentValue('PLAID_REDIRECT_URI')
-
-  try {
-    new URL(redirectUri)
-  } catch {
-    throw new Error('PLAID_REDIRECT_URI must be an absolute URL.')
-  }
-
   return {
     clientId: requiredEnvironmentValue('PLAID_CLIENT_ID'),
     secret: requiredEnvironmentValue('PLAID_SECRET'),
     clientName: requiredEnvironmentValue('PLAID_CLIENT_NAME'),
     countryCodes: countryCodes(),
-    redirectUri,
+    redirectUri: requiredHttpsUrl('PLAID_REDIRECT_URI'),
+    webhookUrl: requiredHttpsUrl('PLAID_WEBHOOK_URL'),
   }
 }
 

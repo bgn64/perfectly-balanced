@@ -44,19 +44,29 @@ A Vite, React, and TypeScript application with Supabase Magic Link authenticatio
 
 The sign-in request passes `shouldCreateUser: false`, so the application does not create an account for an uninvited email address. The Supabase signup setting is still required to prevent other clients from directly invoking signup.
 
-## Plaid transaction imports
+## Plaid transaction synchronization
 
-The authenticated app can import up to 30 days of initially available
-transactions from a user's connected financial accounts. The import stores only
+The authenticated app connects multiple financial institutions and imports up
+to 90 days of initially available transaction history. The import stores only
 the transaction date, merchant name, signed amount, ISO currency code, pending
-state, category, and account name. It does not retain Plaid public tokens,
-access tokens, account/routing numbers, balances, raw transaction descriptions,
-location data, or identity data.
+state, category, account name, and source connection. It does not retain
+account/routing numbers, balances, raw transaction descriptions, location data,
+or identity data.
 
-This is an initial-import-only prototype. After the import request completes,
-the server removes the Plaid Item, so users cannot refresh data, receive future
-updates, or reconnect in update mode. Users can remove their retained rows with
-the **Clear imported data** control.
+Each active Plaid Item access token is stored encrypted at rest in Supabase
+Vault. Only narrowly scoped database routines called by server-side Edge
+Functions can decrypt a token, and only while making a Plaid API request. The
+browser cannot query the Vault, token records, sync cursors, or webhook events.
+
+Plaid's standard `SYNC_UPDATES_AVAILABLE` webhooks trigger cursor-based
+transaction synchronization. This avoids the paid Transactions Refresh add-on;
+Plaid normally checks institutions one to four times per day. A newly connected
+bank can take time to prepare historical data, so the UI shows connection status
+and displays transaction batches as they become available.
+
+Disconnecting a bank removes the Plaid Item and deletes its encrypted access
+token, stopping future updates while retaining already imported history. A user
+can permanently delete saved history only after disconnecting that Item.
 
 ### Live Plaid setup
 
@@ -77,23 +87,33 @@ the **Clear imported data** control.
    | `PLAID_CLIENT_NAME` | Name displayed in Plaid Link. |
    | `PLAID_COUNTRY_CODES` | Comma-separated supported country codes, such as `US`. |
    | `PLAID_REDIRECT_URI` | Exact canonical app URL registered with Plaid. |
+   | `PLAID_WEBHOOK_URL` | Exact deployed `plaid-transactions-webhook` Function URL. |
    | `APP_ALLOWED_ORIGINS` | Comma-separated local and production app origins permitted to call the Functions. |
 
    The Supabase-managed `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and
    `SUPABASE_SERVICE_ROLE_KEY` remain server-only Function settings. Never
    expose the service-role key in the browser application.
 
-5. Apply the database migration and deploy the Functions:
+5. Set `PLAID_WEBHOOK_URL` to the production Supabase Function endpoint:
+
+   ```text
+   https://<supabase-project-ref>.supabase.co/functions/v1/plaid-transactions-webhook
+   ```
+
+   The endpoint is public so Plaid can call it, but it verifies every
+   `Plaid-Verification` signature, request-body digest, and timestamp before
+   accepting a webhook.
+
+6. Apply the database migration and deploy the Functions:
 
    ```sh
    supabase db push
-   supabase functions deploy plaid-create-link-token
-   supabase functions deploy plaid-import-transactions
+   supabase functions deploy
    ```
 
-The Vercel workflow still deploys only the static Vite application. Deploy
-Supabase migrations and Edge Functions before or alongside a Vercel release
-that uses this UI.
+The production GitHub Action applies migrations and deploys all Functions before
+releasing the Vercel client. Configure the required GitHub `production`
+environment secrets and variable described below before merging a deployment.
 
 ## Vercel configuration
 
