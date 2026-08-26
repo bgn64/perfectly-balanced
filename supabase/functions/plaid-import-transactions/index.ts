@@ -1,5 +1,10 @@
 import { getPlaidClient } from '../_shared/plaid.ts'
-import { HttpError, handleCors, jsonResponse } from '../_shared/http.ts'
+import {
+  HttpError,
+  handleCors,
+  jsonResponse,
+  logExternalServiceError,
+} from '../_shared/http.ts'
 import {
   getAuthenticatedUser,
   getServiceRoleClient,
@@ -134,7 +139,10 @@ Deno.serve(async (request) => {
   }
 
   if (removalError) {
-    console.error('Plaid Item removal failed after an import attempt.')
+    logExternalServiceError(
+      'Plaid Item removal failed after an import attempt.',
+      removalError,
+    )
     return jsonResponse(request, 502, {
       error:
         'We could not remove the temporary bank connection. Please contact support before trying again.',
@@ -148,7 +156,7 @@ Deno.serve(async (request) => {
       })
     }
 
-    console.error('Plaid transaction import failed.')
+    logExternalServiceError('Plaid transaction import failed.', operationError)
     return jsonResponse(request, 500, {
       error: 'We could not import transactions from this bank. Please try again.',
     })
