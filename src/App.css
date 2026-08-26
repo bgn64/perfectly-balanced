@@ -152,6 +152,63 @@ button:focus-visible {
   width: 100%;
 }
 
+.app-shell__content + .app-shell__content {
+  margin-top: 1.5rem;
+}
+
+.transactions-panel__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+.transactions-panel__header > div > p:not(.eyebrow) {
+  margin: 1rem 0 0;
+  color: #52627d;
+  line-height: 1.6;
+}
+
+.transactions-panel__actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.transactions-panel__status {
+  margin: 1.5rem 0 0;
+  color: #52627d;
+}
+
+.transactions-table__scroll {
+  margin-top: 1.5rem;
+  overflow-x: auto;
+}
+
+.transactions-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  text-align: left;
+}
+
+.transactions-table th,
+.transactions-table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid #d8e0ef;
+  white-space: nowrap;
+}
+
+.transactions-table th {
+  color: #293956;
+  font-weight: 700;
+}
+
+.transactions-table td {
+  color: #52627d;
+}
+
 @media (max-width: 40rem) {
   .auth-card,
   .configuration-error__panel,
@@ -160,7 +217,8 @@ button:focus-visible {
   }
 
   .app-shell__header,
-  .app-shell__account {
+  .app-shell__account,
+  .transactions-panel__header {
     align-items: flex-start;
     flex-direction: column;
   }

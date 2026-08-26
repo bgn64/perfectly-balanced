@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useAuth } from './auth/useAuth.ts'
 import { getClientConfiguration } from './config.ts'
 import { getSupabaseClient } from './lib/supabase.ts'
+import { TransactionsPanel } from './transactions/TransactionsPanel.tsx'
 import './App.css'
 
 interface AppProps {
@@ -32,7 +33,13 @@ function App({ appName }: AppProps) {
     return <SignInScreen appName={appName} />
   }
 
-  return <AuthenticatedShell appName={appName} email={user.email ?? ''} />
+  return (
+    <AuthenticatedShell
+      appName={appName}
+      email={user.email ?? ''}
+      userId={user.id}
+    />
+  )
 }
 
 function LoadingScreen({ appName }: AppProps) {
@@ -127,9 +134,11 @@ function SignInScreen({ appName }: AppProps) {
 function AuthenticatedShell({
   appName,
   email,
+  userId,
 }: {
   appName: string
   email: string
+  userId: string
 }) {
   const { signOut } = useAuth()
   const [isSigningOut, setIsSigningOut] = useState(false)
@@ -183,6 +192,7 @@ function AuthenticatedShell({
           </p>
         )}
       </section>
+      <TransactionsPanel userId={userId} />
     </main>
   )
 }

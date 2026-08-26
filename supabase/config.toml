@@ -1,0 +1,7 @@
+project_id = "web-app"
+
+[functions.plaid-create-link-token]
+verify_jwt = true
+
+[functions.plaid-import-transactions]
+verify_jwt = true

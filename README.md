@@ -44,6 +44,57 @@ A Vite, React, and TypeScript application with Supabase Magic Link authenticatio
 
 The sign-in request passes `shouldCreateUser: false`, so the application does not create an account for an uninvited email address. The Supabase signup setting is still required to prevent other clients from directly invoking signup.
 
+## Plaid transaction imports
+
+The authenticated app can import up to 30 days of initially available
+transactions from a user's connected financial accounts. The import stores only
+the transaction date, merchant name, signed amount, ISO currency code, pending
+state, category, and account name. It does not retain Plaid public tokens,
+access tokens, account/routing numbers, balances, raw transaction descriptions,
+location data, or identity data.
+
+This is an initial-import-only prototype. After the import request completes,
+the server removes the Plaid Item, so users cannot refresh data, receive future
+updates, or reconnect in update mode. Users can remove their retained rows with
+the **Clear imported data** control.
+
+### Live Plaid setup
+
+1. Obtain a live Plaid production application with the **Transactions** product
+   enabled for every country your prototype supports.
+2. Configure the production app's Link OAuth redirect URI as the app's
+   canonical `VITE_SITE_URL`. Add the same URL to Plaid's Allowed Redirect URIs.
+3. Install the [Supabase CLI](https://supabase.com/docs/guides/cli), log in, and
+   link the local project to the target Supabase project.
+4. Set these **Supabase Edge Function secrets**. Do not use `VITE_` names and
+   do not put them in the Vercel project environment:
+
+   | Name | Purpose |
+   | --- | --- |
+   | `PLAID_CLIENT_ID` | Plaid production client ID. |
+   | `PLAID_SECRET` | Plaid production secret. |
+   | `PLAID_ENVIRONMENT` | Must be `production` for this live integration. |
+   | `PLAID_CLIENT_NAME` | Name displayed in Plaid Link. |
+   | `PLAID_COUNTRY_CODES` | Comma-separated supported country codes, such as `US`. |
+   | `PLAID_REDIRECT_URI` | Exact canonical app URL registered with Plaid. |
+   | `APP_ALLOWED_ORIGINS` | Comma-separated local and production app origins permitted to call the Functions. |
+
+   The Supabase-managed `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and
+   `SUPABASE_SERVICE_ROLE_KEY` remain server-only Function settings. Never
+   expose the service-role key in the browser application.
+
+5. Apply the database migration and deploy the Functions:
+
+   ```sh
+   supabase db push
+   supabase functions deploy plaid-create-link-token
+   supabase functions deploy plaid-import-transactions
+   ```
+
+The Vercel workflow still deploys only the static Vite application. Deploy
+Supabase migrations and Edge Functions before or alongside a Vercel release
+that uses this UI.
+
 ## Vercel configuration
 
 `vercel.json` configures Vite's `npm run build` command and the `dist` output directory. Create or link a Vercel project, then set the four `VITE_` variables above in the Vercel project for **Production**. Set `VITE_SITE_URL` to the exact canonical production URL.
