@@ -103,7 +103,9 @@ If you also enable Vercel preview deployments, set the same browser-safe values 
 
 ## Production deployment workflow
 
-[`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) deploys the prebuilt Vite application to Vercel Production in either case:
+[`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) builds the Vite
+application, applies Supabase migrations, deploys all Supabase Edge Functions,
+then deploys the prebuilt client to Vercel Production in either case:
 
 - A pull request targeting `main` is closed after being merged.
 - Someone selects **Run workflow** from GitHub Actions.
@@ -116,8 +118,15 @@ the `production` environment:
 | Secret | `VERCEL_TOKEN` | Vercel access token with permission to deploy the project. |
 | Variable | `VERCEL_ORG_ID` | Vercel team or personal account ID. |
 | Variable | `VERCEL_PROJECT_ID` | Vercel project ID. |
+| Secret | `SUPABASE_ACCESS_TOKEN` | Personal access token used by the Supabase CLI in GitHub Actions. |
+| Secret | `SUPABASE_DB_PASSWORD` | Production Supabase database password used to apply migrations. |
+| Variable | `SUPABASE_PROJECT_ID` | Production Supabase project reference. This is not a secret. |
 
 Run `npx vercel link` locally to find the organization and project IDs in the generated `.vercel/project.json`; that directory is intentionally ignored. The workflow pulls Production variables from Vercel, builds with the Vercel CLI, and deploys the resulting prebuilt output. If the project is also connected to Vercel's Git integration, disable its automatic Production deployment to avoid a duplicate deployment for each merge.
+
+Add the Supabase values to the same GitHub `production` environment before
+merging. Plaid credentials remain Supabase Edge Function secrets and must not be
+copied into GitHub Actions.
 
 ## Available commands
 
