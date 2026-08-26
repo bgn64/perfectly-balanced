@@ -1,6 +1,11 @@
 import { Products } from 'npm:plaid@46.0.0'
 import { getPlaidClient, getPlaidConfiguration } from '../_shared/plaid.ts'
-import { HttpError, handleCors, jsonResponse } from '../_shared/http.ts'
+import {
+  HttpError,
+  handleCors,
+  jsonResponse,
+  logExternalServiceError,
+} from '../_shared/http.ts'
 import { getAuthenticatedUser } from '../_shared/supabase.ts'
 
 Deno.serve(async (request) => {
@@ -39,7 +44,7 @@ Deno.serve(async (request) => {
       return jsonResponse(request, error.status, { error: error.message })
     }
 
-    console.error('Plaid Link token creation failed.')
+    logExternalServiceError('Plaid Link token creation failed.', error)
     return jsonResponse(request, 500, {
       error: 'We could not start the bank connection. Please try again.',
     })

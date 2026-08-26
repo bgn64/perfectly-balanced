@@ -65,6 +65,40 @@ function responseErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error && error.message ? error.message : fallback
 }
 
+function isFunctionErrorResponse(value: unknown): value is { error: string } {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'error' in value &&
+    typeof value.error === 'string' &&
+    value.error.length > 0
+  )
+}
+
+async function functionErrorMessage(
+  error: unknown,
+  fallback: string,
+): Promise<string> {
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    'context' in error &&
+    error.context instanceof Response
+  ) {
+    try {
+      const body: unknown = await error.context.clone().json()
+
+      if (isFunctionErrorResponse(body)) {
+        return body.error
+      }
+    } catch {
+      return responseErrorMessage(error, fallback)
+    }
+  }
+
+  return responseErrorMessage(error, fallback)
+}
+
 async function queryTransactions(): Promise<Transaction[]> {
   const { data, error } = await getSupabaseClient()
     .from('transactions')
@@ -159,7 +193,12 @@ export function TransactionsPanel({ userId }: { userId: string }) {
       setIsImporting(false)
 
       if (error) {
-        setConnectionError(error.message)
+        setConnectionError(
+          await functionErrorMessage(
+            error,
+            'We could not import transactions from this bank. Please try again.',
+          ),
+        )
         return
       }
 
@@ -232,7 +271,12 @@ export function TransactionsPanel({ userId }: { userId: string }) {
     setIsCreatingLink(false)
 
     if (error) {
-      setConnectionError(error.message)
+      setConnectionError(
+        await functionErrorMessage(
+          error,
+          'We could not start the bank connection. Please try again.',
+        ),
+      )
       return
     }
 

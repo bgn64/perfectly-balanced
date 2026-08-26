@@ -9,6 +9,29 @@ export class HttpError extends Error {
   }
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+function optionalString(value: unknown): string | undefined {
+  return typeof value === 'string' && value ? value : undefined
+}
+
+export function logExternalServiceError(event: string, error: unknown): void {
+  const message = error instanceof Error ? error.message : 'Unknown error'
+  const responseData =
+    isRecord(error) && isRecord(error.response) && isRecord(error.response.data)
+      ? error.response.data
+      : null
+
+  console.error(event, {
+    message,
+    errorCode: responseData ? optionalString(responseData.error_code) : undefined,
+    errorType: responseData ? optionalString(responseData.error_type) : undefined,
+    requestId: responseData ? optionalString(responseData.request_id) : undefined,
+  })
+}
+
 export function jsonResponse(
   request: Request,
   status: number,
