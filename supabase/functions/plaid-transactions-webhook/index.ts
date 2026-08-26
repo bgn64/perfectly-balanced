@@ -6,6 +6,7 @@ import {
 import { getPlaidClient } from '../_shared/plaid.ts'
 import {
   jsonResponse,
+  logDatabaseError,
   logExternalServiceError,
 } from '../_shared/http.ts'
 import { getServiceRoleClient } from '../_shared/supabase.ts'
@@ -108,6 +109,11 @@ async function findLocalItem(
     .maybeSingle()
 
   if (error) {
+    if (error.code === 'PGRST116') {
+      return null
+    }
+
+    logDatabaseError('Plaid Item lookup failed.', error)
     throw new Error('The Plaid connection could not be loaded.')
   }
 
