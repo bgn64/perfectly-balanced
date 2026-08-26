@@ -48,8 +48,9 @@ The sign-in request passes `shouldCreateUser: false`, so the application does no
 
 The authenticated app connects multiple financial institutions and imports up
 to 90 days of initially available transaction history. The import stores only
-the transaction date, merchant name, signed amount, ISO currency code, pending
-state, category, account name, and source connection. It does not retain
+the transaction date, merchant name, a cleaned transaction-name fallback only
+when no merchant is available, signed amount, ISO currency code, pending state,
+category, account name, and source connection. It does not retain
 account/routing numbers, balances, raw transaction descriptions, location data,
 or identity data.
 

@@ -7,6 +7,7 @@ interface Transaction {
   plaid_item_id: string | null
   transaction_date: string
   merchant_name: string | null
+  transaction_name: string | null
   amount: number
   currency_code: string | null
   is_pending: boolean
@@ -48,6 +49,8 @@ interface CompleteItemUpdateResponse {
   importedCount: number
   isSyncing: boolean
 }
+
+type ItemOperation = 'retry' | 'disconnect' | 'delete-history' | 'update'
 
 const linkTokenStorageKey = 'plaid-link-token'
 
@@ -150,7 +153,7 @@ async function queryDashboard(): Promise<DashboardData> {
     client
       .from('transactions')
       .select(
-        'id, plaid_item_id, transaction_date, merchant_name, amount, currency_code, is_pending, category, account_name',
+        'id, plaid_item_id, transaction_date, merchant_name, transaction_name, amount, currency_code, is_pending, category, account_name',
       )
       .order('transaction_date', { ascending: false }),
   ])
@@ -194,7 +197,10 @@ export function TransactionsPanel() {
   const [isLoading, setIsLoading] = useState(true)
   const [isCreatingLink, setIsCreatingLink] = useState(false)
   const [isImporting, setIsImporting] = useState(false)
-  const [changingItemId, setChangingItemId] = useState<string | null>(null)
+  const [itemOperation, setItemOperation] = useState<{
+    itemId: string
+    operation: ItemOperation
+  } | null>(null)
   const [dataError, setDataError] = useState<string | null>(null)
   const [connectionError, setConnectionError] = useState<string | null>(null)
   const [connectionMessage, setConnectionMessage] = useState<string | null>(null)
@@ -207,6 +213,12 @@ export function TransactionsPanel() {
 
     return window.sessionStorage.getItem(linkTokenStorageKey)
   })
+
+  function isItemOperation(itemId: string, operation: ItemOperation): boolean {
+    return (
+      itemOperation?.itemId === itemId && itemOperation.operation === operation
+    )
+  }
 
   const refreshDashboard = useCallback(async () => {
     try {
@@ -395,7 +407,7 @@ export function TransactionsPanel() {
   }
 
   async function completeItemUpdate(itemId: string) {
-    setChangingItemId(itemId)
+    setItemOperation({ itemId, operation: 'update' })
     setConnectionError(null)
     setConnectionMessage(null)
 
@@ -405,7 +417,7 @@ export function TransactionsPanel() {
       body: { itemId },
     })
 
-    setChangingItemId(null)
+    setItemOperation(null)
 
     if (error) {
       setConnectionError(
@@ -426,7 +438,7 @@ export function TransactionsPanel() {
   }
 
   async function retryItemSync(item: PlaidItem) {
-    setChangingItemId(item.id)
+    setItemOperation({ itemId: item.id, operation: 'retry' })
     setConnectionError(null)
     setConnectionMessage(null)
 
@@ -436,7 +448,7 @@ export function TransactionsPanel() {
       body: { itemId: item.id },
     })
 
-    setChangingItemId(null)
+    setItemOperation(null)
 
     if (error) {
       setConnectionError(
@@ -467,7 +479,7 @@ export function TransactionsPanel() {
       return
     }
 
-    setChangingItemId(item.id)
+    setItemOperation({ itemId: item.id, operation: 'disconnect' })
     setConnectionError(null)
     setConnectionMessage(null)
 
@@ -478,7 +490,7 @@ export function TransactionsPanel() {
       },
     )
 
-    setChangingItemId(null)
+    setItemOperation(null)
 
     if (error) {
       setConnectionError(
@@ -505,7 +517,7 @@ export function TransactionsPanel() {
       return
     }
 
-    setChangingItemId(item.id)
+    setItemOperation({ itemId: item.id, operation: 'delete-history' })
     setConnectionError(null)
     setConnectionMessage(null)
 
@@ -516,7 +528,7 @@ export function TransactionsPanel() {
       },
     )
 
-    setChangingItemId(null)
+    setItemOperation(null)
 
     if (error) {
       setConnectionError(
@@ -613,9 +625,9 @@ export function TransactionsPanel() {
                       className="button button--secondary"
                       type="button"
                       onClick={() => void deleteDisconnectedHistory(item)}
-                      disabled={changingItemId === item.id}
+                      disabled={itemOperation?.itemId === item.id}
                     >
-                      {changingItemId === item.id
+                      {isItemOperation(item.id, 'delete-history')
                         ? 'Deleting history...'
                         : 'Delete saved history'}
                     </button>
@@ -627,9 +639,9 @@ export function TransactionsPanel() {
                           className="button button--secondary"
                           type="button"
                           onClick={() => void retryItemSync(item)}
-                          disabled={changingItemId === item.id}
+                          disabled={itemOperation?.itemId === item.id}
                         >
-                          {changingItemId === item.id
+                          {isItemOperation(item.id, 'retry')
                             ? 'Checking transactions...'
                             : 'Check available transactions'}
                         </button>
@@ -642,12 +654,12 @@ export function TransactionsPanel() {
                           disabled={
                             isCreatingLink ||
                             isImporting ||
-                            changingItemId === item.id
+                            itemOperation?.itemId === item.id
                           }
                         >
                           {isCreatingLink && updatingItemId === item.id
                             ? 'Preparing reconnect...'
-                            : changingItemId === item.id
+                            : isItemOperation(item.id, 'update')
                               ? 'Updating bank...'
                               : 'Reconnect bank'}
                         </button>
@@ -656,9 +668,9 @@ export function TransactionsPanel() {
                           className="button button--secondary"
                           type="button"
                           onClick={() => void disconnectItem(item)}
-                          disabled={changingItemId === item.id}
+                          disabled={itemOperation?.itemId === item.id}
                         >
-                          {changingItemId === item.id
+                          {isItemOperation(item.id, 'disconnect')
                             ? 'Disconnecting...'
                             : 'Disconnect bank'}
                         </button>
@@ -688,7 +700,7 @@ export function TransactionsPanel() {
               <thead>
                 <tr>
                   <th scope="col">Date</th>
-                  <th scope="col">Merchant</th>
+                  <th scope="col">Merchant / description</th>
                   <th scope="col">Amount</th>
                   <th scope="col">Currency</th>
                   <th scope="col">Pending</th>
@@ -701,7 +713,11 @@ export function TransactionsPanel() {
                 {transactions.map((transaction) => (
                   <tr key={transaction.id}>
                     <td>{formatDate(transaction.transaction_date)}</td>
-                    <td>{transaction.merchant_name ?? '-'}</td>
+                    <td>
+                      {transaction.merchant_name ??
+                        transaction.transaction_name ??
+                        '-'}
+                    </td>
                     <td>
                       {formatAmount(
                         transaction.amount,

@@ -13,6 +13,7 @@ interface TransactionRow {
   source_transaction_id: string
   transaction_date: string
   merchant_name: string | null
+  transaction_name: string | null
   amount: number
   currency_code: string | null
   is_pending: boolean
@@ -122,10 +123,13 @@ async function retrieveTransactionChanges(
         })
 
         for (const transaction of page.data.added) {
+          const merchantName = transaction.merchant_name ?? null
+
           added.set(transaction.transaction_id, {
             source_transaction_id: transaction.transaction_id,
             transaction_date: transaction.date,
-            merchant_name: transaction.merchant_name ?? null,
+            merchant_name: merchantName,
+            transaction_name: merchantName ? null : transaction.name ?? null,
             amount: transaction.amount,
             currency_code: transaction.iso_currency_code ?? null,
             is_pending: transaction.pending,
@@ -137,10 +141,13 @@ async function retrieveTransactionChanges(
         }
 
         for (const transaction of page.data.modified) {
+          const merchantName = transaction.merchant_name ?? null
+
           modified.set(transaction.transaction_id, {
             source_transaction_id: transaction.transaction_id,
             transaction_date: transaction.date,
-            merchant_name: transaction.merchant_name ?? null,
+            merchant_name: merchantName,
+            transaction_name: merchantName ? null : transaction.name ?? null,
             amount: transaction.amount,
             currency_code: transaction.iso_currency_code ?? null,
             is_pending: transaction.pending,
@@ -196,6 +203,9 @@ export async function syncPlaidItem(
 
   try {
     const changes = await retrieveTransactionChanges(claimedItem)
+    const initialUpdateComplete =
+      options.initialUpdateComplete === true ||
+      (claimedItem.sync_cursor === null && changes.nextCursor !== null)
     const { data, error } = await getServiceRoleClient().rpc(
       'apply_plaid_transaction_sync',
       {
@@ -204,7 +214,7 @@ export async function syncPlaidItem(
         p_added: changes.added,
         p_modified: changes.modified,
         p_removed: changes.removed,
-        p_initial_update_complete: options.initialUpdateComplete ?? false,
+        p_initial_update_complete: initialUpdateComplete,
         p_historical_update_complete: options.historicalUpdateComplete ?? false,
       },
     )
