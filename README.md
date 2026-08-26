@@ -64,6 +64,11 @@ Plaid normally checks institutions one to four times per day. A newly connected
 bank can take time to prepare historical data, so the UI shows connection status
 and displays transaction batches as they become available.
 
+If a connection is still preparing history after a delayed webhook, the
+**Check available transactions** action safely retries `/transactions/sync`
+against the retained Item. It reads data Plaid has already prepared and does not
+call the paid Transactions Refresh endpoint.
+
 Disconnecting a bank removes the Plaid Item and deletes its encrypted access
 token, stopping future updates while retaining already imported history. A user
 can permanently delete saved history only after disconnecting that Item.

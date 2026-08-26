@@ -17,3 +17,6 @@ verify_jwt = true
 
 [functions.plaid-complete-item-update]
 verify_jwt = true
+
+[functions.plaid-retry-item-sync]
+verify_jwt = true

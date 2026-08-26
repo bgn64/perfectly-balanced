@@ -200,7 +200,10 @@ button:focus-visible {
 }
 
 .connection-card__actions {
+  display: flex;
   flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: 0.75rem;
 }
 
 .transactions-panel__header > div > p:not(.eyebrow) {

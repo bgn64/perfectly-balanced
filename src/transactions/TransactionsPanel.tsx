@@ -425,6 +425,39 @@ export function TransactionsPanel() {
     await refreshDashboard()
   }
 
+  async function retryItemSync(item: PlaidItem) {
+    setChangingItemId(item.id)
+    setConnectionError(null)
+    setConnectionMessage(null)
+
+    const { data, error } = await getSupabaseClient().functions.invoke<
+      CompleteItemUpdateResponse
+    >('plaid-retry-item-sync', {
+      body: { itemId: item.id },
+    })
+
+    setChangingItemId(null)
+
+    if (error) {
+      setConnectionError(
+        await functionErrorMessage(
+          error,
+          'We could not check for available transactions. Please try again.',
+        ),
+      )
+      return
+    }
+
+    setConnectionMessage(
+      data?.isSyncing
+        ? 'A transaction synchronization is already in progress.'
+        : data?.importedCount
+          ? `Imported ${data.importedCount} transaction${data.importedCount === 1 ? '' : 's'}.`
+          : 'Your bank has not provided additional transactions yet.',
+    )
+    await refreshDashboard()
+  }
+
   async function disconnectItem(item: PlaidItem) {
     if (
       !window.confirm(
@@ -586,34 +619,51 @@ export function TransactionsPanel() {
                         ? 'Deleting history...'
                         : 'Delete saved history'}
                     </button>
-                  ) : item.status === 'needs_reconnect' ? (
-                    <button
-                      className="button button--secondary"
-                      type="button"
-                      onClick={() => void startConnection(item.id)}
-                      disabled={
-                        isCreatingLink ||
-                        isImporting ||
-                        changingItemId === item.id
-                      }
-                    >
-                      {isCreatingLink && updatingItemId === item.id
-                        ? 'Preparing reconnect...'
-                        : changingItemId === item.id
-                          ? 'Updating bank...'
-                          : 'Reconnect bank'}
-                    </button>
                   ) : (
-                    <button
-                      className="button button--secondary"
-                      type="button"
-                      onClick={() => void disconnectItem(item)}
-                      disabled={changingItemId === item.id}
-                    >
-                      {changingItemId === item.id
-                        ? 'Disconnecting...'
-                        : 'Disconnect bank'}
-                    </button>
+                    <>
+                      {(item.status === 'initial_syncing' ||
+                        item.status === 'error') && (
+                        <button
+                          className="button button--secondary"
+                          type="button"
+                          onClick={() => void retryItemSync(item)}
+                          disabled={changingItemId === item.id}
+                        >
+                          {changingItemId === item.id
+                            ? 'Checking transactions...'
+                            : 'Check available transactions'}
+                        </button>
+                      )}
+                      {item.status === 'needs_reconnect' ? (
+                        <button
+                          className="button button--secondary"
+                          type="button"
+                          onClick={() => void startConnection(item.id)}
+                          disabled={
+                            isCreatingLink ||
+                            isImporting ||
+                            changingItemId === item.id
+                          }
+                        >
+                          {isCreatingLink && updatingItemId === item.id
+                            ? 'Preparing reconnect...'
+                            : changingItemId === item.id
+                              ? 'Updating bank...'
+                              : 'Reconnect bank'}
+                        </button>
+                      ) : (
+                        <button
+                          className="button button--secondary"
+                          type="button"
+                          onClick={() => void disconnectItem(item)}
+                          disabled={changingItemId === item.id}
+                        >
+                          {changingItemId === item.id
+                            ? 'Disconnecting...'
+                            : 'Disconnect bank'}
+                        </button>
+                      )}
+                    </>
                   )}
                 </div>
               </li>
