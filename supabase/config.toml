@@ -5,3 +5,15 @@ verify_jwt = true
 
 [functions.plaid-import-transactions]
 verify_jwt = true
+
+[functions.plaid-transactions-webhook]
+verify_jwt = false
+
+[functions.plaid-disconnect-item]
+verify_jwt = true
+
+[functions.plaid-delete-disconnected-history]
+verify_jwt = true
+
+[functions.plaid-complete-item-update]
+verify_jwt = true

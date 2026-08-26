@@ -163,6 +163,46 @@ button:focus-visible {
   gap: 1.5rem;
 }
 
+.connection-list,
+.transaction-list {
+  margin-top: 2rem;
+}
+
+.connection-list h3,
+.transaction-list h3,
+.connection-card h4 {
+  margin: 0;
+  color: #14213d;
+}
+
+.connection-list__items {
+  display: grid;
+  gap: 0.75rem;
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.connection-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid #d8e0ef;
+  border-radius: 0.75rem;
+}
+
+.connection-card p {
+  margin: 0.375rem 0 0;
+  color: #52627d;
+  font-size: 0.875rem;
+}
+
+.connection-card__actions {
+  flex: 0 0 auto;
+}
+
 .transactions-panel__header > div > p:not(.eyebrow) {
   margin: 1rem 0 0;
   color: #52627d;
@@ -218,7 +258,8 @@ button:focus-visible {
 
   .app-shell__header,
   .app-shell__account,
-  .transactions-panel__header {
+  .transactions-panel__header,
+  .connection-card {
     align-items: flex-start;
     flex-direction: column;
   }

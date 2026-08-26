@@ -9,20 +9,10 @@ import {
   getAuthenticatedUser,
   getServiceRoleClient,
 } from '../_shared/supabase.ts'
+import { syncPlaidItem } from '../_shared/transactionSync.ts'
 
 interface ImportRequest {
   publicToken: string
-}
-
-interface TransactionRow {
-  source_transaction_id: string
-  transaction_date: string
-  merchant_name: string | null
-  amount: number
-  currency_code: string | null
-  is_pending: boolean
-  category: string | null
-  account_name: string
 }
 
 function isImportRequest(value: unknown): value is ImportRequest {
@@ -64,8 +54,8 @@ Deno.serve(async (request) => {
   }
 
   let accessToken: string | null = null
-  let importedCount: number | null = null
-  let operationError: unknown = null
+  let plaidItemId: string | null = null
+  let persistedItemId: string | null = null
 
   try {
     const user = await getAuthenticatedUser(request)
@@ -75,94 +65,76 @@ Deno.serve(async (request) => {
       public_token: publicToken,
     })
     accessToken = exchange.data.access_token
-
-    const accounts = await plaid.accountsGet({
+    plaidItemId = exchange.data.item_id
+    const item = await plaid.itemGet({
       access_token: accessToken,
     })
-    const accountNames = new Map(
-      accounts.data.accounts.map((account) => [account.account_id, account.name]),
-    )
-    const transactions = new Map<string, TransactionRow>()
-    let cursor: string | undefined
-    let hasMore = true
-
-    while (hasMore) {
-      const page = await plaid.transactionsSync({
-        access_token: accessToken,
-        cursor,
+    const { data: localItemId, error: createItemError } =
+      await getServiceRoleClient().rpc('create_plaid_item', {
+        p_user_id: user.id,
+        p_plaid_item_id: plaidItemId,
+        p_access_token: accessToken,
+        p_institution_id: item.data.item.institution_id ?? '',
+        p_institution_name: item.data.item.institution_name ?? '',
       })
 
-      for (const transaction of [...page.data.added, ...page.data.modified]) {
-        transactions.set(transaction.transaction_id, {
-          source_transaction_id: transaction.transaction_id,
-          transaction_date: transaction.date,
-          merchant_name: transaction.merchant_name ?? null,
-          amount: transaction.amount,
-          currency_code: transaction.iso_currency_code ?? null,
-          is_pending: transaction.pending,
-          category: transaction.personal_finance_category?.primary ?? null,
-          account_name: accountNames.get(transaction.account_id) ?? 'Linked account',
-        })
-      }
-
-      cursor = page.data.next_cursor
-      hasMore = page.data.has_more
+    if (createItemError || typeof localItemId !== 'string') {
+      throw new Error('The connected bank could not be stored securely.')
     }
 
-    const { data, error } = await getServiceRoleClient().rpc(
-      'replace_transactions_for_user',
-      {
-        p_user_id: user.id,
-        p_transactions: [...transactions.values()],
-      },
-    )
+    persistedItemId = localItemId
 
-    if (error) {
-      throw new Error('The imported transactions could not be saved.')
-    }
-
-    importedCount = typeof data === 'number' ? data : transactions.size
-  } catch (error) {
-    operationError = error
-  }
-
-  let removalError: unknown = null
-
-  if (accessToken) {
     try {
-      await getPlaidClient().itemRemove({
-        access_token: accessToken,
+      const result = await syncPlaidItem(localItemId)
+
+      return jsonResponse(request, 200, {
+        itemId: localItemId,
+        importedCount: result.importedCount,
+        isSyncing: true,
       })
     } catch (error) {
-      removalError = error
-    }
-  }
-
-  if (removalError) {
-    logExternalServiceError(
-      'Plaid Item removal failed after an import attempt.',
-      removalError,
-    )
-    return jsonResponse(request, 502, {
-      error:
-        'We could not remove the temporary bank connection. Please contact support before trying again.',
-    })
-  }
-
-  if (operationError) {
-    if (operationError instanceof HttpError) {
-      return jsonResponse(request, operationError.status, {
-        error: operationError.message,
+      logExternalServiceError('Initial Plaid transaction sync failed.', error)
+      return jsonResponse(request, 200, {
+        itemId: localItemId,
+        importedCount: 0,
+        isSyncing: true,
       })
     }
+  } catch (error) {
+    if (error instanceof HttpError) {
+      return jsonResponse(request, error.status, { error: error.message })
+    }
 
-    logExternalServiceError('Plaid transaction import failed.', operationError)
+    if (accessToken && !persistedItemId) {
+      let storedItemExists = false
+
+      if (plaidItemId) {
+        const { data } = await getServiceRoleClient()
+          .from('plaid_items')
+          .select('id')
+          .eq('plaid_item_id', plaidItemId)
+          .maybeSingle()
+
+        storedItemExists = Boolean(data)
+      }
+
+      if (!storedItemExists) {
+        try {
+          await getPlaidClient().itemRemove({
+            access_token: accessToken,
+          })
+        } catch (cleanupError) {
+          logExternalServiceError(
+            'Plaid Item cleanup after failed creation failed.',
+            cleanupError,
+          )
+        }
+      }
+    }
+
+    logExternalServiceError('Plaid Item creation failed.', error)
     return jsonResponse(request, 500, {
-      error: 'We could not import transactions from this bank. Please try again.',
+      error: 'We could not connect this bank. Please try again.',
     })
   }
-
-  return jsonResponse(request, 200, {
-    importedCount,
-  })
 })

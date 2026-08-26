@@ -4,6 +4,7 @@ import { getSupabaseClient } from '../lib/supabase.ts'
 
 interface Transaction {
   id: string
+  plaid_item_id: string | null
   transaction_date: string
   merchant_name: string | null
   amount: number
@@ -13,12 +14,39 @@ interface Transaction {
   account_name: string
 }
 
+interface PlaidItem {
+  id: string
+  institution_name: string | null
+  status:
+    | 'initial_syncing'
+    | 'active'
+    | 'needs_reconnect'
+    | 'error'
+    | 'disconnected'
+  initial_update_complete: boolean
+  historical_update_complete: boolean
+  last_synced_at: string | null
+  connected_at: string
+}
+
+interface DashboardData {
+  items: PlaidItem[]
+  transactions: Transaction[]
+}
+
 interface LinkTokenResponse {
   linkToken: string
 }
 
 interface ImportTransactionsResponse {
+  itemId: string
   importedCount: number
+  isSyncing: boolean
+}
+
+interface CompleteItemUpdateResponse {
+  importedCount: number
+  isSyncing: boolean
 }
 
 const linkTokenStorageKey = 'plaid-link-token'
@@ -29,6 +57,17 @@ function formatDate(value: string): string {
     month: 'short',
     year: 'numeric',
   }).format(new Date(`${value}T00:00:00`))
+}
+
+function formatTimestamp(value: string | null): string {
+  if (!value) {
+    return 'Not yet synchronized'
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(value))
 }
 
 function formatAmount(amount: number, currencyCode: string | null): string {
@@ -99,30 +138,67 @@ async function functionErrorMessage(
   return responseErrorMessage(error, fallback)
 }
 
-async function queryTransactions(): Promise<Transaction[]> {
-  const { data, error } = await getSupabaseClient()
-    .from('transactions')
-    .select(
-      'id, transaction_date, merchant_name, amount, currency_code, is_pending, category, account_name',
-    )
-    .order('transaction_date', { ascending: false })
+async function queryDashboard(): Promise<DashboardData> {
+  const client = getSupabaseClient()
+  const [itemsResult, transactionsResult] = await Promise.all([
+    client
+      .from('plaid_items')
+      .select(
+        'id, institution_name, status, initial_update_complete, historical_update_complete, last_synced_at, connected_at',
+      )
+      .order('connected_at', { ascending: false }),
+    client
+      .from('transactions')
+      .select(
+        'id, plaid_item_id, transaction_date, merchant_name, amount, currency_code, is_pending, category, account_name',
+      )
+      .order('transaction_date', { ascending: false }),
+  ])
 
-  if (error) {
-    throw new Error(error.message)
+  if (itemsResult.error) {
+    throw new Error(itemsResult.error.message)
   }
 
-  return data ?? []
+  if (transactionsResult.error) {
+    throw new Error(transactionsResult.error.message)
+  }
+
+  return {
+    items: itemsResult.data ?? [],
+    transactions: transactionsResult.data ?? [],
+  }
 }
 
-export function TransactionsPanel({ userId }: { userId: string }) {
+function connectionStatus(item: PlaidItem): string {
+  switch (item.status) {
+    case 'initial_syncing':
+      return item.initial_update_complete
+        ? 'Preparing additional history'
+        : 'Preparing transaction history'
+    case 'active':
+      return item.historical_update_complete
+        ? 'Connected and synchronized'
+        : 'Connected'
+    case 'needs_reconnect':
+      return 'Reconnect needed'
+    case 'error':
+      return 'Synchronization needs attention'
+    case 'disconnected':
+      return 'Disconnected; history retained'
+  }
+}
+
+export function TransactionsPanel() {
+  const [items, setItems] = useState<PlaidItem[]>([])
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isCreatingLink, setIsCreatingLink] = useState(false)
   const [isImporting, setIsImporting] = useState(false)
-  const [isClearing, setIsClearing] = useState(false)
+  const [changingItemId, setChangingItemId] = useState<string | null>(null)
   const [dataError, setDataError] = useState<string | null>(null)
   const [connectionError, setConnectionError] = useState<string | null>(null)
   const [connectionMessage, setConnectionMessage] = useState<string | null>(null)
+  const [updatingItemId, setUpdatingItemId] = useState<string | null>(null)
   const [linkToken, setLinkToken] = useState<string | null>(() => {
     if (!hasOAuthRedirect()) {
       window.sessionStorage.removeItem(linkTokenStorageKey)
@@ -132,12 +208,13 @@ export function TransactionsPanel({ userId }: { userId: string }) {
     return window.sessionStorage.getItem(linkTokenStorageKey)
   })
 
-  const loadTransactions = useCallback(async () => {
+  const refreshDashboard = useCallback(async () => {
     try {
-      const loadedTransactions = await queryTransactions()
+      const dashboard = await queryDashboard()
 
       setDataError(null)
-      setTransactions(loadedTransactions)
+      setItems(dashboard.items)
+      setTransactions(dashboard.transactions)
     } catch (error) {
       setDataError(responseErrorMessage(error, 'We could not load transactions.'))
     } finally {
@@ -148,16 +225,17 @@ export function TransactionsPanel({ userId }: { userId: string }) {
   useEffect(() => {
     let isCurrent = true
 
-    async function loadInitialTransactions() {
+    async function loadInitialDashboard() {
       try {
-        const loadedTransactions = await queryTransactions()
+        const dashboard = await queryDashboard()
 
         if (!isCurrent) {
           return
         }
 
         setDataError(null)
-        setTransactions(loadedTransactions)
+        setItems(dashboard.items)
+        setTransactions(dashboard.transactions)
       } catch (error) {
         if (isCurrent) {
           setDataError(
@@ -171,12 +249,27 @@ export function TransactionsPanel({ userId }: { userId: string }) {
       }
     }
 
-    void loadInitialTransactions()
+    void loadInitialDashboard()
 
     return () => {
       isCurrent = false
     }
   }, [])
+
+  const hasInitialSync = items.some((item) => item.status === 'initial_syncing')
+
+  useEffect(() => {
+    const interval = window.setInterval(
+      () => {
+        void refreshDashboard()
+      },
+      hasInitialSync ? 5_000 : 60_000,
+    )
+
+    return () => {
+      window.clearInterval(interval)
+    }
+  }, [hasInitialSync, refreshDashboard])
 
   const importTransactions = useCallback(
     async (publicToken: string) => {
@@ -196,29 +289,27 @@ export function TransactionsPanel({ userId }: { userId: string }) {
         setConnectionError(
           await functionErrorMessage(
             error,
-            'We could not import transactions from this bank. Please try again.',
+            'We could not connect this bank. Please try again.',
           ),
         )
         return
       }
 
-      const importedCount = data?.importedCount
-
-      if (typeof importedCount !== 'number') {
+      if (!data?.itemId || typeof data.importedCount !== 'number') {
         setConnectionError(
-          'The bank connection completed, but the import result was invalid.',
+          'The bank connected, but the synchronization result was invalid.',
         )
         return
       }
 
       setConnectionMessage(
-        importedCount === 0
-          ? 'Your bank did not provide transactions during this initial import.'
-          : `Imported ${importedCount} transaction${importedCount === 1 ? '' : 's'}.`,
+        data.importedCount === 0
+          ? 'Your bank is connected. We are preparing its transaction history.'
+          : `Connected bank and imported ${data.importedCount} transaction${data.importedCount === 1 ? '' : 's'}.`,
       )
-      await loadTransactions()
+      await refreshDashboard()
     },
-    [loadTransactions],
+    [refreshDashboard],
   )
 
   const { error: plaidLoadError, open, ready } = usePlaidLink({
@@ -232,6 +323,13 @@ export function TransactionsPanel({ userId }: { userId: string }) {
       clearPersistedLinkToken()
       setLinkToken(null)
 
+      if (updatingItemId) {
+        const itemId = updatingItemId
+        setUpdatingItemId(null)
+        void completeItemUpdate(itemId)
+        return
+      }
+
       if (!publicToken) {
         setConnectionError('The bank connection did not return a usable token.')
         return
@@ -242,6 +340,7 @@ export function TransactionsPanel({ userId }: { userId: string }) {
     onExit: (error) => {
       clearPersistedLinkToken()
       setLinkToken(null)
+      setUpdatingItemId(null)
 
       if (error) {
         setConnectionError(error.display_message ?? error.error_message)
@@ -259,18 +358,23 @@ export function TransactionsPanel({ userId }: { userId: string }) {
     ? 'We could not load the secure bank connection window.'
     : connectionError
 
-  async function startConnection() {
+  async function startConnection(itemId?: string) {
     setIsCreatingLink(true)
+    setUpdatingItemId(itemId ?? null)
     setConnectionError(null)
     setConnectionMessage(null)
 
     const { data, error } = await getSupabaseClient().functions.invoke<LinkTokenResponse>(
       'plaid-create-link-token',
+      {
+        body: itemId ? { itemId } : {},
+      },
     )
 
     setIsCreatingLink(false)
 
     if (error) {
+      setUpdatingItemId(null)
       setConnectionError(
         await functionErrorMessage(
           error,
@@ -281,6 +385,7 @@ export function TransactionsPanel({ userId }: { userId: string }) {
     }
 
     if (!data?.linkToken) {
+      setUpdatingItemId(null)
       setConnectionError('The bank connection could not be initialized.')
       return
     }
@@ -289,33 +394,116 @@ export function TransactionsPanel({ userId }: { userId: string }) {
     setLinkToken(data.linkToken)
   }
 
-  async function clearTransactions() {
+  async function completeItemUpdate(itemId: string) {
+    setChangingItemId(itemId)
+    setConnectionError(null)
+    setConnectionMessage(null)
+
+    const { data, error } = await getSupabaseClient().functions.invoke<
+      CompleteItemUpdateResponse
+    >('plaid-complete-item-update', {
+      body: { itemId },
+    })
+
+    setChangingItemId(null)
+
+    if (error) {
+      setConnectionError(
+        await functionErrorMessage(
+          error,
+          'We could not complete this bank update. Please try again.',
+        ),
+      )
+      return
+    }
+
+    setConnectionMessage(
+      data?.isSyncing
+        ? 'Your bank was updated. We are synchronizing transactions.'
+        : `Your bank was updated. Imported ${data?.importedCount ?? 0} transaction${data?.importedCount === 1 ? '' : 's'}.`,
+    )
+    await refreshDashboard()
+  }
+
+  async function disconnectItem(item: PlaidItem) {
     if (
       !window.confirm(
-        'Delete all imported transaction data from this application? This cannot be undone.',
+        `Disconnect ${item.institution_name ?? 'this bank'}? New transactions will stop syncing, but imported history will remain.`,
       )
     ) {
       return
     }
 
-    setIsClearing(true)
-    setDataError(null)
+    setChangingItemId(item.id)
+    setConnectionError(null)
+    setConnectionMessage(null)
 
-    const { error } = await getSupabaseClient()
-      .from('transactions')
-      .delete()
-      .eq('user_id', userId)
+    const { error } = await getSupabaseClient().functions.invoke(
+      'plaid-disconnect-item',
+      {
+        body: { itemId: item.id },
+      },
+    )
 
-    setIsClearing(false)
+    setChangingItemId(null)
 
     if (error) {
-      setDataError(error.message)
+      setConnectionError(
+        await functionErrorMessage(
+          error,
+          'We could not disconnect this bank. Please try again.',
+        ),
+      )
       return
     }
 
-    setTransactions([])
-    setConnectionMessage('Imported transaction data was deleted.')
+    setConnectionMessage(
+      `${item.institution_name ?? 'Bank'} was disconnected. Imported history remains available.`,
+    )
+    await refreshDashboard()
   }
+
+  async function deleteDisconnectedHistory(item: PlaidItem) {
+    if (
+      !window.confirm(
+        `Delete all retained history from ${item.institution_name ?? 'this bank'}? This cannot be undone.`,
+      )
+    ) {
+      return
+    }
+
+    setChangingItemId(item.id)
+    setConnectionError(null)
+    setConnectionMessage(null)
+
+    const { error } = await getSupabaseClient().functions.invoke(
+      'plaid-delete-disconnected-history',
+      {
+        body: { itemId: item.id },
+      },
+    )
+
+    setChangingItemId(null)
+
+    if (error) {
+      setConnectionError(
+        await functionErrorMessage(
+          error,
+          'We could not delete this disconnected bank history.',
+        ),
+      )
+      return
+    }
+
+    setConnectionMessage(
+      `${item.institution_name ?? 'Disconnected bank'} history was deleted.`,
+    )
+    await refreshDashboard()
+  }
+
+  const institutionsByItemId = new Map(
+    items.map((item) => [item.id, item.institution_name ?? 'Connected bank']),
+  )
 
   return (
     <section
@@ -325,35 +513,23 @@ export function TransactionsPanel({ userId }: { userId: string }) {
       <div className="transactions-panel__header">
         <div>
           <p className="eyebrow">Transactions</p>
-          <h2 id="transactions-title">Imported transactions</h2>
+          <h2 id="transactions-title">Connected bank transactions</h2>
           <p>
-            Connect a bank to import its currently available transactions. The
-            connection is removed after the import completes.
+            Connected banks update automatically. Disconnecting a bank stops
+            future updates but keeps the history you have already imported.
           </p>
         </div>
-        <div className="transactions-panel__actions">
-          <button
-            type="button"
-            onClick={() => void startConnection()}
-            disabled={isCreatingLink || isImporting}
-          >
-            {isCreatingLink
-              ? 'Preparing secure connection...'
-              : isImporting
-                ? 'Importing transactions...'
-                : 'Connect bank'}
-          </button>
-          {transactions.length > 0 && (
-            <button
-              className="button button--secondary"
-              type="button"
-              onClick={() => void clearTransactions()}
-              disabled={isClearing || isCreatingLink || isImporting}
-            >
-              {isClearing ? 'Deleting data...' : 'Clear imported data'}
-            </button>
-          )}
-        </div>
+        <button
+          type="button"
+          onClick={() => void startConnection()}
+          disabled={isCreatingLink || isImporting}
+        >
+          {isCreatingLink
+            ? 'Preparing secure connection...'
+            : isImporting
+              ? 'Connecting bank...'
+              : 'Connect bank'}
+        </button>
       </div>
 
       {displayedConnectionError && (
@@ -375,44 +551,130 @@ export function TransactionsPanel({ userId }: { userId: string }) {
         </p>
       )}
 
-      {isLoading ? (
-        <p className="transactions-panel__status" aria-live="polite">
-          Loading transactions...
-        </p>
-      ) : transactions.length === 0 ? (
-        <p className="transactions-panel__status">
-          No transactions have been imported yet.
-        </p>
-      ) : (
-        <div className="transactions-table__scroll">
-          <table className="transactions-table">
-            <thead>
-              <tr>
-                <th scope="col">Date</th>
-                <th scope="col">Merchant</th>
-                <th scope="col">Amount</th>
-                <th scope="col">Currency</th>
-                <th scope="col">Pending</th>
-                <th scope="col">Category</th>
-                <th scope="col">Account</th>
-              </tr>
-            </thead>
-            <tbody>
-              {transactions.map((transaction) => (
-                <tr key={transaction.id}>
-                  <td>{formatDate(transaction.transaction_date)}</td>
-                  <td>{transaction.merchant_name ?? '-'}</td>
-                  <td>{formatAmount(transaction.amount, transaction.currency_code)}</td>
-                  <td>{transaction.currency_code ?? '-'}</td>
-                  <td>{transaction.is_pending ? 'Pending' : 'Posted'}</td>
-                  <td>{transaction.category ?? '-'}</td>
-                  <td>{transaction.account_name}</td>
+      <section
+        className="connection-list"
+        aria-labelledby="connections-title"
+        aria-busy={isLoading}
+      >
+        <h3 id="connections-title">Bank connections</h3>
+        {isLoading ? (
+          <p className="transactions-panel__status" aria-live="polite">
+            Loading bank connections...
+          </p>
+        ) : items.length === 0 ? (
+          <p className="transactions-panel__status">
+            No banks are connected yet.
+          </p>
+        ) : (
+          <ul className="connection-list__items">
+            {items.map((item) => (
+              <li key={item.id} className="connection-card">
+                <div>
+                  <h4>{item.institution_name ?? 'Connected bank'}</h4>
+                  <p>{connectionStatus(item)}</p>
+                  <p>Last sync: {formatTimestamp(item.last_synced_at)}</p>
+                </div>
+                <div className="connection-card__actions">
+                  {item.status === 'disconnected' ? (
+                    <button
+                      className="button button--secondary"
+                      type="button"
+                      onClick={() => void deleteDisconnectedHistory(item)}
+                      disabled={changingItemId === item.id}
+                    >
+                      {changingItemId === item.id
+                        ? 'Deleting history...'
+                        : 'Delete saved history'}
+                    </button>
+                  ) : item.status === 'needs_reconnect' ? (
+                    <button
+                      className="button button--secondary"
+                      type="button"
+                      onClick={() => void startConnection(item.id)}
+                      disabled={
+                        isCreatingLink ||
+                        isImporting ||
+                        changingItemId === item.id
+                      }
+                    >
+                      {isCreatingLink && updatingItemId === item.id
+                        ? 'Preparing reconnect...'
+                        : changingItemId === item.id
+                          ? 'Updating bank...'
+                          : 'Reconnect bank'}
+                    </button>
+                  ) : (
+                    <button
+                      className="button button--secondary"
+                      type="button"
+                      onClick={() => void disconnectItem(item)}
+                      disabled={changingItemId === item.id}
+                    >
+                      {changingItemId === item.id
+                        ? 'Disconnecting...'
+                        : 'Disconnect bank'}
+                    </button>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="transaction-list" aria-labelledby="transaction-list-title">
+        <h3 id="transaction-list-title">Imported transactions</h3>
+        {isLoading ? (
+          <p className="transactions-panel__status" aria-live="polite">
+            Loading transactions...
+          </p>
+        ) : transactions.length === 0 ? (
+          <p className="transactions-panel__status">
+            No transactions have been imported yet.
+          </p>
+        ) : (
+          <div className="transactions-table__scroll">
+            <table className="transactions-table">
+              <thead>
+                <tr>
+                  <th scope="col">Date</th>
+                  <th scope="col">Merchant</th>
+                  <th scope="col">Amount</th>
+                  <th scope="col">Currency</th>
+                  <th scope="col">Pending</th>
+                  <th scope="col">Category</th>
+                  <th scope="col">Account</th>
+                  <th scope="col">Bank</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+              </thead>
+              <tbody>
+                {transactions.map((transaction) => (
+                  <tr key={transaction.id}>
+                    <td>{formatDate(transaction.transaction_date)}</td>
+                    <td>{transaction.merchant_name ?? '-'}</td>
+                    <td>
+                      {formatAmount(
+                        transaction.amount,
+                        transaction.currency_code,
+                      )}
+                    </td>
+                    <td>{transaction.currency_code ?? '-'}</td>
+                    <td>{transaction.is_pending ? 'Pending' : 'Posted'}</td>
+                    <td>{transaction.category ?? '-'}</td>
+                    <td>{transaction.account_name}</td>
+                    <td>
+                      {transaction.plaid_item_id
+                        ? institutionsByItemId.get(transaction.plaid_item_id) ??
+                          'Connected bank'
+                        : 'Previous import'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
     </section>
   )
 }
