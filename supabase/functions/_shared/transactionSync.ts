@@ -1,4 +1,5 @@
 import { getPlaidClient } from './plaid.ts'
+import { logDatabaseError } from './http.ts'
 import { getServiceRoleClient } from './supabase.ts'
 
 interface ClaimedPlaidItem {
@@ -74,6 +75,7 @@ async function claimPlaidItem(
   )
 
   if (error) {
+    logDatabaseError('Plaid Item sync claim failed.', error)
     throw new Error('The Plaid connection could not be claimed for synchronization.')
   }
 
