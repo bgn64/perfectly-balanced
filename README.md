@@ -128,12 +128,20 @@ If you also enable Vercel preview deployments, set the same browser-safe values 
 
 ## Production deployment workflow
 
-[`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) builds the Vite
-application, applies Supabase migrations, deploys all Supabase Edge Functions,
-then deploys the prebuilt client to Vercel Production in either case:
+[.github/workflows/deploy.yml](.github/workflows/deploy.yml) builds the Vite
+application, then conditionally applies Supabase migrations and deploys
+Supabase Edge Functions before publishing the prebuilt client to Vercel
+Production in either case:
 
 - A pull request targeting `main` is closed after being merged.
 - Someone selects **Run workflow** from GitHub Actions.
+
+For a merged pull request, the workflow only runs `supabase db push` when files
+under `supabase/migrations/` changed, and only deploys Functions when
+`supabase/functions/` or `supabase/config.toml` changed. Supabase migration
+history also makes `db push` safe when all committed migrations are already
+applied. A manual workflow run intentionally deploys both migrations and
+Functions so an operator can reconcile the full configured state.
 
 Before running it, add the GitHub configuration below at repository scope or in
 the `production` environment:

@@ -2,6 +2,7 @@ import {
   HttpError,
   handleCors,
   jsonResponse,
+  logDatabaseError,
   logExternalServiceError,
 } from '../_shared/http.ts'
 import {
@@ -44,14 +45,25 @@ Deno.serve(async (request) => {
 
     const { data: item, error: itemError } = await getServiceRoleClient()
       .from('plaid_items')
-      .select('id')
+      .select('id, status')
       .eq('id', body.itemId)
       .eq('user_id', user.id)
-      .neq('status', 'disconnected')
       .maybeSingle()
 
-    if (itemError || !item) {
+    if (itemError && itemError.code !== 'PGRST116') {
+      logDatabaseError('Plaid sync retry Item lookup failed.', itemError)
+      throw new Error('The bank connection could not be loaded for synchronization.')
+    }
+
+    if (!item) {
       throw new HttpError(404, 'The active bank connection was not found.')
+    }
+
+    if (item.status === 'disconnected') {
+      throw new HttpError(
+        409,
+        'This bank is disconnected and cannot synchronize transactions.',
+      )
     }
 
     const result = await syncPlaidItem(item.id)
