@@ -32,6 +32,17 @@ export function logExternalServiceError(event: string, error: unknown): void {
   })
 }
 
+export function logDatabaseError(event: string, error: unknown): void {
+  const details = isRecord(error) ? error : {}
+
+  console.error(event, {
+    code: optionalString(details.code),
+    message: optionalString(details.message),
+    details: optionalString(details.details),
+    hint: optionalString(details.hint),
+  })
+}
+
 export function jsonResponse(
   request: Request,
   status: number,
