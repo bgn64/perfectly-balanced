@@ -169,4 +169,23 @@ copied into GitHub Actions.
 | `npm run dev` | Start the local Vite server. |
 | `npm run lint` | Run Oxlint. |
 | `npm run build` | Type-check and create the production build in `dist`. |
+| `npm run mockup` | Serve the static UI mockup from `mockup/` for review. |
 | `npm run preview` | Preview the production build locally. |
+
+## UI mockup and agent workflow
+
+`mockup/` is the committed, static, current-state rendering of the app's UI.
+It contains no application logic, authentication, network requests, database
+calls, or Plaid behavior. When multiple mockup pages are needed, their shared
+navigation keeps the screens connected.
+
+Before making a UI-changing feature, Copilot must update and serve the mockup
+with `npm run mockup`, obtain explicit visual approval, then create a
+database-aware implementation plan and obtain approval again before changing
+application code. Every shipped UI change must include its matching `mockup/`
+update in the same commit or pull request.
+
+The repository expects an externally configured `ui-automation` MCP for final
+UI smoke testing. Until a safe local or staging Plaid integration exists, UI
+automation must never operate any live Plaid bank-connection control or mutate
+real transaction data.

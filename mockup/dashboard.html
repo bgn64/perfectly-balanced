@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard - Invite Only App mockup</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <nav class="mockup-nav" aria-label="Mockup screens">
+      <a href="index.html">Sign in</a>
+      <a aria-current="page" href="dashboard.html">Dashboard</a>
+      <a href="configuration-error.html">Configuration error</a>
+    </nav>
+
+    <main class="app-shell">
+      <header class="app-shell__header">
+        <div>
+          <p class="eyebrow">Invite Only App</p>
+          <h1>Welcome</h1>
+        </div>
+        <div class="app-shell__account">
+          <span>you@example.com</span>
+          <button class="button button--secondary" type="button">Sign out</button>
+        </div>
+      </header>
+
+      <section class="app-shell__content" aria-labelledby="workspace-title">
+        <p class="eyebrow">Protected workspace</p>
+        <h2 id="workspace-title">You are signed in</h2>
+        <p>
+          This is the authenticated starting point for your application. Add
+          product features here knowing that only invited users can reach them.
+        </p>
+      </section>
+
+      <section
+        class="app-shell__content transactions-panel"
+        aria-labelledby="transactions-title"
+      >
+        <div class="transactions-panel__header">
+          <div>
+            <p class="eyebrow">Transactions</p>
+            <h2 id="transactions-title">Connected bank transactions</h2>
+            <p>
+              Connected banks update automatically. Disconnecting a bank stops
+              future updates but keeps the history you have already imported.
+            </p>
+          </div>
+          <button class="button" type="button">Connect bank</button>
+        </div>
+
+        <section class="connection-list" aria-labelledby="connections-title">
+          <h3 id="connections-title">Bank connections</h3>
+          <ul class="connection-list__items">
+            <li class="connection-card">
+              <div>
+                <h4>Example Bank</h4>
+                <p>Connected and synchronized</p>
+                <p>Last sync: Aug 26, 2026, 3:45 PM</p>
+              </div>
+              <div class="connection-card__actions">
+                <button class="button button--secondary" type="button">
+                  Disconnect bank
+                </button>
+              </div>
+            </li>
+          </ul>
+        </section>
+
+        <section class="transaction-list" aria-labelledby="transaction-list-title">
+          <h3 id="transaction-list-title">Imported transactions</h3>
+          <div class="transactions-table__scroll">
+            <table class="transactions-table">
+              <thead>
+                <tr>
+                  <th scope="col">Date</th>
+                  <th scope="col">Merchant / description</th>
+                  <th scope="col">Amount</th>
+                  <th scope="col">Currency</th>
+                  <th scope="col">Pending</th>
+                  <th scope="col">Category</th>
+                  <th scope="col">Account</th>
+                  <th scope="col">Bank</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Aug 26, 2026</td>
+                  <td>Example Market</td>
+                  <td>$42.18</td>
+                  <td>USD</td>
+                  <td>Posted</td>
+                  <td>FOOD_AND_DRINK</td>
+                  <td>Everyday Checking</td>
+                  <td>Example Bank</td>
+                </tr>
+                <tr>
+                  <td>Aug 25, 2026</td>
+                  <td>Transfer</td>
+                  <td>-$100.00</td>
+                  <td>USD</td>
+                  <td>Posted</td>
+                  <td>TRANSFER_OUT</td>
+                  <td>Everyday Checking</td>
+                  <td>Example Bank</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Configuration error - Invite Only App mockup</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <nav class="mockup-nav" aria-label="Mockup screens">
+      <a href="index.html">Sign in</a>
+      <a href="dashboard.html">Dashboard</a>
+      <a aria-current="page" href="configuration-error.html"
+        >Configuration error</a
+      >
+    </nav>
+
+    <main class="configuration-error">
+      <section class="configuration-error__panel" aria-labelledby="error-title">
+        <p class="eyebrow">Configuration required</p>
+        <h1 id="error-title">Set up your local environment</h1>
+        <p>
+          Copy <code>.env.example</code> to <code>.env</code>, then provide the
+          required Vite environment variables before starting the app.
+        </p>
+        <p class="form-message form-message--error">
+          Missing required environment variables:
+          <code>VITE_SUPABASE_URL</code>.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

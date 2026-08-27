@@ -1,0 +1,314 @@
+:root {
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  color: #14213d;
+  background: #f5f7fb;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.mockup-nav {
+  display: flex;
+  width: min(100% - 3rem, 70rem);
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 1rem auto 0;
+}
+
+.mockup-nav a {
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  color: #1d4ed8;
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.mockup-nav a:hover,
+.mockup-nav a[aria-current="page"] {
+  background: #e8eefb;
+}
+
+.auth-page,
+.configuration-error {
+  display: grid;
+  min-height: calc(100vh - 4rem);
+  place-items: center;
+  padding: 1.5rem;
+}
+
+.auth-card,
+.configuration-error__panel,
+.app-shell__content {
+  width: min(100%, 31rem);
+  padding: 2.5rem;
+  border: 1px solid #d8e0ef;
+  border-radius: 1rem;
+  background: #ffffff;
+  box-shadow: 0 1.25rem 2.75rem rgb(20 33 61 / 8%);
+}
+
+.eyebrow {
+  margin: 0 0 0.75rem;
+  color: #2563eb;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  margin: 0;
+  color: #14213d;
+  letter-spacing: -0.025em;
+}
+
+h1 {
+  font-size: clamp(2rem, 6vw, 2.75rem);
+  line-height: 1.1;
+}
+
+h2 {
+  font-size: 1.5rem;
+}
+
+h3 {
+  font-size: 1.125rem;
+}
+
+.auth-card__copy,
+.auth-card__hint,
+.app-shell__content > p:not(.eyebrow),
+.transactions-panel__header > div > p:not(.eyebrow) {
+  margin: 1rem 0 0;
+  color: #52627d;
+  line-height: 1.6;
+}
+
+.auth-card__hint {
+  font-size: 0.875rem;
+}
+
+.sign-in-form {
+  display: grid;
+  gap: 0.625rem;
+  margin-top: 1.75rem;
+}
+
+.sign-in-form label {
+  color: #293956;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.sign-in-form input {
+  width: 100%;
+  padding: 0.75rem 0.875rem;
+  border: 1px solid #aebbd2;
+  border-radius: 0.5rem;
+  background: #ffffff;
+  color: #14213d;
+}
+
+button:focus-visible,
+input:focus-visible,
+.mockup-nav a:focus-visible {
+  outline: 0.1875rem solid #93c5fd;
+  outline-offset: 0.125rem;
+}
+
+.button {
+  display: inline-block;
+  border: 0;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: #1d4ed8;
+  color: #ffffff;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.button:hover {
+  background: #1e40af;
+}
+
+.button--secondary {
+  background: #e8eefb;
+  color: #1d4ed8;
+}
+
+.button--secondary:hover {
+  background: #d7e3fc;
+}
+
+.sign-in-form .button {
+  margin-top: 0.5rem;
+  text-align: center;
+}
+
+.form-message {
+  margin: 1rem 0 0;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  line-height: 1.5;
+}
+
+.form-message--error {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.form-message--success {
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.app-shell {
+  width: min(100% - 3rem, 70rem);
+  margin: 0 auto;
+  padding: 2rem 0;
+}
+
+.app-shell__header,
+.transactions-panel__header,
+.connection-card {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+.app-shell__header {
+  align-items: center;
+  padding-bottom: 2rem;
+}
+
+.app-shell__account {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  color: #52627d;
+  font-size: 0.875rem;
+}
+
+.app-shell__content {
+  width: 100%;
+}
+
+.app-shell__content + .app-shell__content {
+  margin-top: 1.5rem;
+}
+
+.connection-list,
+.transaction-list {
+  margin-top: 2rem;
+}
+
+.connection-list__items {
+  display: grid;
+  gap: 0.75rem;
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.connection-card {
+  align-items: center;
+  padding: 1rem;
+  border: 1px solid #d8e0ef;
+  border-radius: 0.75rem;
+}
+
+.connection-card p {
+  margin: 0.375rem 0 0;
+  color: #52627d;
+  font-size: 0.875rem;
+}
+
+.connection-card__actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.transactions-table__scroll {
+  margin-top: 1.5rem;
+  overflow-x: auto;
+}
+
+.transactions-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  text-align: left;
+}
+
+.transactions-table th,
+.transactions-table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid #d8e0ef;
+  white-space: nowrap;
+}
+
+.transactions-table th {
+  color: #293956;
+  font-weight: 700;
+}
+
+.transactions-table td {
+  color: #52627d;
+}
+
+code {
+  padding: 0.125rem 0.3125rem;
+  border-radius: 0.25rem;
+  background: #e8eefb;
+  color: #1d4ed8;
+}
+
+@media (max-width: 40rem) {
+  .mockup-nav,
+  .app-shell {
+    width: min(100% - 2rem, 70rem);
+  }
+
+  .auth-card,
+  .configuration-error__panel,
+  .app-shell__content {
+    padding: 1.5rem;
+  }
+
+  .app-shell__header,
+  .app-shell__account,
+  .transactions-panel__header,
+  .connection-card {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
