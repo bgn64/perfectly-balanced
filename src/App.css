@@ -328,32 +328,78 @@ button:focus-visible {
   color: #52627d;
 }
 
-.transactions-table__scroll {
-  margin-top: 1.5rem;
-  overflow-x: auto;
+.transaction-cards {
+  display: grid;
+  gap: 0.75rem;
+  margin: 1.5rem 0 0;
+  padding: 0;
+  list-style: none;
 }
 
-.transactions-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.875rem;
-  text-align: left;
+.transaction-card {
+  border: 1px solid #d8e0ef;
+  border-radius: 0.75rem;
+  background: #ffffff;
+  overflow: hidden;
 }
 
-.transactions-table th,
-.transactions-table td {
-  padding: 0.75rem;
-  border-bottom: 1px solid #d8e0ef;
+.transaction-card--editing {
+  border-color: #93c5fd;
+  background: #f8faff;
+}
+
+.transaction-card__summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(12rem, 15rem);
+  align-items: start;
+  gap: 1.25rem;
+  padding: 1rem;
+}
+
+.transaction-card__heading {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.transaction-card__heading time,
+.transaction-card__meta,
+.transaction-card__label {
+  color: #52627d;
+  font-size: 0.8125rem;
+}
+
+.transaction-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.transaction-card__meta span + span::before {
+  margin-right: 0.75rem;
+  color: #aebbd2;
+  content: '·';
+}
+
+.transaction-card__amount {
+  color: #b91c1c;
+  font-size: 1rem;
   white-space: nowrap;
 }
 
-.transactions-table th {
-  color: #293956;
-  font-weight: 700;
+.transaction-card__amount--inflow {
+  color: #166534;
 }
 
-.transactions-table td {
-  color: #52627d;
+.transaction-card__categories {
+  display: grid;
+  justify-items: start;
+  gap: 0.375rem;
+}
+
+.transaction-card__label {
+  font-weight: 700;
 }
 
 .split-summary {
@@ -362,22 +408,12 @@ button:focus-visible {
   gap: 0.25rem;
 }
 
-.transaction-row--editing td {
-  border-bottom: 0;
-  background: #f8faff;
-}
-
-.split-editor-row td {
-  padding: 0 0.75rem 1rem;
-  background: #f8faff;
-  white-space: normal;
-}
-
 .split-editor {
-  min-width: 36rem;
+  width: auto;
+  margin: 0 1rem 1rem;
   padding: 1rem;
   border: 1px solid #93c5fd;
-  border-radius: 0.75rem;
+  border-radius: 0.625rem;
   background: #ffffff;
 }
 
@@ -486,5 +522,43 @@ button:focus-visible {
   .category-rename-form {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .transaction-card__summary {
+    grid-template-columns: 1fr auto;
+  }
+
+  .transaction-card__categories {
+    grid-column: 1 / -1;
+  }
+
+  .split-editor__header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .split-line {
+    grid-template-columns: 1fr;
+  }
+
+  .split-line__remove {
+    justify-self: start;
+    margin-bottom: 0;
+  }
+}
+
+@media (max-width: 28rem) {
+  .transaction-card__summary {
+    grid-template-columns: 1fr;
+  }
+
+  .transaction-card__heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .transaction-card__categories {
+    grid-column: auto;
   }
 }

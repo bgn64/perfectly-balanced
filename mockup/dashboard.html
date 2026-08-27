@@ -124,220 +124,242 @@
 
         <section class="transaction-list" aria-labelledby="transaction-list-title">
           <h3 id="transaction-list-title">Imported transactions</h3>
-          <div class="transactions-table__scroll">
-            <table class="transactions-table">
-              <thead>
-                <tr>
-                  <th scope="col">Date</th>
-                  <th scope="col">Merchant / description</th>
-                  <th scope="col">Amount</th>
-                  <th scope="col">Currency</th>
-                  <th scope="col">Pending</th>
-                  <th scope="col">Category splits</th>
-                  <th scope="col">Account</th>
-                  <th scope="col">Bank</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>Aug 26, 2026</td>
-                  <td>Example Market</td>
-                  <td>-$42.18</td>
-                  <td>USD</td>
-                  <td>Posted</td>
-                  <td>
-                    <div class="split-summary">
-                      <span>Groceries -$32.18</span>
-                      <span>Household -$10.00</span>
-                      <button class="text-button" type="button">Edit</button>
-                    </div>
-                  </td>
-                  <td>Everyday Checking</td>
-                  <td>Example Bank</td>
-                </tr>
-                <tr>
-                  <td>Aug 25, 2026</td>
-                  <td>Payroll deposit</td>
-                  <td>+$2,500.00</td>
-                  <td>USD</td>
-                  <td>Posted</td>
-                  <td>
-                    <button class="button button--compact" type="button">
-                      Categorize
+          <ul class="transaction-cards">
+            <li class="transaction-card">
+              <div class="transaction-card__summary">
+                <div class="transaction-card__details">
+                  <div class="transaction-card__heading">
+                    <h4>Example Market</h4>
+                    <time datetime="2026-08-26">Aug 26, 2026</time>
+                  </div>
+                  <div class="transaction-card__meta">
+                    <span>Everyday Checking</span>
+                    <span>Example Bank</span>
+                    <span>USD</span>
+                    <span>Posted</span>
+                  </div>
+                </div>
+                <strong class="transaction-card__amount">-$42.18</strong>
+                <div class="transaction-card__categories">
+                  <span class="transaction-card__label">Category splits</span>
+                  <div class="split-summary">
+                    <span>Groceries -$32.18</span>
+                    <span>Household -$10.00</span>
+                    <button class="text-button" type="button">Edit</button>
+                  </div>
+                </div>
+              </div>
+            </li>
+
+            <li class="transaction-card">
+              <div class="transaction-card__summary">
+                <div class="transaction-card__details">
+                  <div class="transaction-card__heading">
+                    <h4>Payroll deposit</h4>
+                    <time datetime="2026-08-25">Aug 25, 2026</time>
+                  </div>
+                  <div class="transaction-card__meta">
+                    <span>Everyday Checking</span>
+                    <span>Example Bank</span>
+                    <span>USD</span>
+                    <span>Posted</span>
+                  </div>
+                </div>
+                <strong class="transaction-card__amount transaction-card__amount--inflow">
+                  +$2,500.00
+                </strong>
+                <div class="transaction-card__categories">
+                  <span class="transaction-card__label">Category splits</span>
+                  <button class="button button--compact" type="button">
+                    Categorize
+                  </button>
+                </div>
+              </div>
+            </li>
+
+            <li class="transaction-card transaction-card--editing">
+              <div class="transaction-card__summary">
+                <div class="transaction-card__details">
+                  <div class="transaction-card__heading">
+                    <h4>Corner Cafe</h4>
+                    <time datetime="2026-08-24">Aug 24, 2026</time>
+                  </div>
+                  <div class="transaction-card__meta">
+                    <span>Everyday Checking</span>
+                    <span>Example Bank</span>
+                    <span>USD</span>
+                    <span>Posted</span>
+                  </div>
+                </div>
+                <strong class="transaction-card__amount">-$28.50</strong>
+                <div class="transaction-card__categories">
+                  <span class="transaction-card__label">Category splits</span>
+                  <strong>Editing below</strong>
+                </div>
+              </div>
+              <form class="split-editor">
+                <div class="split-editor__header">
+                  <div>
+                    <h4>Split Corner Cafe</h4>
+                    <p>
+                      Assign the full <strong>-$28.50</strong>. Every split
+                      must also be an outflow.
+                    </p>
+                  </div>
+                  <span class="split-balance split-balance--complete">
+                    Fully assigned
+                  </span>
+                </div>
+                <div class="split-lines">
+                  <div class="split-line">
+                    <label>
+                      Category
+                      <select>
+                        <option>Restaurants</option>
+                        <option>Groceries</option>
+                        <option>Household</option>
+                      </select>
+                    </label>
+                    <label>
+                      Amount
+                      <input type="text" value="-20.00" />
+                    </label>
+                    <button
+                      aria-label="Remove Restaurants split"
+                      class="text-button text-button--danger split-line__remove"
+                      type="button"
+                    >
+                      Remove
                     </button>
-                  </td>
-                  <td>Everyday Checking</td>
-                  <td>Example Bank</td>
-                </tr>
-                <tr class="transaction-row--editing">
-                  <td>Aug 24, 2026</td>
-                  <td>Corner Cafe</td>
-                  <td>-$28.50</td>
-                  <td>USD</td>
-                  <td>Posted</td>
-                  <td><strong>Editing below</strong></td>
-                  <td>Everyday Checking</td>
-                  <td>Example Bank</td>
-                </tr>
-                <tr class="split-editor-row">
-                  <td colspan="8">
-                    <form class="split-editor">
-                      <div class="split-editor__header">
-                        <div>
-                          <h4>Split Corner Cafe</h4>
-                          <p>
-                            Assign the full <strong>-$28.50</strong>. Every
-                            split must also be an outflow.
-                          </p>
-                        </div>
-                        <span class="split-balance split-balance--complete">
-                          Fully assigned
-                        </span>
-                      </div>
-                      <div class="split-lines">
-                        <div class="split-line">
-                          <label>
-                            Category
-                            <select>
-                              <option>Restaurants</option>
-                              <option>Groceries</option>
-                              <option>Household</option>
-                            </select>
-                          </label>
-                          <label>
-                            Amount
-                            <input type="text" value="-20.00" />
-                          </label>
-                          <button
-                            aria-label="Remove Restaurants split"
-                            class="text-button text-button--danger split-line__remove"
-                            type="button"
-                          >
-                            Remove
-                          </button>
-                        </div>
-                        <div class="split-line">
-                          <label>
-                            Category
-                            <select>
-                              <option>Groceries</option>
-                              <option>Restaurants</option>
-                              <option>Household</option>
-                            </select>
-                          </label>
-                          <label>
-                            Amount
-                            <input type="text" value="-8.50" />
-                          </label>
-                          <button
-                            aria-label="Remove Groceries split"
-                            class="text-button text-button--danger split-line__remove"
-                            type="button"
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      </div>
-                      <button class="text-button split-editor__add" type="button">
-                        + Add split
-                      </button>
-                      <div class="split-editor__actions">
-                        <button class="button button--secondary" type="button">
-                          Cancel
-                        </button>
-                        <button class="button" type="button">Save splits</button>
-                      </div>
-                    </form>
-                  </td>
-                </tr>
-                <tr class="transaction-row--editing">
-                  <td>Aug 23, 2026</td>
-                  <td>Example refund</td>
-                  <td>+$100.00</td>
-                  <td>USD</td>
-                  <td>Posted</td>
-                  <td><strong>Invalid example below</strong></td>
-                  <td>Everyday Checking</td>
-                  <td>Example Bank</td>
-                </tr>
-                <tr class="split-editor-row">
-                  <td colspan="8">
-                    <form class="split-editor split-editor--invalid">
-                      <div class="split-editor__header">
-                        <div>
-                          <h4>Split Example refund</h4>
-                          <p>
-                            Assign the full <strong>+$100.00</strong>. Every
-                            split must also be an inflow.
-                          </p>
-                        </div>
-                        <span class="split-balance split-balance--error">
-                          $100.00 over
-                        </span>
-                      </div>
-                      <div class="split-lines">
-                        <div class="split-line">
-                          <label>
-                            Category
-                            <select>
-                              <option>Paycheck</option>
-                              <option>Groceries</option>
-                            </select>
-                          </label>
-                          <label>
-                            Amount
-                            <input aria-invalid="true" type="text" value="-50.00" />
-                          </label>
-                          <button
-                            aria-label="Remove Paycheck split"
-                            class="text-button text-button--danger split-line__remove"
-                            type="button"
-                          >
-                            Remove
-                          </button>
-                        </div>
-                        <div class="split-line">
-                          <label>
-                            Category
-                            <select>
-                              <option>Groceries</option>
-                              <option>Paycheck</option>
-                            </select>
-                          </label>
-                          <label>
-                            Amount
-                            <input aria-invalid="true" type="text" value="250.00" />
-                          </label>
-                          <button
-                            aria-label="Remove Groceries split"
-                            class="text-button text-button--danger split-line__remove"
-                            type="button"
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      </div>
-                      <p class="form-message form-message--error">
-                        Splits must total +$100.00, and every split must be an
-                        inflow.
-                      </p>
-                      <button class="text-button split-editor__add" type="button">
-                        + Add split
-                      </button>
-                      <div class="split-editor__actions">
-                        <button class="button button--secondary" type="button">
-                          Cancel
-                        </button>
-                        <button class="button" disabled type="button">
-                          Save splits
-                        </button>
-                      </div>
-                    </form>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+                  </div>
+                  <div class="split-line">
+                    <label>
+                      Category
+                      <select>
+                        <option>Groceries</option>
+                        <option>Restaurants</option>
+                        <option>Household</option>
+                      </select>
+                    </label>
+                    <label>
+                      Amount
+                      <input type="text" value="-8.50" />
+                    </label>
+                    <button
+                      aria-label="Remove Groceries split"
+                      class="text-button text-button--danger split-line__remove"
+                      type="button"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+                <button class="text-button split-editor__add" type="button">
+                  + Add split
+                </button>
+                <div class="split-editor__actions">
+                  <button class="button button--secondary" type="button">
+                    Cancel
+                  </button>
+                  <button class="button" type="button">Save splits</button>
+                </div>
+              </form>
+            </li>
+
+            <li class="transaction-card transaction-card--editing">
+              <div class="transaction-card__summary">
+                <div class="transaction-card__details">
+                  <div class="transaction-card__heading">
+                    <h4>Example refund</h4>
+                    <time datetime="2026-08-23">Aug 23, 2026</time>
+                  </div>
+                  <div class="transaction-card__meta">
+                    <span>Everyday Checking</span>
+                    <span>Example Bank</span>
+                    <span>USD</span>
+                    <span>Posted</span>
+                  </div>
+                </div>
+                <strong class="transaction-card__amount transaction-card__amount--inflow">
+                  +$100.00
+                </strong>
+                <div class="transaction-card__categories">
+                  <span class="transaction-card__label">Category splits</span>
+                  <strong>Invalid example below</strong>
+                </div>
+              </div>
+              <form class="split-editor split-editor--invalid">
+                <div class="split-editor__header">
+                  <div>
+                    <h4>Split Example refund</h4>
+                    <p>
+                      Assign the full <strong>+$100.00</strong>. Every split
+                      must also be an inflow.
+                    </p>
+                  </div>
+                  <span class="split-balance split-balance--error">
+                    $100.00 over
+                  </span>
+                </div>
+                <div class="split-lines">
+                  <div class="split-line">
+                    <label>
+                      Category
+                      <select>
+                        <option>Paycheck</option>
+                        <option>Groceries</option>
+                      </select>
+                    </label>
+                    <label>
+                      Amount
+                      <input aria-invalid="true" type="text" value="-50.00" />
+                    </label>
+                    <button
+                      aria-label="Remove Paycheck split"
+                      class="text-button text-button--danger split-line__remove"
+                      type="button"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                  <div class="split-line">
+                    <label>
+                      Category
+                      <select>
+                        <option>Groceries</option>
+                        <option>Paycheck</option>
+                      </select>
+                    </label>
+                    <label>
+                      Amount
+                      <input aria-invalid="true" type="text" value="250.00" />
+                    </label>
+                    <button
+                      aria-label="Remove Groceries split"
+                      class="text-button text-button--danger split-line__remove"
+                      type="button"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+                <p class="form-message form-message--error">
+                  Splits must total +$100.00, and every split must be an inflow.
+                </p>
+                <button class="text-button split-editor__add" type="button">
+                  + Add split
+                </button>
+                <div class="split-editor__actions">
+                  <button class="button button--secondary" type="button">
+                    Cancel
+                  </button>
+                  <button class="button" disabled type="button">
+                    Save splits
+                  </button>
+                </div>
+              </form>
+            </li>
+          </ul>
         </section>
       </section>
     </main>
