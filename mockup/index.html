@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sign in - Invite Only App mockup</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <nav class="mockup-nav" aria-label="Mockup screens">
+      <a aria-current="page" href="index.html">Sign in</a>
+      <a href="dashboard.html">Dashboard</a>
+      <a href="configuration-error.html">Configuration error</a>
+    </nav>
+
+    <main class="auth-page">
+      <section class="auth-card" aria-labelledby="sign-in-title">
+        <p class="eyebrow">Invite Only App</p>
+        <h1 id="sign-in-title">Sign in with email</h1>
+        <p class="auth-card__copy">
+          Enter the email address associated with your invitation. We will send
+          you a one-time sign-in link.
+        </p>
+        <form class="sign-in-form">
+          <label for="email">Email address</label>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            autocomplete="email"
+            placeholder="you@example.com"
+          />
+          <button class="button" type="button">Email me a sign-in link</button>
+        </form>
+        <p class="auth-card__hint">
+          Static mockup: submitting this form does not send email.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>
