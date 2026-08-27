@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useAuth } from './auth/useAuth.ts'
+import { CategoriesPanel } from './categories/CategoriesPanel.tsx'
 import { getClientConfiguration } from './config.ts'
 import { getSupabaseClient } from './lib/supabase.ts'
 import { TransactionsPanel } from './transactions/TransactionsPanel.tsx'
@@ -140,6 +141,7 @@ function AuthenticatedShell({
   const { signOut } = useAuth()
   const [isSigningOut, setIsSigningOut] = useState(false)
   const [signOutError, setSignOutError] = useState<string | null>(null)
+  const [categoriesRevision, setCategoriesRevision] = useState(0)
 
   async function handleSignOut() {
     setIsSigningOut(true)
@@ -189,7 +191,12 @@ function AuthenticatedShell({
           </p>
         )}
       </section>
-      <TransactionsPanel />
+      <CategoriesPanel
+        onCategoriesChanged={() => {
+          setCategoriesRevision((revision) => revision + 1)
+        }}
+      />
+      <TransactionsPanel categoriesRevision={categoriesRevision} />
     </main>
   )
 }

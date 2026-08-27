@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { Fragment, useCallback, useEffect, useState } from 'react'
 import { usePlaidLink } from 'react-plaid-link'
 import { getSupabaseClient } from '../lib/supabase.ts'
 
@@ -11,8 +11,25 @@ interface Transaction {
   amount: number
   currency_code: string | null
   is_pending: boolean
-  category: string | null
   account_name: string
+}
+
+interface Category {
+  id: string
+  name: string
+}
+
+interface TransactionSplit {
+  id: string
+  transaction_id: string
+  category_id: string
+  amount: number
+}
+
+interface DraftSplit {
+  key: string
+  categoryId: string
+  amount: string
 }
 
 interface PlaidItem {
@@ -33,6 +50,8 @@ interface PlaidItem {
 interface DashboardData {
   items: PlaidItem[]
   transactions: Transaction[]
+  categories: Category[]
+  splits: TransactionSplit[]
 }
 
 interface LinkTokenResponse {
@@ -74,17 +93,31 @@ function formatTimestamp(value: string | null): string {
 }
 
 function formatAmount(amount: number, currencyCode: string | null): string {
+  let formatted: string
+
   if (!currencyCode) {
-    return new Intl.NumberFormat(undefined, {
+    formatted = new Intl.NumberFormat(undefined, {
       maximumFractionDigits: 2,
       minimumFractionDigits: 2,
     }).format(amount)
+  } else {
+    formatted = new Intl.NumberFormat(undefined, {
+      currency: currencyCode,
+      style: 'currency',
+    }).format(amount)
   }
 
-  return new Intl.NumberFormat(undefined, {
-    currency: currencyCode,
-    style: 'currency',
-  }).format(amount)
+  return amount > 0 ? `+${formatted}` : formatted
+}
+
+function parseSplitAmount(value: string): number | null {
+  const normalized = value.trim()
+  if (!/^[+-]?\d+(?:\.\d{1,2})?$/.test(normalized)) {
+    return null
+  }
+
+  const amount = Number(normalized)
+  return Number.isFinite(amount) ? amount : null
 }
 
 function hasOAuthRedirect(): boolean {
@@ -143,7 +176,8 @@ async function functionErrorMessage(
 
 async function queryDashboard(): Promise<DashboardData> {
   const client = getSupabaseClient()
-  const [itemsResult, transactionsResult] = await Promise.all([
+  const [itemsResult, transactionsResult, categoriesResult, splitsResult] =
+    await Promise.all([
     client
       .from('plaid_items')
       .select(
@@ -153,9 +187,13 @@ async function queryDashboard(): Promise<DashboardData> {
     client
       .from('transactions')
       .select(
-        'id, plaid_item_id, transaction_date, merchant_name, transaction_name, amount, currency_code, is_pending, category, account_name',
+        'id, plaid_item_id, transaction_date, merchant_name, transaction_name, amount, currency_code, is_pending, account_name',
       )
       .order('transaction_date', { ascending: false }),
+    client.from('categories').select('id, name').order('name'),
+    client
+      .from('transaction_category_splits')
+      .select('id, transaction_id, category_id, amount'),
   ])
 
   if (itemsResult.error) {
@@ -166,9 +204,19 @@ async function queryDashboard(): Promise<DashboardData> {
     throw new Error(transactionsResult.error.message)
   }
 
+  if (categoriesResult.error) {
+    throw new Error(categoriesResult.error.message)
+  }
+
+  if (splitsResult.error) {
+    throw new Error(splitsResult.error.message)
+  }
+
   return {
     items: itemsResult.data ?? [],
     transactions: transactionsResult.data ?? [],
+    categories: categoriesResult.data ?? [],
+    splits: splitsResult.data ?? [],
   }
 }
 
@@ -191,9 +239,15 @@ function connectionStatus(item: PlaidItem): string {
   }
 }
 
-export function TransactionsPanel() {
+export function TransactionsPanel({
+  categoriesRevision,
+}: {
+  categoriesRevision: number
+}) {
   const [items, setItems] = useState<PlaidItem[]>([])
   const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
+  const [splits, setSplits] = useState<TransactionSplit[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isCreatingLink, setIsCreatingLink] = useState(false)
   const [isImporting, setIsImporting] = useState(false)
@@ -204,6 +258,12 @@ export function TransactionsPanel() {
   const [dataError, setDataError] = useState<string | null>(null)
   const [connectionError, setConnectionError] = useState<string | null>(null)
   const [connectionMessage, setConnectionMessage] = useState<string | null>(null)
+  const [editingTransactionId, setEditingTransactionId] = useState<
+    string | null
+  >(null)
+  const [draftSplits, setDraftSplits] = useState<DraftSplit[]>([])
+  const [splitError, setSplitError] = useState<string | null>(null)
+  const [isSavingSplits, setIsSavingSplits] = useState(false)
   const [updatingItemId, setUpdatingItemId] = useState<string | null>(null)
   const [linkToken, setLinkToken] = useState<string | null>(() => {
     if (!hasOAuthRedirect()) {
@@ -227,6 +287,8 @@ export function TransactionsPanel() {
       setDataError(null)
       setItems(dashboard.items)
       setTransactions(dashboard.transactions)
+      setCategories(dashboard.categories)
+      setSplits(dashboard.splits)
     } catch (error) {
       setDataError(responseErrorMessage(error, 'We could not load transactions.'))
     } finally {
@@ -248,6 +310,8 @@ export function TransactionsPanel() {
         setDataError(null)
         setItems(dashboard.items)
         setTransactions(dashboard.transactions)
+        setCategories(dashboard.categories)
+        setSplits(dashboard.splits)
       } catch (error) {
         if (isCurrent) {
           setDataError(
@@ -266,7 +330,7 @@ export function TransactionsPanel() {
     return () => {
       isCurrent = false
     }
-  }, [])
+  }, [categoriesRevision])
 
   const hasInitialSync = items.some((item) => item.status === 'initial_syncing')
 
@@ -546,8 +610,199 @@ export function TransactionsPanel() {
     await refreshDashboard()
   }
 
+  function startSplitEdit(transaction: Transaction) {
+    const currentSplits = splits.filter(
+      (split) => split.transaction_id === transaction.id,
+    )
+
+    setEditingTransactionId(transaction.id)
+    setSplitError(null)
+    setDraftSplits(
+      currentSplits.length > 0
+        ? currentSplits.map((split) => ({
+            key: split.id,
+            categoryId: split.category_id,
+            amount: split.amount.toFixed(2),
+          }))
+        : [
+            {
+              key: window.crypto.randomUUID(),
+              categoryId: categories[0]?.id ?? '',
+              amount: transaction.amount.toFixed(2),
+            },
+          ],
+    )
+  }
+
+  function updateDraftSplit(
+    key: string,
+    field: 'categoryId' | 'amount',
+    value: string,
+  ) {
+    setDraftSplits((current) =>
+      current.map((split) =>
+        split.key === key ? { ...split, [field]: value } : split,
+      ),
+    )
+    setSplitError(null)
+  }
+
+  function addDraftSplit(transaction: Transaction) {
+    const selectedCategoryIds = new Set(
+      draftSplits.map((split) => split.categoryId),
+    )
+    const availableCategory = categories.find(
+      (category) => !selectedCategoryIds.has(category.id),
+    )
+    const assignedAmount = draftSplits.reduce(
+      (sum, split) => sum + (parseSplitAmount(split.amount) ?? 0),
+      0,
+    )
+
+    setDraftSplits((current) => [
+      ...current,
+      {
+        key: window.crypto.randomUUID(),
+        categoryId: availableCategory?.id ?? '',
+        amount: (transaction.amount - assignedAmount).toFixed(2),
+      },
+    ])
+    setSplitError(null)
+  }
+
+  function removeDraftSplit(key: string) {
+    setDraftSplits((current) =>
+      current.filter((split) => split.key !== key),
+    )
+    setSplitError(null)
+  }
+
+  function validateDraftSplits(transaction: Transaction): string | null {
+    if (draftSplits.length === 0) {
+      return null
+    }
+
+    if (draftSplits.some((split) => !split.categoryId)) {
+      return 'Choose a category for every split.'
+    }
+
+    if (new Set(draftSplits.map((split) => split.categoryId)).size !==
+      draftSplits.length) {
+      return 'A category can appear only once in a transaction split.'
+    }
+
+    const amounts = draftSplits.map((split) =>
+      parseSplitAmount(split.amount),
+    )
+
+    if (amounts.some((amount) => amount === null || amount === 0)) {
+      return 'Enter a nonzero amount with no more than two decimal places for every split.'
+    }
+
+    const validAmounts = amounts as number[]
+    if (
+      validAmounts.some(
+        (amount) => Math.sign(amount) !== Math.sign(transaction.amount),
+      )
+    ) {
+      return `Every split must be ${
+        transaction.amount > 0 ? 'an inflow' : 'an outflow'
+      }.`
+    }
+
+    const transactionCents = Math.round(transaction.amount * 100)
+    const splitCents = validAmounts.reduce(
+      (sum, amount) => sum + Math.round(amount * 100),
+      0,
+    )
+
+    if (splitCents !== transactionCents) {
+      return `Splits must total ${formatAmount(
+        transaction.amount,
+        transaction.currency_code,
+      )}.`
+    }
+
+    return null
+  }
+
+  function splitBalanceLabel(transaction: Transaction): {
+    label: string
+    isValid: boolean
+  } {
+    if (draftSplits.length === 0) {
+      return { label: 'Unassigned', isValid: true }
+    }
+
+    const amounts = draftSplits.map((split) =>
+      parseSplitAmount(split.amount),
+    )
+    if (amounts.some((amount) => amount === null)) {
+      return { label: 'Check amounts', isValid: false }
+    }
+
+    const remainingCents =
+      Math.round(transaction.amount * 100) -
+      (amounts as number[]).reduce(
+        (sum, amount) => sum + Math.round(amount * 100),
+        0,
+      )
+
+    if (remainingCents === 0 && !validateDraftSplits(transaction)) {
+      return { label: 'Fully assigned', isValid: true }
+    }
+
+    const direction = Math.sign(remainingCents) === Math.sign(transaction.amount)
+      ? 'remaining'
+      : 'over'
+
+    return {
+      label: `${formatAmount(
+        Math.abs(remainingCents) / 100,
+        transaction.currency_code,
+      ).replace(/^\+/, '')} ${direction}`,
+      isValid: false,
+    }
+  }
+
+  async function saveSplits(transaction: Transaction) {
+    const validationError = validateDraftSplits(transaction)
+    if (validationError) {
+      setSplitError(validationError)
+      return
+    }
+
+    setIsSavingSplits(true)
+    setSplitError(null)
+
+    const { error } = await getSupabaseClient().rpc(
+      'replace_transaction_category_splits',
+      {
+        p_transaction_id: transaction.id,
+        p_splits: draftSplits.map((split) => ({
+          category_id: split.categoryId,
+          amount: Number(split.amount),
+        })),
+      },
+    )
+
+    setIsSavingSplits(false)
+
+    if (error) {
+      setSplitError(error.message)
+      return
+    }
+
+    setEditingTransactionId(null)
+    setDraftSplits([])
+    await refreshDashboard()
+  }
+
   const institutionsByItemId = new Map(
     items.map((item) => [item.id, item.institution_name ?? 'Connected bank']),
+  )
+  const categoriesById = new Map(
+    categories.map((category) => [category.id, category]),
   )
 
   return (
@@ -565,6 +820,7 @@ export function TransactionsPanel() {
           </p>
         </div>
         <button
+          className="button"
           type="button"
           onClick={() => void startConnection()}
           disabled={isCreatingLink || isImporting}
@@ -704,38 +960,250 @@ export function TransactionsPanel() {
                   <th scope="col">Amount</th>
                   <th scope="col">Currency</th>
                   <th scope="col">Pending</th>
-                  <th scope="col">Category</th>
+                  <th scope="col">Category splits</th>
                   <th scope="col">Account</th>
                   <th scope="col">Bank</th>
                 </tr>
               </thead>
               <tbody>
-                {transactions.map((transaction) => (
-                  <tr key={transaction.id}>
-                    <td>{formatDate(transaction.transaction_date)}</td>
-                    <td>
-                      {transaction.merchant_name ??
-                        transaction.transaction_name ??
-                        '-'}
-                    </td>
-                    <td>
-                      {formatAmount(
-                        transaction.amount,
-                        transaction.currency_code,
+                {transactions.map((transaction) => {
+                  const transactionSplits = splits.filter(
+                    (split) => split.transaction_id === transaction.id,
+                  )
+                  const isEditing =
+                    editingTransactionId === transaction.id
+                  const balance = isEditing
+                    ? splitBalanceLabel(transaction)
+                    : null
+
+                  return (
+                    <Fragment key={transaction.id}>
+                      <tr className={isEditing ? 'transaction-row--editing' : ''}>
+                        <td>{formatDate(transaction.transaction_date)}</td>
+                        <td>
+                          {transaction.merchant_name ??
+                            transaction.transaction_name ??
+                            '-'}
+                        </td>
+                        <td>
+                          {formatAmount(
+                            transaction.amount,
+                            transaction.currency_code,
+                          )}
+                        </td>
+                        <td>{transaction.currency_code ?? '-'}</td>
+                        <td>{transaction.is_pending ? 'Pending' : 'Posted'}</td>
+                        <td>
+                          {isEditing ? (
+                            <strong>Editing below</strong>
+                          ) : transactionSplits.length > 0 ? (
+                            <div className="split-summary">
+                              {transactionSplits.map((split) => (
+                                <span key={split.id}>
+                                  {categoriesById.get(split.category_id)?.name ??
+                                    'Deleted category'}{' '}
+                                  {formatAmount(
+                                    split.amount,
+                                    transaction.currency_code,
+                                  )}
+                                </span>
+                              ))}
+                              <button
+                                className="text-button"
+                                type="button"
+                                onClick={() => startSplitEdit(transaction)}
+                              >
+                                Edit
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              className="button button--compact"
+                              type="button"
+                              onClick={() => startSplitEdit(transaction)}
+                              disabled={categories.length === 0}
+                              title={
+                                categories.length === 0
+                                  ? 'Create a category first'
+                                  : undefined
+                              }
+                            >
+                              Categorize
+                            </button>
+                          )}
+                        </td>
+                        <td>{transaction.account_name}</td>
+                        <td>
+                          {transaction.plaid_item_id
+                            ? institutionsByItemId.get(
+                                transaction.plaid_item_id,
+                              ) ?? 'Connected bank'
+                            : 'Previous import'}
+                        </td>
+                      </tr>
+                      {isEditing && balance && (
+                        <tr className="split-editor-row">
+                          <td colSpan={8}>
+                            <form
+                              className={`split-editor${
+                                splitError ? ' split-editor--invalid' : ''
+                              }`}
+                              onSubmit={(event) => {
+                                event.preventDefault()
+                                void saveSplits(transaction)
+                              }}
+                            >
+                              <div className="split-editor__header">
+                                <div>
+                                  <h4>
+                                    Split{' '}
+                                    {transaction.merchant_name ??
+                                      transaction.transaction_name ??
+                                      'transaction'}
+                                  </h4>
+                                  <p>
+                                    Assign the full{' '}
+                                    <strong>
+                                      {formatAmount(
+                                        transaction.amount,
+                                        transaction.currency_code,
+                                      )}
+                                    </strong>
+                                    . Every split must also be{' '}
+                                    {transaction.amount > 0
+                                      ? 'an inflow'
+                                      : 'an outflow'}
+                                    .
+                                  </p>
+                                </div>
+                                <span
+                                  className={`split-balance ${
+                                    balance.isValid
+                                      ? 'split-balance--complete'
+                                      : 'split-balance--error'
+                                  }`}
+                                >
+                                  {balance.label}
+                                </span>
+                              </div>
+
+                              <div className="split-lines">
+                                {draftSplits.map((split) => (
+                                  <div className="split-line" key={split.key}>
+                                    <label>
+                                      Category
+                                      <select
+                                        value={split.categoryId}
+                                        onChange={(event) =>
+                                          updateDraftSplit(
+                                            split.key,
+                                            'categoryId',
+                                            event.target.value,
+                                          )
+                                        }
+                                        disabled={isSavingSplits}
+                                      >
+                                        <option value="">Choose category</option>
+                                        {categories.map((category) => (
+                                          <option
+                                            key={category.id}
+                                            value={category.id}
+                                            disabled={draftSplits.some(
+                                              (other) =>
+                                                other.key !== split.key &&
+                                                other.categoryId === category.id,
+                                            )}
+                                          >
+                                            {category.name}
+                                          </option>
+                                        ))}
+                                      </select>
+                                    </label>
+                                    <label>
+                                      Amount
+                                      <input
+                                        inputMode="decimal"
+                                        type="text"
+                                        value={split.amount}
+                                        onChange={(event) =>
+                                          updateDraftSplit(
+                                            split.key,
+                                            'amount',
+                                            event.target.value,
+                                          )
+                                        }
+                                        disabled={isSavingSplits}
+                                        aria-invalid={
+                                          splitError ? 'true' : undefined
+                                        }
+                                      />
+                                    </label>
+                                    <button
+                                      aria-label="Remove split"
+                                      className="text-button text-button--danger split-line__remove"
+                                      type="button"
+                                      onClick={() => removeDraftSplit(split.key)}
+                                      disabled={isSavingSplits}
+                                    >
+                                      Remove
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+
+                              {splitError && (
+                                <p
+                                  className="form-message form-message--error"
+                                  role="alert"
+                                >
+                                  {splitError}
+                                </p>
+                              )}
+
+                              <button
+                                className="text-button split-editor__add"
+                                type="button"
+                                onClick={() => addDraftSplit(transaction)}
+                                disabled={
+                                  isSavingSplits ||
+                                  draftSplits.length >= categories.length
+                                }
+                              >
+                                + Add split
+                              </button>
+                              <div className="split-editor__actions">
+                                <button
+                                  className="button button--secondary"
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingTransactionId(null)
+                                    setDraftSplits([])
+                                    setSplitError(null)
+                                  }}
+                                  disabled={isSavingSplits}
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  className="button"
+                                  type="submit"
+                                  disabled={
+                                    isSavingSplits ||
+                                    Boolean(validateDraftSplits(transaction))
+                                  }
+                                >
+                                  {isSavingSplits
+                                    ? 'Saving splits...'
+                                    : 'Save splits'}
+                                </button>
+                              </div>
+                            </form>
+                          </td>
+                        </tr>
                       )}
-                    </td>
-                    <td>{transaction.currency_code ?? '-'}</td>
-                    <td>{transaction.is_pending ? 'Pending' : 'Posted'}</td>
-                    <td>{transaction.category ?? '-'}</td>
-                    <td>{transaction.account_name}</td>
-                    <td>
-                      {transaction.plaid_item_id
-                        ? institutionsByItemId.get(transaction.plaid_item_id) ??
-                          'Connected bank'
-                        : 'Previous import'}
-                    </td>
-                  </tr>
-                ))}
+                    </Fragment>
+                  )
+                })}
               </tbody>
             </table>
           </div>
