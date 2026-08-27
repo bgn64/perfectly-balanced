@@ -10,6 +10,7 @@
     <nav class="mockup-nav" aria-label="Mockup screens">
       <a href="index.html">Sign in</a>
       <a aria-current="page" href="dashboard.html">Dashboard</a>
+      <a href="budget-empty.html">Empty budget state</a>
       <a href="configuration-error.html">Configuration error</a>
     </nav>
 
@@ -86,6 +87,168 @@
             </div>
           </li>
         </ul>
+      </section>
+
+      <section class="app-shell__content budget-panel" aria-labelledby="budget-title">
+        <div class="budget-panel__header">
+          <div>
+            <p class="eyebrow">Monthly budget</p>
+            <h2 id="budget-title">August 2026 budget</h2>
+            <p>
+              Budgeted amounts use positive numbers for planned income and
+              negative numbers for planned spending.
+            </p>
+          </div>
+          <form class="month-picker">
+            <label for="budget-month">Budget month</label>
+            <div class="month-picker__controls">
+              <input id="budget-month" type="month" value="2026-08" />
+              <button class="button button--secondary" type="button">
+                View month
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div class="budget-editors">
+          <form class="budget-editor-card">
+            <h3>Add subsection</h3>
+            <label for="subsection-name">Subsection name</label>
+            <div class="budget-editor-card__controls">
+              <input
+                id="subsection-name"
+                placeholder="e.g. Essentials"
+                type="text"
+              />
+              <button class="button" type="button">Add subsection</button>
+            </div>
+          </form>
+
+          <form class="budget-editor-card">
+            <h3>Add category</h3>
+            <div class="budget-allocation-fields">
+              <label>
+                Category
+                <select>
+                  <option>Restaurants</option>
+                  <option>Paycheck</option>
+                  <option>Groceries</option>
+                </select>
+              </label>
+              <label>
+                Budgeted amount
+                <input type="text" value="-150.00" />
+              </label>
+              <label>
+                Location
+                <select>
+                  <option>Essentials</option>
+                  <option>Unsectioned</option>
+                </select>
+              </label>
+            </div>
+            <button class="button" type="button">Add to budget</button>
+          </form>
+        </div>
+
+        <div class="budget-groups">
+          <section class="budget-group" aria-labelledby="unsectioned-title">
+            <div class="budget-group__header">
+              <div>
+                <p class="budget-group__label">Budget root</p>
+                <h3 id="unsectioned-title">Unsectioned</h3>
+              </div>
+            </div>
+            <ul class="budget-allocation-list">
+              <li class="budget-allocation">
+                <div>
+                  <h4>Paycheck</h4>
+                  <p>Planned income</p>
+                </div>
+                <dl class="budget-allocation__amounts">
+                  <div>
+                    <dt>Budgeted</dt>
+                    <dd class="amount--inflow">+$5,000.00</dd>
+                  </div>
+                  <div>
+                    <dt>Received so far</dt>
+                    <dd class="amount--inflow">+$2,500.00</dd>
+                  </div>
+                </dl>
+                <div class="budget-allocation__actions">
+                  <button class="text-button" type="button">Edit amount</button>
+                  <button class="text-button" type="button">Move down</button>
+                  <button class="text-button text-button--danger" type="button">
+                    Remove
+                  </button>
+                </div>
+              </li>
+            </ul>
+          </section>
+
+          <section class="budget-group" aria-labelledby="essentials-title">
+            <div class="budget-group__header">
+              <div>
+                <p class="budget-group__label">Subsection</p>
+                <h3 id="essentials-title">Essentials</h3>
+              </div>
+              <div class="budget-group__actions">
+                <button class="text-button" type="button">Move up</button>
+                <button class="text-button" type="button">Move down</button>
+                <button class="text-button text-button--danger" type="button">
+                  Delete subsection
+                </button>
+              </div>
+            </div>
+            <ul class="budget-allocation-list">
+              <li class="budget-allocation">
+                <div>
+                  <h4>Groceries</h4>
+                  <p>Planned spending</p>
+                </div>
+                <dl class="budget-allocation__amounts">
+                  <div>
+                    <dt>Budgeted</dt>
+                    <dd class="amount--outflow">-$600.00</dd>
+                  </div>
+                  <div>
+                    <dt>Spent so far</dt>
+                    <dd class="amount--outflow">-$475.22</dd>
+                  </div>
+                </dl>
+                <div class="budget-allocation__actions">
+                  <button class="text-button" type="button">Edit amount</button>
+                  <button class="text-button" type="button">Move down</button>
+                  <button class="text-button text-button--danger" type="button">
+                    Remove
+                  </button>
+                </div>
+              </li>
+              <li class="budget-allocation budget-allocation--editing">
+                <div>
+                  <h4>Housing</h4>
+                  <p>Editing planned spending</p>
+                </div>
+                <form class="budget-allocation__edit-form">
+                  <label>
+                    Budgeted amount
+                    <input type="text" value="-1800.00" />
+                  </label>
+                  <div>
+                    <button class="text-button" type="button">Save</button>
+                    <button class="text-button" type="button">Cancel</button>
+                  </div>
+                </form>
+                <div class="budget-allocation__actions">
+                  <button class="text-button" type="button">Move up</button>
+                  <button class="text-button text-button--danger" type="button">
+                    Remove
+                  </button>
+                </div>
+              </li>
+            </ul>
+          </section>
+        </div>
       </section>
 
       <section

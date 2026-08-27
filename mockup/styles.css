@@ -265,6 +265,10 @@ select:focus-visible,
 
 .category-create-form input,
 .category-item input,
+.budget-editor-card input,
+.budget-editor-card select,
+.budget-allocation__edit-form input,
+.month-picker input,
 .split-line input,
 .split-line select {
   min-width: 0;
@@ -324,6 +328,188 @@ select:focus-visible,
 
 .text-button--danger {
   color: #b91c1c;
+}
+
+.budget-panel__header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 2rem;
+}
+
+.budget-panel__header > div > p:not(.eyebrow),
+.budget-empty-state p {
+  margin: 0.75rem 0 0;
+  color: #52627d;
+  line-height: 1.6;
+}
+
+.month-picker {
+  flex: 0 0 auto;
+}
+
+.month-picker label,
+.budget-editor-card label,
+.budget-allocation__edit-form label {
+  display: grid;
+  gap: 0.375rem;
+  color: #293956;
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.month-picker__controls,
+.budget-editor-card__controls {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.375rem;
+}
+
+.budget-editors {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.budget-editor-card,
+.budget-empty-state {
+  padding: 1rem;
+  border: 1px solid #d8e0ef;
+  border-radius: 0.75rem;
+  background: #f8faff;
+}
+
+.budget-editor-card h3 {
+  margin-bottom: 0.75rem;
+}
+
+.budget-editor-card__controls input {
+  width: 100%;
+}
+
+.budget-allocation-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 9rem minmax(0, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.budget-groups {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.budget-group {
+  border: 1px solid #d8e0ef;
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
+.budget-group__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  background: #f8faff;
+}
+
+.budget-group__label {
+  margin: 0 0 0.25rem;
+  color: #52627d;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.budget-group__actions,
+.budget-allocation__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.budget-allocation-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.budget-allocation {
+  display: grid;
+  grid-template-columns: minmax(8rem, 1fr) minmax(15rem, 1.25fr) auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  border-top: 1px solid #d8e0ef;
+}
+
+.budget-allocation:first-child {
+  border-top: 0;
+}
+
+.budget-allocation--editing {
+  background: #eff6ff;
+}
+
+.budget-allocation p {
+  margin: 0.25rem 0 0;
+  color: #52627d;
+  font-size: 0.8125rem;
+}
+
+.budget-allocation__amounts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(7rem, 1fr));
+  gap: 1rem;
+  margin: 0;
+}
+
+.budget-allocation__amounts div {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.budget-allocation__amounts dt {
+  color: #52627d;
+  font-size: 0.75rem;
+}
+
+.budget-allocation__amounts dd {
+  margin: 0;
+  font-weight: 700;
+}
+
+.amount--inflow {
+  color: #166534;
+}
+
+.amount--outflow {
+  color: #b91c1c;
+}
+
+.budget-allocation__edit-form {
+  display: flex;
+  align-items: end;
+  gap: 0.75rem;
+}
+
+.budget-allocation__edit-form > div {
+  display: flex;
+  gap: 0.5rem;
+  padding-bottom: 0.625rem;
+}
+
+.budget-empty-state {
+  margin-top: 1.5rem;
+  text-align: center;
+}
+
+.budget-empty-state .button {
+  margin-top: 1rem;
 }
 
 .connection-list,
@@ -551,6 +737,7 @@ code {
   .app-shell__account,
   .transactions-panel__header,
   .section-header,
+  .budget-panel__header,
   .connection-card {
     align-items: flex-start;
     flex-direction: column;
@@ -560,10 +747,28 @@ code {
     width: 100%;
   }
 
+  .month-picker {
+    width: 100%;
+  }
+
+  .month-picker__controls,
   .category-create-form__controls,
   .category-item {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .budget-editors,
+  .budget-allocation-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .budget-allocation {
+    grid-template-columns: 1fr;
+  }
+
+  .budget-allocation__actions {
+    justify-content: flex-start;
   }
 
   .transaction-card__summary {
@@ -586,6 +791,18 @@ code {
   .split-line__remove {
     justify-self: start;
     margin-bottom: 0;
+  }
+}
+
+@media (max-width: 34rem) {
+  .budget-group__header,
+  .budget-allocation__edit-form {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .budget-allocation__amounts {
+    grid-template-columns: 1fr;
   }
 }
 

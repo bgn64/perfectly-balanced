@@ -241,8 +241,10 @@ function connectionStatus(item: PlaidItem): string {
 
 export function TransactionsPanel({
   categoriesRevision,
+  onTransactionsChanged,
 }: {
   categoriesRevision: number
+  onTransactionsChanged: () => void
 }) {
   const [items, setItems] = useState<PlaidItem[]>([])
   const [transactions, setTransactions] = useState<Transaction[]>([])
@@ -289,12 +291,13 @@ export function TransactionsPanel({
       setTransactions(dashboard.transactions)
       setCategories(dashboard.categories)
       setSplits(dashboard.splits)
+      onTransactionsChanged()
     } catch (error) {
       setDataError(responseErrorMessage(error, 'We could not load transactions.'))
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [onTransactionsChanged])
 
   useEffect(() => {
     let isCurrent = true
@@ -611,6 +614,13 @@ export function TransactionsPanel({
   }
 
   function startSplitEdit(transaction: Transaction) {
+    if (transaction.currency_code !== 'USD') {
+      setSplitError('Only USD transactions can be categorized.')
+      setEditingTransactionId(transaction.id)
+      setDraftSplits([])
+      return
+    }
+
     const currentSplits = splits.filter(
       (split) => split.transaction_id === transaction.id,
     )
