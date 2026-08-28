@@ -1,8 +1,8 @@
 import { useCallback, useState, type FormEvent } from 'react'
 import { useAuth } from './auth/useAuth.ts'
 import { BudgetPanel } from './budgets/BudgetPanel.tsx'
-import { CategoriesPanel } from './categories/CategoriesPanel.tsx'
 import { getClientConfiguration } from './config.ts'
+import { InsightsPanel } from './insights/InsightsPanel.tsx'
 import { getSupabaseClient } from './lib/supabase.ts'
 import { TransactionsPanel } from './transactions/TransactionsPanel.tsx'
 import './App.css'
@@ -140,6 +140,9 @@ function AuthenticatedShell({
   email: string
 }) {
   const { signOut } = useAuth()
+  const [activeView, setActiveView] = useState<
+    'budgets' | 'transactions' | 'insights'
+  >('budgets')
   const [isSigningOut, setIsSigningOut] = useState(false)
   const [signOutError, setSignOutError] = useState<string | null>(null)
   const [categoriesRevision, setCategoriesRevision] = useState(0)
@@ -164,52 +167,93 @@ function AuthenticatedShell({
     }
   }
 
+  const handleCategoriesChanged = useCallback(() => {
+    setCategoriesRevision((revision) => revision + 1)
+  }, [])
+  const initials = email
+    .split('@')[0]
+    .split(/[._-]/)
+    .map((part) => part[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase()
+
   return (
-    <main className="app-shell">
-      <header className="app-shell__header">
-        <div>
-          <p className="eyebrow">{appName}</p>
-          <h1>Welcome</h1>
-        </div>
-        <div className="app-shell__account">
-          <span>{email}</span>
-          <button
-            className="button button--secondary"
-            type="button"
-            onClick={handleSignOut}
-            disabled={isSigningOut}
-          >
-            {isSigningOut ? 'Signing out...' : 'Sign out'}
-          </button>
-        </div>
+    <div className="authenticated-app">
+      <header className="topbar">
+        <button
+          className="brand"
+          type="button"
+          onClick={() => setActiveView('budgets')}
+        >
+          <span className="brand-mark" aria-hidden="true">P</span>
+          {appName}
+        </button>
+        <nav className="primary-nav" aria-label="Primary navigation">
+          {(
+            [
+              ['budgets', 'Budgets'],
+              ['transactions', 'Transactions'],
+              ['insights', 'Insights'],
+            ] as const
+          ).map(([view, label]) => (
+            <button
+              aria-current={activeView === view ? 'page' : undefined}
+              className={activeView === view ? 'active' : ''}
+              key={view}
+              type="button"
+              onClick={() => setActiveView(view)}
+            >
+              {label}
+            </button>
+          ))}
+        </nav>
+        <details className="account-menu">
+          <summary className="account-chip">
+            <span className="avatar">{initials || 'PB'}</span>
+            <span className="account-label">{email.split('@')[0]}</span>
+          </summary>
+          <div className="account-popover">
+            <strong>{email}</strong>
+            <button
+              className="button button--secondary"
+              type="button"
+              onClick={() => void handleSignOut()}
+              disabled={isSigningOut}
+            >
+              {isSigningOut ? 'Signing out...' : 'Sign out'}
+            </button>
+          </div>
+        </details>
       </header>
-      <section className="app-shell__content" aria-labelledby="workspace-title">
-        <p className="eyebrow">Protected workspace</p>
-        <h2 id="workspace-title">You are signed in</h2>
-        <p>
-          This is the authenticated starting point for your application. Add
-          product features here knowing that only invited users can reach them.
-        </p>
-        {signOutError && (
+      {signOutError && (
+        <div className="shell-message">
           <p className="form-message form-message--error" role="alert">
             {signOutError}
           </p>
-        )}
-      </section>
-      <CategoriesPanel
-        onCategoriesChanged={() => {
-          setCategoriesRevision((revision) => revision + 1)
-        }}
-      />
-      <BudgetPanel
-        categoriesRevision={categoriesRevision}
-        activityRevision={budgetActivityRevision}
-      />
-      <TransactionsPanel
-        categoriesRevision={categoriesRevision}
-        onTransactionsChanged={handleTransactionsChanged}
-      />
-    </main>
+        </div>
+      )}
+      {activeView === 'budgets' && (
+        <BudgetPanel
+          categoriesRevision={categoriesRevision}
+          activityRevision={budgetActivityRevision}
+          onCategoriesChanged={handleCategoriesChanged}
+        />
+      )}
+      {activeView === 'transactions' && (
+        <TransactionsPanel
+          categoriesRevision={categoriesRevision}
+          onCategoriesChanged={handleCategoriesChanged}
+          onTransactionsChanged={handleTransactionsChanged}
+        />
+      )}
+      {activeView === 'insights' && (
+        <InsightsPanel
+          categoriesRevision={categoriesRevision}
+          activityRevision={budgetActivityRevision}
+        />
+      )}
+    </div>
   )
 }
 

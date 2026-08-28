@@ -1,29 +1,32 @@
-import { useCallback, useEffect, useState } from 'react'
-import { usePlaidLink } from 'react-plaid-link'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
+import { useAuth } from '../auth/useAuth.ts'
+import { CategoryCombobox } from '../finance/CategoryCombobox.tsx'
+import type {
+  Budget,
+  Category,
+  Transaction,
+  TransactionSplit,
+} from '../finance/types.ts'
+import { collectPages } from '../finance/query.ts'
+import {
+  formatMoney,
+  formatMonth,
+  monthKey,
+  transactionDescription,
+} from '../finance/utils.ts'
 import { getSupabaseClient } from '../lib/supabase.ts'
 
-interface Transaction {
-  id: string
-  plaid_item_id: string | null
-  transaction_date: string
-  merchant_name: string | null
-  transaction_name: string | null
-  amount: number
-  currency_code: string | null
-  is_pending: boolean
-  account_name: string
-}
-
-interface Category {
-  id: string
-  name: string
-}
-
-interface TransactionSplit {
-  id: string
-  transaction_id: string
-  category_id: string
-  amount: number
+interface TransactionsData {
+  transactions: Transaction[]
+  categories: Category[]
+  splits: TransactionSplit[]
+  budgets: Budget[]
 }
 
 interface DraftSplit {
@@ -32,1186 +35,794 @@ interface DraftSplit {
   amount: string
 }
 
-interface PlaidItem {
-  id: string
-  institution_name: string | null
-  status:
-    | 'initial_syncing'
-    | 'active'
-    | 'needs_reconnect'
-    | 'error'
-    | 'disconnected'
-  initial_update_complete: boolean
-  historical_update_complete: boolean
-  last_synced_at: string | null
-  connected_at: string
-}
+type TransactionSort = 'date' | 'merchant' | 'amount'
 
-interface DashboardData {
-  items: PlaidItem[]
-  transactions: Transaction[]
-  categories: Category[]
-  splits: TransactionSplit[]
-}
+const uncategorizedFilter = 'uncategorized'
 
-interface LinkTokenResponse {
-  linkToken: string
-}
+async function queryTransactions(): Promise<TransactionsData> {
+  const client = getSupabaseClient()
+  const [transactions, categoriesResult, splits, budgetsResult] =
+    await Promise.all([
+      collectPages((afterId, limit) => {
+        let query = client
+          .from('transactions')
+          .select(
+            'id, plaid_item_id, transaction_date, merchant_name, transaction_name, amount, currency_code, is_pending, account_name',
+          )
+          .order('id')
+          .limit(limit)
+        if (afterId) {
+          query = query.gt('id', afterId)
+        }
+        return query
+      }),
+      client.from('categories').select('id, name').order('name'),
+      collectPages((afterId, limit) => {
+        let query = client
+          .from('transaction_category_splits')
+          .select('id, transaction_id, category_id, amount')
+          .order('id')
+          .limit(limit)
+        if (afterId) {
+          query = query.gt('id', afterId)
+        }
+        return query
+      }),
+      client.from('budgets').select('id, month').order('month', { ascending: false }),
+    ])
 
-interface ImportTransactionsResponse {
-  itemId: string
-  importedCount: number
-  isSyncing: boolean
-}
-
-interface CompleteItemUpdateResponse {
-  importedCount: number
-  isSyncing: boolean
-}
-
-type ItemOperation = 'retry' | 'disconnect' | 'delete-history' | 'update'
-
-const linkTokenStorageKey = 'plaid-link-token'
-
-function formatDate(value: string): string {
-  return new Intl.DateTimeFormat(undefined, {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  }).format(new Date(`${value}T00:00:00`))
-}
-
-function formatTimestamp(value: string | null): string {
-  if (!value) {
-    return 'Not yet synchronized'
+  for (const result of [categoriesResult, budgetsResult]) {
+    if (result.error) {
+      throw new Error(result.error.message)
+    }
   }
 
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(new Date(value))
-}
-
-function formatAmount(amount: number, currencyCode: string | null): string {
-  let formatted: string
-
-  if (!currencyCode) {
-    formatted = new Intl.NumberFormat(undefined, {
-      maximumFractionDigits: 2,
-      minimumFractionDigits: 2,
-    }).format(amount)
-  } else {
-    formatted = new Intl.NumberFormat(undefined, {
-      currency: currencyCode,
-      style: 'currency',
-    }).format(amount)
+  return {
+    transactions: transactions.map((transaction) => ({
+      ...transaction,
+      amount: Number(transaction.amount),
+    })),
+    categories: categoriesResult.data ?? [],
+    splits: splits.map((split) => ({
+      ...split,
+      amount: Number(split.amount),
+    })),
+    budgets: budgetsResult.data ?? [],
   }
-
-  return amount > 0 ? `+${formatted}` : formatted
 }
 
 function parseSplitAmount(value: string): number | null {
-  const normalized = value.trim()
-  if (!/^[+-]?\d+(?:\.\d{1,2})?$/.test(normalized)) {
+  const normalized = value.trim().replace(/[$,\s]/g, '')
+  if (!/^-?\d+(?:\.\d{1,2})?$/.test(normalized)) {
     return null
   }
-
   const amount = Number(normalized)
   return Number.isFinite(amount) ? amount : null
 }
 
-function hasOAuthRedirect(): boolean {
-  return new URL(window.location.href).searchParams.has('oauth_state_id')
-}
-
-function clearPersistedLinkToken(): void {
-  window.sessionStorage.removeItem(linkTokenStorageKey)
-
-  if (hasOAuthRedirect()) {
-    window.history.replaceState({}, document.title, window.location.pathname)
-  }
-}
-
-function responseErrorMessage(error: unknown, fallback: string): string {
-  if (typeof error === 'string' && error) {
-    return error
+function evenlyDistributedSplits(
+  transactionAmount: number,
+  splits: DraftSplit[],
+): DraftSplit[] {
+  if (splits.length === 0) {
+    return []
   }
 
-  return error instanceof Error && error.message ? error.message : fallback
+  const totalCents = Math.round(transactionAmount * 100)
+  const evenCents = Math.trunc(totalCents / splits.length)
+  const remainder = totalCents - evenCents * splits.length
+
+  return splits.map((split, index) => ({
+    ...split,
+    amount: (
+      (evenCents + (index === splits.length - 1 ? remainder : 0)) /
+      100
+    ).toFixed(2),
+  }))
 }
 
-function isFunctionErrorResponse(value: unknown): value is { error: string } {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'error' in value &&
-    typeof value.error === 'string' &&
-    value.error.length > 0
+function splitsMatchEvenDistribution(
+  transactionAmount: number,
+  splits: TransactionSplit[],
+): boolean {
+  if (splits.length === 0) {
+    return true
+  }
+
+  const expected = evenlyDistributedSplits(
+    transactionAmount,
+    splits.map((split) => ({
+      key: split.id,
+      categoryId: split.category_id,
+      amount: split.amount.toFixed(2),
+    })),
   )
-}
+    .map((split) => Math.round(Number(split.amount) * 100))
+    .sort((left, right) => left - right)
+  const actual = splits
+    .map((split) => Math.round(split.amount * 100))
+    .sort((left, right) => left - right)
 
-async function functionErrorMessage(
-  error: unknown,
-  fallback: string,
-): Promise<string> {
-  if (
-    typeof error === 'object' &&
-    error !== null &&
-    'context' in error &&
-    error.context instanceof Response
-  ) {
-    try {
-      const body: unknown = await error.context.clone().json()
-
-      if (isFunctionErrorResponse(body)) {
-        return body.error
-      }
-    } catch {
-      return responseErrorMessage(error, fallback)
-    }
-  }
-
-  return responseErrorMessage(error, fallback)
-}
-
-async function queryDashboard(): Promise<DashboardData> {
-  const client = getSupabaseClient()
-  const [itemsResult, transactionsResult, categoriesResult, splitsResult] =
-    await Promise.all([
-    client
-      .from('plaid_items')
-      .select(
-        'id, institution_name, status, initial_update_complete, historical_update_complete, last_synced_at, connected_at',
-      )
-      .order('connected_at', { ascending: false }),
-    client
-      .from('transactions')
-      .select(
-        'id, plaid_item_id, transaction_date, merchant_name, transaction_name, amount, currency_code, is_pending, account_name',
-      )
-      .order('transaction_date', { ascending: false }),
-    client.from('categories').select('id, name').order('name'),
-    client
-      .from('transaction_category_splits')
-      .select('id, transaction_id, category_id, amount'),
-  ])
-
-  if (itemsResult.error) {
-    throw new Error(itemsResult.error.message)
-  }
-
-  if (transactionsResult.error) {
-    throw new Error(transactionsResult.error.message)
-  }
-
-  if (categoriesResult.error) {
-    throw new Error(categoriesResult.error.message)
-  }
-
-  if (splitsResult.error) {
-    throw new Error(splitsResult.error.message)
-  }
-
-  return {
-    items: itemsResult.data ?? [],
-    transactions: transactionsResult.data ?? [],
-    categories: categoriesResult.data ?? [],
-    splits: splitsResult.data ?? [],
-  }
-}
-
-function connectionStatus(item: PlaidItem): string {
-  switch (item.status) {
-    case 'initial_syncing':
-      return item.initial_update_complete
-        ? 'Preparing additional history'
-        : 'Preparing transaction history'
-    case 'active':
-      return item.historical_update_complete
-        ? 'Connected and synchronized'
-        : 'Connected'
-    case 'needs_reconnect':
-      return 'Reconnect needed'
-    case 'error':
-      return 'Synchronization needs attention'
-    case 'disconnected':
-      return 'Disconnected; history retained'
-  }
+  return actual.every((amount, index) => amount === expected[index])
 }
 
 export function TransactionsPanel({
   categoriesRevision,
+  onCategoriesChanged,
   onTransactionsChanged,
 }: {
   categoriesRevision: number
+  onCategoriesChanged: () => void
   onTransactionsChanged: () => void
 }) {
-  const [items, setItems] = useState<PlaidItem[]>([])
+  const { user } = useAuth()
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [splits, setSplits] = useState<TransactionSplit[]>([])
+  const [budgets, setBudgets] = useState<Budget[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [isCreatingLink, setIsCreatingLink] = useState(false)
-  const [isImporting, setIsImporting] = useState(false)
-  const [itemOperation, setItemOperation] = useState<{
-    itemId: string
-    operation: ItemOperation
-  } | null>(null)
   const [dataError, setDataError] = useState<string | null>(null)
-  const [connectionError, setConnectionError] = useState<string | null>(null)
-  const [connectionMessage, setConnectionMessage] = useState<string | null>(null)
-  const [editingTransactionId, setEditingTransactionId] = useState<
+  const [searchQuery, setSearchQuery] = useState('')
+  const [scopeFilter, setScopeFilter] = useState<string | null>(null)
+  const [categoryFilters, setCategoryFilters] = useState<string[]>([])
+  const [sort, setSort] = useState<TransactionSort>('date')
+  const [selectedTransactionId, setSelectedTransactionId] = useState<
     string | null
   >(null)
   const [draftSplits, setDraftSplits] = useState<DraftSplit[]>([])
+  const [isManualSplit, setIsManualSplit] = useState(false)
   const [splitError, setSplitError] = useState<string | null>(null)
   const [isSavingSplits, setIsSavingSplits] = useState(false)
-  const [updatingItemId, setUpdatingItemId] = useState<string | null>(null)
-  const [linkToken, setLinkToken] = useState<string | null>(() => {
-    if (!hasOAuthRedirect()) {
-      window.sessionStorage.removeItem(linkTokenStorageKey)
-      return null
-    }
+  const requestGeneration = useRef(0)
+  const selectedTransactionIdRef = useRef<string | null>(null)
 
-    return window.sessionStorage.getItem(linkTokenStorageKey)
-  })
-
-  function isItemOperation(itemId: string, operation: ItemOperation): boolean {
-    return (
-      itemOperation?.itemId === itemId && itemOperation.operation === operation
-    )
-  }
-
-  const refreshDashboard = useCallback(async () => {
+  const refreshTransactions = useCallback(async () => {
+    const generation = ++requestGeneration.current
     try {
-      const dashboard = await queryDashboard()
-
-      setDataError(null)
-      setItems(dashboard.items)
-      setTransactions(dashboard.transactions)
-      setCategories(dashboard.categories)
-      setSplits(dashboard.splits)
-      onTransactionsChanged()
-    } catch (error) {
-      setDataError(responseErrorMessage(error, 'We could not load transactions.'))
-    } finally {
-      setIsLoading(false)
-    }
-  }, [onTransactionsChanged])
-
-  useEffect(() => {
-    let isCurrent = true
-
-    async function loadInitialDashboard() {
-      try {
-        const dashboard = await queryDashboard()
-
-        if (!isCurrent) {
-          return
-        }
-
-        setDataError(null)
-        setItems(dashboard.items)
-        setTransactions(dashboard.transactions)
-        setCategories(dashboard.categories)
-        setSplits(dashboard.splits)
-      } catch (error) {
-        if (isCurrent) {
-          setDataError(
-            responseErrorMessage(error, 'We could not load transactions.'),
-          )
-        }
-      } finally {
-        if (isCurrent) {
-          setIsLoading(false)
-        }
+      const data = await queryTransactions()
+      if (generation !== requestGeneration.current) {
+        return
       }
-    }
-
-    void loadInitialDashboard()
-
-    return () => {
-      isCurrent = false
-    }
-  }, [categoriesRevision])
-
-  const hasInitialSync = items.some((item) => item.status === 'initial_syncing')
-
-  useEffect(() => {
-    const interval = window.setInterval(
-      () => {
-        void refreshDashboard()
-      },
-      hasInitialSync ? 5_000 : 60_000,
-    )
-
-    return () => {
-      window.clearInterval(interval)
-    }
-  }, [hasInitialSync, refreshDashboard])
-
-  const importTransactions = useCallback(
-    async (publicToken: string) => {
-      setIsImporting(true)
-      setConnectionError(null)
-      setConnectionMessage(null)
-
-      const { data, error } = await getSupabaseClient().functions.invoke<
-        ImportTransactionsResponse
-      >('plaid-import-transactions', {
-        body: { publicToken },
-      })
-
-      setIsImporting(false)
-
-      if (error) {
-        setConnectionError(
-          await functionErrorMessage(
-            error,
-            'We could not connect this bank. Please try again.',
-          ),
+      setTransactions(data.transactions)
+      setCategories(data.categories)
+      setSplits(data.splits)
+      setBudgets(data.budgets)
+      if (!selectedTransactionIdRef.current && data.transactions[0]) {
+        const firstTransaction = data.transactions[0]
+        const firstSplits = data.splits.filter(
+          (split) => split.transaction_id === firstTransaction.id,
         )
-        return
-      }
-
-      if (!data?.itemId || typeof data.importedCount !== 'number') {
-        setConnectionError(
-          'The bank connected, but the synchronization result was invalid.',
-        )
-        return
-      }
-
-      setConnectionMessage(
-        data.importedCount === 0
-          ? 'Your bank is connected. We are preparing its transaction history.'
-          : `Connected bank and imported ${data.importedCount} transaction${data.importedCount === 1 ? '' : 's'}.`,
-      )
-      await refreshDashboard()
-    },
-    [refreshDashboard],
-  )
-
-  const { error: plaidLoadError, open, ready } = usePlaidLink({
-    token: linkToken,
-    ...(hasOAuthRedirect()
-      ? {
-          receivedRedirectUri: window.location.href,
-        }
-      : {}),
-    onSuccess: (publicToken) => {
-      clearPersistedLinkToken()
-      setLinkToken(null)
-
-      if (updatingItemId) {
-        const itemId = updatingItemId
-        setUpdatingItemId(null)
-        void completeItemUpdate(itemId)
-        return
-      }
-
-      if (!publicToken) {
-        setConnectionError('The bank connection did not return a usable token.')
-        return
-      }
-
-      void importTransactions(publicToken)
-    },
-    onExit: (error) => {
-      clearPersistedLinkToken()
-      setLinkToken(null)
-      setUpdatingItemId(null)
-
-      if (error) {
-        setConnectionError(error.display_message ?? error.error_message)
-      }
-    },
-  })
-
-  useEffect(() => {
-    if (linkToken && ready && !isImporting) {
-      open()
-    }
-  }, [isImporting, linkToken, open, ready])
-
-  const displayedConnectionError = plaidLoadError
-    ? 'We could not load the secure bank connection window.'
-    : connectionError
-
-  async function startConnection(itemId?: string) {
-    setIsCreatingLink(true)
-    setUpdatingItemId(itemId ?? null)
-    setConnectionError(null)
-    setConnectionMessage(null)
-
-    const { data, error } = await getSupabaseClient().functions.invoke<LinkTokenResponse>(
-      'plaid-create-link-token',
-      {
-        body: itemId ? { itemId } : {},
-      },
-    )
-
-    setIsCreatingLink(false)
-
-    if (error) {
-      setUpdatingItemId(null)
-      setConnectionError(
-        await functionErrorMessage(
-          error,
-          'We could not start the bank connection. Please try again.',
-        ),
-      )
-      return
-    }
-
-    if (!data?.linkToken) {
-      setUpdatingItemId(null)
-      setConnectionError('The bank connection could not be initialized.')
-      return
-    }
-
-    window.sessionStorage.setItem(linkTokenStorageKey, data.linkToken)
-    setLinkToken(data.linkToken)
-  }
-
-  async function completeItemUpdate(itemId: string) {
-    setItemOperation({ itemId, operation: 'update' })
-    setConnectionError(null)
-    setConnectionMessage(null)
-
-    const { data, error } = await getSupabaseClient().functions.invoke<
-      CompleteItemUpdateResponse
-    >('plaid-complete-item-update', {
-      body: { itemId },
-    })
-
-    setItemOperation(null)
-
-    if (error) {
-      setConnectionError(
-        await functionErrorMessage(
-          error,
-          'We could not complete this bank update. Please try again.',
-        ),
-      )
-      return
-    }
-
-    setConnectionMessage(
-      data?.isSyncing
-        ? 'Your bank was updated. We are synchronizing transactions.'
-        : `Your bank was updated. Imported ${data?.importedCount ?? 0} transaction${data?.importedCount === 1 ? '' : 's'}.`,
-    )
-    await refreshDashboard()
-  }
-
-  async function retryItemSync(item: PlaidItem) {
-    setItemOperation({ itemId: item.id, operation: 'retry' })
-    setConnectionError(null)
-    setConnectionMessage(null)
-
-    const { data, error } = await getSupabaseClient().functions.invoke<
-      CompleteItemUpdateResponse
-    >('plaid-retry-item-sync', {
-      body: { itemId: item.id },
-    })
-
-    setItemOperation(null)
-
-    if (error) {
-      setConnectionError(
-        await functionErrorMessage(
-          error,
-          'We could not check for available transactions. Please try again.',
-        ),
-      )
-      return
-    }
-
-    setConnectionMessage(
-      data?.isSyncing
-        ? 'A transaction synchronization is already in progress.'
-        : data?.importedCount
-          ? `Imported ${data.importedCount} transaction${data.importedCount === 1 ? '' : 's'}.`
-          : 'Your bank has not provided additional transactions yet.',
-    )
-    await refreshDashboard()
-  }
-
-  async function disconnectItem(item: PlaidItem) {
-    if (
-      !window.confirm(
-        `Disconnect ${item.institution_name ?? 'this bank'}? New transactions will stop syncing, but imported history will remain.`,
-      )
-    ) {
-      return
-    }
-
-    setItemOperation({ itemId: item.id, operation: 'disconnect' })
-    setConnectionError(null)
-    setConnectionMessage(null)
-
-    const { error } = await getSupabaseClient().functions.invoke(
-      'plaid-disconnect-item',
-      {
-        body: { itemId: item.id },
-      },
-    )
-
-    setItemOperation(null)
-
-    if (error) {
-      setConnectionError(
-        await functionErrorMessage(
-          error,
-          'We could not disconnect this bank. Please try again.',
-        ),
-      )
-      return
-    }
-
-    setConnectionMessage(
-      `${item.institution_name ?? 'Bank'} was disconnected. Imported history remains available.`,
-    )
-    await refreshDashboard()
-  }
-
-  async function deleteDisconnectedHistory(item: PlaidItem) {
-    if (
-      !window.confirm(
-        `Delete all retained history from ${item.institution_name ?? 'this bank'}? This cannot be undone.`,
-      )
-    ) {
-      return
-    }
-
-    setItemOperation({ itemId: item.id, operation: 'delete-history' })
-    setConnectionError(null)
-    setConnectionMessage(null)
-
-    const { error } = await getSupabaseClient().functions.invoke(
-      'plaid-delete-disconnected-history',
-      {
-        body: { itemId: item.id },
-      },
-    )
-
-    setItemOperation(null)
-
-    if (error) {
-      setConnectionError(
-        await functionErrorMessage(
-          error,
-          'We could not delete this disconnected bank history.',
-        ),
-      )
-      return
-    }
-
-    setConnectionMessage(
-      `${item.institution_name ?? 'Disconnected bank'} history was deleted.`,
-    )
-    await refreshDashboard()
-  }
-
-  function startSplitEdit(transaction: Transaction) {
-    if (transaction.currency_code !== 'USD') {
-      setSplitError('Only USD transactions can be categorized.')
-      setEditingTransactionId(transaction.id)
-      setDraftSplits([])
-      return
-    }
-
-    const currentSplits = splits.filter(
-      (split) => split.transaction_id === transaction.id,
-    )
-
-    setEditingTransactionId(transaction.id)
-    setSplitError(null)
-    setDraftSplits(
-      currentSplits.length > 0
-        ? currentSplits.map((split) => ({
+        selectedTransactionIdRef.current = firstTransaction.id
+        setSelectedTransactionId(firstTransaction.id)
+        setDraftSplits(
+          firstSplits.map((split) => ({
             key: split.id,
             categoryId: split.category_id,
             amount: split.amount.toFixed(2),
-          }))
-        : [
-            {
-              key: window.crypto.randomUUID(),
-              categoryId: categories[0]?.id ?? '',
-              amount: transaction.amount.toFixed(2),
-            },
-          ],
+          })),
+        )
+        setIsManualSplit(
+          !splitsMatchEvenDistribution(firstTransaction.amount, firstSplits),
+        )
+      }
+      setDataError(null)
+    } catch (error) {
+      if (generation === requestGeneration.current) {
+        setDataError(
+          error instanceof Error
+            ? error.message
+            : 'We could not load transactions.',
+        )
+      }
+    } finally {
+      if (generation === requestGeneration.current) {
+        setIsLoading(false)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect -- This effect synchronizes the transaction stream with Supabase.
+    void refreshTransactions()
+    const interval = window.setInterval(() => {
+      void refreshTransactions()
+    }, 60_000)
+    return () => {
+      requestGeneration.current += 1
+      window.clearInterval(interval)
+    }
+  }, [categoriesRevision, refreshTransactions])
+
+  const splitsByTransaction = useMemo(() => {
+    const grouped = new Map<string, TransactionSplit[]>()
+    for (const split of splits) {
+      const current = grouped.get(split.transaction_id) ?? []
+      current.push(split)
+      grouped.set(split.transaction_id, current)
+    }
+    return grouped
+  }, [splits])
+  const categoriesById = useMemo(
+    () => new Map(categories.map((category) => [category.id, category])),
+    [categories],
+  )
+  const monthOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(transactions.map((transaction) => monthKey(transaction.transaction_date))),
+      ).sort((left, right) => right.localeCompare(left)),
+    [transactions],
+  )
+  const scopeOptions = useMemo(
+    () => [
+      ...budgets.map((budget) => ({
+        key: `budget:${budget.id}`,
+        label: `${formatMonth(monthKey(budget.month))} budget`,
+        month: monthKey(budget.month),
+      })),
+      ...monthOptions.map((month) => ({
+        key: `month:${month}`,
+        label: formatMonth(month),
+        month,
+      })),
+    ],
+    [budgets, monthOptions],
+  )
+  const scopeByKey = useMemo(
+    () => new Map(scopeOptions.map((option) => [option.key, option])),
+    [scopeOptions],
+  )
+
+  const displayedTransactions = useMemo(() => {
+    const normalizedSearch = searchQuery.trim().toLocaleLowerCase()
+    const activeMonth = scopeFilter
+      ? scopeByKey.get(scopeFilter)?.month
+      : undefined
+    const filtered = transactions.filter((transaction) => {
+      if (
+        normalizedSearch &&
+        !transactionDescription(transaction)
+          .toLocaleLowerCase()
+          .includes(normalizedSearch)
+      ) {
+        return false
+      }
+      if (
+        activeMonth &&
+        activeMonth !== monthKey(transaction.transaction_date)
+      ) {
+        return false
+      }
+      if (categoryFilters.length > 0) {
+        const transactionSplits = splitsByTransaction.get(transaction.id) ?? []
+        const matchesUncategorized =
+          categoryFilters.includes(uncategorizedFilter) &&
+          transactionSplits.length === 0
+        const matchesCategory = transactionSplits.some((split) =>
+          categoryFilters.includes(split.category_id),
+        )
+        if (!matchesUncategorized && !matchesCategory) {
+          return false
+        }
+      }
+      return true
+    })
+
+    return [...filtered].sort((left, right) => {
+      if (sort === 'merchant') {
+        return transactionDescription(left).localeCompare(
+          transactionDescription(right),
+        )
+      }
+      if (sort === 'amount') {
+        return Math.abs(right.amount) - Math.abs(left.amount)
+      }
+      return right.transaction_date.localeCompare(left.transaction_date)
+    })
+  }, [
+    categoryFilters,
+    scopeByKey,
+    scopeFilter,
+    searchQuery,
+    sort,
+    splitsByTransaction,
+    transactions,
+  ])
+
+  const selectedTransaction =
+    transactions.find((transaction) => transaction.id === selectedTransactionId) ??
+    null
+
+  function selectTransaction(transaction: Transaction) {
+    const transactionSplits = splitsByTransaction.get(transaction.id) ?? []
+    selectedTransactionIdRef.current = transaction.id
+    setSelectedTransactionId(transaction.id)
+    setDraftSplits(
+      transactionSplits.map((split) => ({
+        key: split.id,
+        categoryId: split.category_id,
+        amount: split.amount.toFixed(2),
+      })),
+    )
+    setIsManualSplit(
+      !splitsMatchEvenDistribution(transaction.amount, transactionSplits),
+    )
+    setSplitError(
+      transaction.currency_code === 'USD'
+        ? null
+        : 'Only USD transactions can be categorized.',
     )
   }
 
-  function updateDraftSplit(
-    key: string,
-    field: 'categoryId' | 'amount',
-    value: string,
-  ) {
-    setDraftSplits((current) =>
-      current.map((split) =>
-        split.key === key ? { ...split, [field]: value } : split,
-      ),
+  async function createCategory(name: string): Promise<Category> {
+    if (!user) {
+      throw new Error('Authentication is required.')
+    }
+    const { data, error } = await getSupabaseClient()
+      .from('categories')
+      .insert({ name: name.trim(), user_id: user.id })
+      .select('id, name')
+      .single()
+    if (error) {
+      throw new Error(
+        error.code === '23505' ? 'Category names must be unique.' : error.message,
+      )
+    }
+    setCategories((current) =>
+      [...current, data].sort((left, right) => left.name.localeCompare(right.name)),
     )
-    setSplitError(null)
+    onCategoriesChanged()
+    return data
   }
 
-  function addDraftSplit(transaction: Transaction) {
-    const selectedCategoryIds = new Set(
-      draftSplits.map((split) => split.categoryId),
-    )
-    const availableCategory = categories.find(
-      (category) => !selectedCategoryIds.has(category.id),
-    )
-    const assignedAmount = draftSplits.reduce(
-      (sum, split) => sum + (parseSplitAmount(split.amount) ?? 0),
-      0,
-    )
-
-    setDraftSplits((current) => [
-      ...current,
+  function addCategoryToSplit(category: Category) {
+    if (!selectedTransaction) {
+      return
+    }
+    if (draftSplits.some((split) => split.categoryId === category.id)) {
+      throw new Error('That category is already assigned.')
+    }
+    const next = [
+      ...draftSplits,
       {
         key: window.crypto.randomUUID(),
-        categoryId: availableCategory?.id ?? '',
-        amount: (transaction.amount - assignedAmount).toFixed(2),
+        categoryId: category.id,
+        amount: '0.00',
       },
-    ])
+    ]
+    if (isManualSplit) {
+      const assignedCents = draftSplits.reduce(
+        (sum, split) =>
+          sum + Math.round((parseSplitAmount(split.amount) ?? 0) * 100),
+        0,
+      )
+      const remainingCents =
+        Math.round(selectedTransaction.amount * 100) - assignedCents
+      next[next.length - 1] = {
+        ...next[next.length - 1],
+        amount: (remainingCents / 100).toFixed(2),
+      }
+      setDraftSplits(next)
+    } else {
+      setDraftSplits(evenlyDistributedSplits(selectedTransaction.amount, next))
+    }
     setSplitError(null)
   }
 
-  function removeDraftSplit(key: string) {
-    setDraftSplits((current) =>
-      current.filter((split) => split.key !== key),
+  function removeSplit(key: string) {
+    const next = draftSplits.filter((split) => split.key !== key)
+    setDraftSplits(
+      !isManualSplit && selectedTransaction
+        ? evenlyDistributedSplits(selectedTransaction.amount, next)
+        : next,
     )
     setSplitError(null)
   }
 
-  function validateDraftSplits(transaction: Transaction): string | null {
+  function validateSplits(transaction: Transaction): string | null {
     if (draftSplits.length === 0) {
       return null
     }
-
-    if (draftSplits.some((split) => !split.categoryId)) {
-      return 'Choose a category for every split.'
-    }
-
-    if (new Set(draftSplits.map((split) => split.categoryId)).size !==
-      draftSplits.length) {
-      return 'A category can appear only once in a transaction split.'
-    }
-
-    const amounts = draftSplits.map((split) =>
-      parseSplitAmount(split.amount),
-    )
-
+    const amounts = draftSplits.map((split) => parseSplitAmount(split.amount))
     if (amounts.some((amount) => amount === null || amount === 0)) {
-      return 'Enter a nonzero amount with no more than two decimal places for every split.'
+      return 'Every category needs a nonzero amount with no more than two decimals.'
     }
-
     const validAmounts = amounts as number[]
     if (
       validAmounts.some(
         (amount) => Math.sign(amount) !== Math.sign(transaction.amount),
       )
     ) {
-      return `Every split must be ${
-        transaction.amount > 0 ? 'an inflow' : 'an outflow'
-      }.`
+      return `Every amount must be ${transaction.amount > 0 ? 'income' : 'spending'}.`
     }
-
-    const transactionCents = Math.round(transaction.amount * 100)
     const splitCents = validAmounts.reduce(
       (sum, amount) => sum + Math.round(amount * 100),
       0,
     )
-
-    if (splitCents !== transactionCents) {
-      return `Splits must total ${formatAmount(
+    if (splitCents !== Math.round(transaction.amount * 100)) {
+      return `Splits must total ${formatMoney(
         transaction.amount,
-        transaction.currency_code,
+        transaction.currency_code ?? 'USD',
       )}.`
     }
-
     return null
   }
 
-  function splitBalanceLabel(transaction: Transaction): {
-    label: string
-    isValid: boolean
-  } {
-    if (draftSplits.length === 0) {
-      return { label: 'Unassigned', isValid: true }
+  async function saveSplits() {
+    if (!selectedTransaction) {
+      return
     }
-
-    const amounts = draftSplits.map((split) =>
-      parseSplitAmount(split.amount),
-    )
-    if (amounts.some((amount) => amount === null)) {
-      return { label: 'Check amounts', isValid: false }
-    }
-
-    const remainingCents =
-      Math.round(transaction.amount * 100) -
-      (amounts as number[]).reduce(
-        (sum, amount) => sum + Math.round(amount * 100),
-        0,
-      )
-
-    if (remainingCents === 0 && !validateDraftSplits(transaction)) {
-      return { label: 'Fully assigned', isValid: true }
-    }
-
-    const direction = Math.sign(remainingCents) === Math.sign(transaction.amount)
-      ? 'remaining'
-      : 'over'
-
-    return {
-      label: `${formatAmount(
-        Math.abs(remainingCents) / 100,
-        transaction.currency_code,
-      ).replace(/^\+/, '')} ${direction}`,
-      isValid: false,
-    }
-  }
-
-  async function saveSplits(transaction: Transaction) {
-    const validationError = validateDraftSplits(transaction)
+    const validationError = validateSplits(selectedTransaction)
     if (validationError) {
       setSplitError(validationError)
       return
     }
-
     setIsSavingSplits(true)
     setSplitError(null)
-
     const { error } = await getSupabaseClient().rpc(
       'replace_transaction_category_splits',
       {
-        p_transaction_id: transaction.id,
+        p_transaction_id: selectedTransaction.id,
         p_splits: draftSplits.map((split) => ({
           category_id: split.categoryId,
           amount: Number(split.amount),
         })),
       },
     )
-
     setIsSavingSplits(false)
-
     if (error) {
       setSplitError(error.message)
       return
     }
-
-    setEditingTransactionId(null)
-    setDraftSplits([])
-    await refreshDashboard()
+    await refreshTransactions()
+    onTransactionsChanged()
   }
 
-  const institutionsByItemId = new Map(
-    items.map((item) => [item.id, item.institution_name ?? 'Connected bank']),
-  )
-  const categoriesById = new Map(
-    categories.map((category) => [category.id, category]),
-  )
+  function toggleFilter(
+    value: string,
+    setFilters: React.Dispatch<React.SetStateAction<string[]>>,
+  ) {
+    setFilters((current) =>
+      current.includes(value)
+        ? current.filter((filter) => filter !== value)
+        : [...current, value],
+    )
+  }
+
+  const activeFilterCount = (scopeFilter ? 1 : 0) + categoryFilters.length
 
   return (
-    <section
-      className="app-shell__content transactions-panel"
-      aria-labelledby="transactions-title"
-    >
-      <div className="transactions-panel__header">
+    <main className="page transactions-page">
+      <div className="page-head">
         <div>
-          <p className="eyebrow">Transactions</p>
-          <h2 id="transactions-title">Connected bank transactions</h2>
-          <p>
-            Connected banks update automatically. Disconnecting a bank stops
-            future updates but keeps the history you have already imported.
+          <p className="eyebrow">Complete transaction stream</p>
+          <h1>Transactions</h1>
+          <p className="subtle">
+            Search, filter, and categorize activity from every connected account.
           </p>
         </div>
-        <button
-          className="button"
-          type="button"
-          onClick={() => void startConnection()}
-          disabled={isCreatingLink || isImporting}
-        >
-          {isCreatingLink
-            ? 'Preparing secure connection...'
-            : isImporting
-              ? 'Connecting bank...'
-              : 'Connect bank'}
-        </button>
+        <span className="subtle">
+          {displayedTransactions.length.toLocaleString()} transactions
+        </span>
       </div>
 
-      {displayedConnectionError && (
-        <p className="form-message form-message--error" role="alert">
-          {responseErrorMessage(
-            displayedConnectionError,
-            'The bank connection failed.',
-          )}
-        </p>
-      )}
       {dataError && (
         <p className="form-message form-message--error" role="alert">
-          {responseErrorMessage(dataError, 'We could not load transactions.')}
-        </p>
-      )}
-      {connectionMessage && (
-        <p className="form-message form-message--success" role="status">
-          {connectionMessage}
+          {dataError}
         </p>
       )}
 
-      <section
-        className="connection-list"
-        aria-labelledby="connections-title"
-        aria-busy={isLoading}
-      >
-        <h3 id="connections-title">Bank connections</h3>
-        {isLoading ? (
-          <p className="transactions-panel__status" aria-live="polite">
-            Loading bank connections...
-          </p>
-        ) : items.length === 0 ? (
-          <p className="transactions-panel__status">
-            No banks are connected yet.
-          </p>
-        ) : (
-          <ul className="connection-list__items">
-            {items.map((item) => (
-              <li key={item.id} className="connection-card">
-                <div>
-                  <h4>{item.institution_name ?? 'Connected bank'}</h4>
-                  <p>{connectionStatus(item)}</p>
-                  <p>Last sync: {formatTimestamp(item.last_synced_at)}</p>
-                </div>
-                <div className="connection-card__actions">
-                  {item.status === 'disconnected' ? (
-                    <button
-                      className="button button--secondary"
-                      type="button"
-                      onClick={() => void deleteDisconnectedHistory(item)}
-                      disabled={itemOperation?.itemId === item.id}
-                    >
-                      {isItemOperation(item.id, 'delete-history')
-                        ? 'Deleting history...'
-                        : 'Delete saved history'}
-                    </button>
-                  ) : (
-                    <>
-                      {(item.status === 'initial_syncing' ||
-                        item.status === 'error') && (
-                        <button
-                          className="button button--secondary"
-                          type="button"
-                          onClick={() => void retryItemSync(item)}
-                          disabled={itemOperation?.itemId === item.id}
-                        >
-                          {isItemOperation(item.id, 'retry')
-                            ? 'Checking transactions...'
-                            : 'Check available transactions'}
-                        </button>
-                      )}
-                      {item.status === 'needs_reconnect' ? (
-                        <button
-                          className="button button--secondary"
-                          type="button"
-                          onClick={() => void startConnection(item.id)}
-                          disabled={
-                            isCreatingLink ||
-                            isImporting ||
-                            itemOperation?.itemId === item.id
-                          }
-                        >
-                          {isCreatingLink && updatingItemId === item.id
-                            ? 'Preparing reconnect...'
-                            : isItemOperation(item.id, 'update')
-                              ? 'Updating bank...'
-                              : 'Reconnect bank'}
-                        </button>
-                      ) : (
-                        <button
-                          className="button button--secondary"
-                          type="button"
-                          onClick={() => void disconnectItem(item)}
-                          disabled={itemOperation?.itemId === item.id}
-                        >
-                          {isItemOperation(item.id, 'disconnect')
-                            ? 'Disconnecting...'
-                            : 'Disconnect bank'}
-                        </button>
-                      )}
-                    </>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      <div className="toolbar">
+        <div className="search">
+          <label className="sr-only" htmlFor="merchant-search">
+            Search merchant name
+          </label>
+          <input
+            id="merchant-search"
+            placeholder="Search merchant name..."
+            type="search"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+          />
+        </div>
+        <div className="toolbar-group transaction-tools">
+          <details className="filter-wrap">
+            <summary className="pill-button">
+              Filter{activeFilterCount ? ` · ${activeFilterCount}` : ''}
+            </summary>
+            <div className="popover filter-popover">
+              <h2>Budget or month</h2>
+              {scopeOptions.map((option) => (
+                <label className="radio" key={option.key}>
+                  <input
+                    checked={scopeFilter === option.key}
+                    name="transaction-scope"
+                    type="radio"
+                    onChange={() => setScopeFilter(option.key)}
+                  />
+                  {option.label}
+                </label>
+              ))}
+              <h2>Categories · match any</h2>
+              <label className="check">
+                <input
+                  checked={categoryFilters.includes(uncategorizedFilter)}
+                  type="checkbox"
+                  onChange={() =>
+                    toggleFilter(uncategorizedFilter, setCategoryFilters)
+                  }
+                />
+                Uncategorized
+              </label>
+              {categories.map((category) => (
+                <label className="check" key={category.id}>
+                  <input
+                    checked={categoryFilters.includes(category.id)}
+                    type="checkbox"
+                    onChange={() =>
+                      toggleFilter(category.id, setCategoryFilters)
+                    }
+                  />
+                  {category.name}
+                </label>
+              ))}
+            </div>
+          </details>
+          <details className="filter-wrap">
+            <summary className="pill-button">
+              {sort === 'date'
+                ? 'Newest first'
+                : sort === 'merchant'
+                  ? 'Merchant A-Z'
+                  : 'Highest amount'}
+            </summary>
+            <div className="popover sort-popover">
+              {(
+                [
+                  ['date', 'Date · newest'],
+                  ['merchant', 'Merchant · A-Z'],
+                  ['amount', 'Amount · highest'],
+                ] as const
+              ).map(([value, label]) => (
+                <label className="radio" key={value}>
+                  <input
+                    checked={sort === value}
+                    name="transaction-sort"
+                    type="radio"
+                    onChange={() => setSort(value)}
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
+          </details>
+        </div>
+      </div>
 
-      <section className="transaction-list" aria-labelledby="transaction-list-title">
-        <h3 id="transaction-list-title">Imported transactions</h3>
-        {isLoading ? (
-          <p className="transactions-panel__status" aria-live="polite">
-            Loading transactions...
-          </p>
-        ) : transactions.length === 0 ? (
-          <p className="transactions-panel__status">
-            No transactions have been imported yet.
-          </p>
-        ) : (
-          <ul className="transaction-cards">
-            {transactions.map((transaction) => {
-              const transactionSplits = splits.filter(
-                (split) => split.transaction_id === transaction.id,
-              )
-              const isEditing = editingTransactionId === transaction.id
-              const balance = isEditing
-                ? splitBalanceLabel(transaction)
-                : null
-              const institution = transaction.plaid_item_id
-                ? institutionsByItemId.get(transaction.plaid_item_id) ??
-                  'Connected bank'
-                : 'Previous import'
-              const description =
-                transaction.merchant_name ??
-                transaction.transaction_name ??
-                'Transaction'
+      {activeFilterCount > 0 && (
+        <div className="active-filters" aria-label="Active filters">
+          {scopeFilter && (
+            <FilterChip
+              label={scopeByKey.get(scopeFilter)?.label ?? scopeFilter}
+              onRemove={() => setScopeFilter(null)}
+            />
+          )}
+          {categoryFilters.map((filter) => (
+            <FilterChip
+              key={filter}
+              label={
+                filter === uncategorizedFilter
+                  ? 'Uncategorized'
+                  : categoriesById.get(filter)?.name ?? filter
+              }
+              onRemove={() => toggleFilter(filter, setCategoryFilters)}
+            />
+          ))}
+        </div>
+      )}
 
+      <div className="transaction-layout with-detail">
+        <section className="panel transactions" aria-busy={isLoading}>
+          {isLoading ? (
+            <div className="empty-state" aria-live="polite">
+              Loading transactions...
+            </div>
+          ) : displayedTransactions.length === 0 ? (
+            <div className="empty-state">
+              No transactions match the current search and filters.
+            </div>
+          ) : (
+            displayedTransactions.map((transaction) => {
+              const transactionSplits =
+                splitsByTransaction.get(transaction.id) ?? []
+              const isSelected = transaction.id === selectedTransactionId
               return (
-                <li
-                  className={`transaction-card${
-                    isEditing ? ' transaction-card--editing' : ''
+                <button
+                  className={`transaction-row${
+                    isSelected ? ' selected-transaction' : ''
                   }`}
                   key={transaction.id}
+                  type="button"
+                  onClick={() => selectTransaction(transaction)}
                 >
-                  <div className="transaction-card__summary">
-                    <div className="transaction-card__details">
-                      <div className="transaction-card__heading">
-                        <h4>{description}</h4>
-                        <time dateTime={transaction.transaction_date}>
-                          {formatDate(transaction.transaction_date)}
-                        </time>
-                      </div>
-                      <div className="transaction-card__meta">
-                        <span>{transaction.account_name}</span>
-                        <span>{institution}</span>
-                        <span>{transaction.currency_code ?? '-'}</span>
-                        <span>
-                          {transaction.is_pending ? 'Pending' : 'Posted'}
-                        </span>
-                      </div>
-                    </div>
-                    <strong
-                      className={`transaction-card__amount${
-                        transaction.amount > 0
-                          ? ' transaction-card__amount--inflow'
-                          : ''
-                      }`}
-                    >
-                      {formatAmount(
-                        transaction.amount,
-                        transaction.currency_code,
-                      )}
-                    </strong>
-                    <div className="transaction-card__categories">
-                      <span className="transaction-card__label">
-                        Category splits
-                      </span>
-                      {isEditing ? (
-                        <strong>Editing below</strong>
-                      ) : transactionSplits.length > 0 ? (
-                        <div className="split-summary">
-                          {transactionSplits.map((split) => (
-                            <span key={split.id}>
-                              {categoriesById.get(split.category_id)?.name ??
-                                'Deleted category'}{' '}
-                              {formatAmount(
-                                split.amount,
-                                transaction.currency_code,
-                              )}
-                            </span>
-                          ))}
-                          <button
-                            className="text-button"
-                            type="button"
-                            onClick={() => startSplitEdit(transaction)}
-                          >
-                            Edit
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          className="button button--compact"
-                          type="button"
-                          onClick={() => startSplitEdit(transaction)}
-                          disabled={categories.length === 0}
-                          title={
-                            categories.length === 0
-                              ? 'Create a category first'
-                              : undefined
-                          }
-                        >
-                          Categorize
-                        </button>
-                      )}
-                    </div>
+                  <div className="transaction-main">
+                    <strong>{transactionDescription(transaction)}</strong>
+                    <p>
+                      {new Intl.DateTimeFormat(undefined, {
+                        day: 'numeric',
+                        month: 'short',
+                      }).format(new Date(`${transaction.transaction_date}T00:00:00`))}
+                      {' · '}
+                      {transaction.account_name}
+                      {transaction.is_pending ? ' · Pending' : ''}
+                    </p>
                   </div>
-
-                  {isEditing && balance && (
-                    <form
-                      className={`split-editor${
-                        splitError ? ' split-editor--invalid' : ''
-                      }`}
-                      onSubmit={(event) => {
-                        event.preventDefault()
-                        void saveSplits(transaction)
-                      }}
-                    >
-                      <div className="split-editor__header">
-                        <div>
-                          <h4>Split {description}</h4>
-                          <p>
-                            Assign the full{' '}
-                            <strong>
-                              {formatAmount(
-                                transaction.amount,
-                                transaction.currency_code,
-                              )}
-                            </strong>
-                            . Every split must also be{' '}
-                            {transaction.amount > 0
-                              ? 'an inflow'
-                              : 'an outflow'}
-                            .
-                          </p>
-                        </div>
-                        <span
-                          className={`split-balance ${
-                            balance.isValid
-                              ? 'split-balance--complete'
-                              : 'split-balance--error'
-                          }`}
-                        >
-                          {balance.label}
-                        </span>
-                      </div>
-
-                      <div className="split-lines">
-                        {draftSplits.map((split) => (
-                          <div className="split-line" key={split.key}>
-                            <label>
-                              Category
-                              <select
-                                value={split.categoryId}
-                                onChange={(event) =>
-                                  updateDraftSplit(
-                                    split.key,
-                                    'categoryId',
-                                    event.target.value,
-                                  )
-                                }
-                                disabled={isSavingSplits}
-                              >
-                                <option value="">Choose category</option>
-                                {categories.map((category) => (
-                                  <option
-                                    key={category.id}
-                                    value={category.id}
-                                    disabled={draftSplits.some(
-                                      (other) =>
-                                        other.key !== split.key &&
-                                        other.categoryId === category.id,
-                                    )}
-                                  >
-                                    {category.name}
-                                  </option>
-                                ))}
-                              </select>
-                            </label>
-                            <label>
-                              Amount
-                              <input
-                                inputMode="decimal"
-                                type="text"
-                                value={split.amount}
-                                onChange={(event) =>
-                                  updateDraftSplit(
-                                    split.key,
-                                    'amount',
-                                    event.target.value,
-                                  )
-                                }
-                                disabled={isSavingSplits}
-                                aria-invalid={splitError ? 'true' : undefined}
-                              />
-                            </label>
-                            <button
-                              aria-label="Remove split"
-                              className="text-button text-button--danger split-line__remove"
-                              type="button"
-                              onClick={() => removeDraftSplit(split.key)}
-                              disabled={isSavingSplits}
-                            >
-                              Remove
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-
-                      {splitError && (
-                        <p
-                          className="form-message form-message--error"
-                          role="alert"
-                        >
-                          {splitError}
-                        </p>
-                      )}
-
-                      <button
-                        className="text-button split-editor__add"
-                        type="button"
-                        onClick={() => addDraftSplit(transaction)}
-                        disabled={
-                          isSavingSplits ||
-                          draftSplits.length >= categories.length
-                        }
-                      >
-                        + Add split
-                      </button>
-                      <div className="split-editor__actions">
-                        <button
-                          className="button button--secondary"
-                          type="button"
-                          onClick={() => {
-                            setEditingTransactionId(null)
-                            setDraftSplits([])
-                            setSplitError(null)
-                          }}
-                          disabled={isSavingSplits}
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          className="button"
-                          type="submit"
-                          disabled={
-                            isSavingSplits ||
-                            Boolean(validateDraftSplits(transaction))
-                          }
-                        >
-                          {isSavingSplits ? 'Saving splits...' : 'Save splits'}
-                        </button>
-                      </div>
-                    </form>
-                  )}
-                </li>
+                  <strong
+                    className={`transaction-amount ${
+                      transaction.amount >= 0 ? 'positive' : 'negative'
+                    }`}
+                  >
+                    {formatMoney(
+                      transaction.amount,
+                      transaction.currency_code ?? 'USD',
+                    )}
+                  </strong>
+                  <span
+                    className={`category-chip${
+                      transactionSplits.length === 0 ? ' empty' : ''
+                    }`}
+                  >
+                    {transactionSplits.length === 0
+                      ? '+ Categorize'
+                      : transactionSplits.length === 1
+                        ? categoriesById.get(transactionSplits[0].category_id)
+                            ?.name ?? '1 category'
+                        : `${transactionSplits.length} categories`}
+                  </span>
+                </button>
               )
-            })}
-          </ul>
-        )}
-      </section>
-    </section>
+            })
+          )}
+        </section>
+
+        <aside className="detail-panel" aria-live="polite">
+          {!selectedTransaction ? (
+            <div className="detail-panel__empty">
+              <p className="eyebrow">Selected transaction</p>
+              <h2>Choose a transaction</h2>
+              <p className="subtle">
+                Its category split will stay open here while you work.
+              </p>
+            </div>
+          ) : (
+            <>
+              <p className="eyebrow">Selected transaction</p>
+              <div className="section-head">
+                <div>
+                  <h2>{transactionDescription(selectedTransaction)}</h2>
+                  <p className="subtle">
+                    {new Intl.DateTimeFormat(undefined, {
+                      dateStyle: 'medium',
+                    }).format(
+                      new Date(`${selectedTransaction.transaction_date}T00:00:00`),
+                    )}
+                    {' · '}
+                    {selectedTransaction.account_name}
+                  </p>
+                </div>
+                <strong
+                  className={
+                    selectedTransaction.amount >= 0 ? 'positive' : 'negative'
+                  }
+                >
+                  {formatMoney(
+                    selectedTransaction.amount,
+                    selectedTransaction.currency_code ?? 'USD',
+                  )}
+                </strong>
+              </div>
+              <h3 className="split-heading">Category split</h3>
+              {draftSplits.map((split) => (
+                <div className="split-line" key={split.key}>
+                  <span className="split-category">
+                    {categoriesById.get(split.categoryId)?.name ?? 'Category'}
+                  </span>
+                  <label>
+                    <span className="sr-only">
+                      {categoriesById.get(split.categoryId)?.name} amount
+                    </span>
+                    <input
+                      aria-invalid={splitError ? 'true' : undefined}
+                      disabled={isSavingSplits}
+                      inputMode="decimal"
+                      type="text"
+                      value={split.amount}
+                      onChange={(event) => {
+                        setIsManualSplit(true)
+                        setDraftSplits((current) =>
+                          current.map((candidate) =>
+                            candidate.key === split.key
+                              ? { ...candidate, amount: event.target.value }
+                              : candidate,
+                          ),
+                        )
+                        setSplitError(null)
+                      }}
+                    />
+                  </label>
+                  <button
+                    aria-label={`Remove ${
+                      categoriesById.get(split.categoryId)?.name ?? 'category'
+                    }`}
+                    className="icon-button"
+                    disabled={isSavingSplits}
+                    type="button"
+                    onClick={() => removeSplit(split.key)}
+                  >
+                    &times;
+                  </button>
+                </div>
+              ))}
+              {selectedTransaction.currency_code === 'USD' && (
+                <div className="detail-category-add">
+                  <CategoryCombobox
+                    categories={categories}
+                    disabled={isSavingSplits}
+                    excludedCategoryIds={draftSplits.map(
+                      (split) => split.categoryId,
+                    )}
+                    label="Add or create a split category"
+                    placeholder="Search or create a category..."
+                    onCreate={createCategory}
+                    onSelect={addCategoryToSplit}
+                  />
+                </div>
+              )}
+              <p className="split-note">
+                {isManualSplit
+                  ? 'Amounts are manual. New categories receive the remaining amount.'
+                  : 'Categories are evenly split; the final category receives any leftover cent.'}
+              </p>
+              {splitError && (
+                <p className="form-message form-message--error" role="alert">
+                  {splitError}
+                </p>
+              )}
+              <button
+                className="button detail-save"
+                disabled={
+                  isSavingSplits || selectedTransaction.currency_code !== 'USD'
+                }
+                type="button"
+                onClick={() => void saveSplits()}
+              >
+                {isSavingSplits
+                  ? 'Saving...'
+                  : draftSplits.length === 0
+                    ? 'Save as uncategorized'
+                    : 'Done'}
+              </button>
+            </>
+          )}
+        </aside>
+      </div>
+    </main>
+  )
+}
+
+function FilterChip({
+  label,
+  onRemove,
+}: {
+  label: string
+  onRemove: () => void
+}) {
+  return (
+    <span className="filter-chip">
+      {label}
+      <button aria-label={`Remove ${label} filter`} type="button" onClick={onRemove}>
+        &times;
+      </button>
+    </span>
   )
 }

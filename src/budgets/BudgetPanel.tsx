@@ -3,96 +3,63 @@ import {
   useEffect,
   useRef,
   useState,
+  type DragEvent,
   type FormEvent,
-  type ReactNode,
 } from 'react'
+import { useAuth } from '../auth/useAuth.ts'
+import { CategoryCombobox } from '../finance/CategoryCombobox.tsx'
+import type {
+  Budget,
+  BudgetAllocation,
+  BudgetDirection,
+  BudgetSubsection,
+  Category,
+} from '../finance/types.ts'
+import {
+  currentMonth,
+  formatMoney,
+  formatMonth,
+  parseMagnitude,
+  shiftMonth,
+} from '../finance/utils.ts'
 import { getSupabaseClient } from '../lib/supabase.ts'
 
-interface Budget {
-  id: string
-  month: string
-}
-
-interface BudgetSubsection {
-  id: string
-  name: string
-  position: number
-}
-
-interface BudgetAllocation {
-  allocation_id: string
-  category_id: string
-  category_name: string
-  subsection_id: string | null
-  position: number
-  budgeted_amount: number
-  actual_amount: number
-}
-
-interface Category {
-  id: string
-  name: string
-}
-
 interface BudgetData {
+  budgets: Budget[]
   budget: Budget | null
   subsections: BudgetSubsection[]
   allocations: BudgetAllocation[]
   categories: Category[]
 }
 
-function currentMonth(): string {
-  const date = new Date()
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+interface DraggedBudgetItem {
+  id: string
+  type: 'subsection' | 'allocation'
 }
 
-function formatMonth(month: string): string {
-  return new Intl.DateTimeFormat(undefined, {
-    month: 'long',
-    year: 'numeric',
-  }).format(new Date(`${month}-01T00:00:00`))
-}
-
-function formatAmount(amount: number): string {
-  const formatted = new Intl.NumberFormat(undefined, {
-    currency: 'USD',
-    style: 'currency',
-  }).format(amount)
-
-  return amount > 0 ? `+${formatted}` : formatted
-}
-
-function parseAmount(value: string): number | null {
-  const normalized = value.trim()
-  if (!/^[+-]?\d+(?:\.\d{1,2})?$/.test(normalized)) {
-    return null
-  }
-
-  const amount = Number(normalized)
-  return Number.isFinite(amount) ? amount : null
-}
+const budgetDragType = 'application/x-perfectly-balanced-budget-item'
 
 async function queryBudget(month: string): Promise<BudgetData> {
   const client = getSupabaseClient()
-  const [budgetResult, categoriesResult] = await Promise.all([
-    client
-      .from('budgets')
-      .select('id, month')
-      .eq('month', `${month}-01`)
-      .maybeSingle(),
+  const [budgetsResult, categoriesResult] = await Promise.all([
+    client.from('budgets').select('id, month').order('month', { ascending: false }),
     client.from('categories').select('id, name').order('name'),
   ])
 
-  if (budgetResult.error) {
-    throw new Error(budgetResult.error.message)
+  if (budgetsResult.error) {
+    throw new Error(budgetsResult.error.message)
   }
-
   if (categoriesResult.error) {
     throw new Error(categoriesResult.error.message)
   }
 
-  if (!budgetResult.data) {
+  const budgets = budgetsResult.data ?? []
+  const budget =
+    budgets.find((candidate) => candidate.month.slice(0, 7) === month) ?? null
+
+  if (!budget) {
     return {
+      budgets,
       budget: null,
       subsections: [],
       allocations: [],
@@ -104,27 +71,27 @@ async function queryBudget(month: string): Promise<BudgetData> {
     client
       .from('budget_subsections')
       .select('id, name, position')
-      .eq('budget_id', budgetResult.data.id)
+      .eq('budget_id', budget.id)
       .order('position'),
     client
       .from('budget_category_activity')
       .select(
-        'allocation_id, category_id, category_name, subsection_id, position, budgeted_amount, actual_amount',
+        'allocation_id, category_id, category_name, subsection_id, subsection_name, position, direction, budgeted_amount, actual_amount',
       )
-      .eq('budget_id', budgetResult.data.id)
+      .eq('budget_id', budget.id)
       .order('position'),
   ])
 
   if (subsectionsResult.error) {
     throw new Error(subsectionsResult.error.message)
   }
-
   if (allocationsResult.error) {
     throw new Error(allocationsResult.error.message)
   }
 
   return {
-    budget: budgetResult.data,
+    budgets,
+    budget,
     subsections: subsectionsResult.data ?? [],
     allocations: (allocationsResult.data ?? []).map((allocation) => ({
       ...allocation,
@@ -138,149 +105,142 @@ async function queryBudget(month: string): Promise<BudgetData> {
 export function BudgetPanel({
   categoriesRevision,
   activityRevision,
+  onCategoriesChanged,
 }: {
   categoriesRevision: number
   activityRevision: number
+  onCategoriesChanged: () => void
 }) {
-  const initialMonth = currentMonth()
-  const [selectedMonth, setSelectedMonth] = useState(initialMonth)
-  const [monthInput, setMonthInput] = useState(initialMonth)
+  const { user } = useAuth()
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth)
+  const [budgets, setBudgets] = useState<Budget[]>([])
   const [budget, setBudget] = useState<Budget | null>(null)
   const [subsections, setSubsections] = useState<BudgetSubsection[]>([])
   const [allocations, setAllocations] = useState<BudgetAllocation[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [subsectionName, setSubsectionName] = useState('')
-  const [categoryId, setCategoryId] = useState('')
-  const [allocationAmount, setAllocationAmount] = useState('')
-  const [allocationSubsectionId, setAllocationSubsectionId] = useState('')
-  const [editingAllocationId, setEditingAllocationId] = useState<string | null>(
-    null,
-  )
-  const [editingAmount, setEditingAmount] = useState('')
   const [busyId, setBusyId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const requestGeneration = useRef(0)
-  const selectedMonthRef = useRef(selectedMonth)
+  const mutationBusy = useRef(false)
 
   const loadBudget = useCallback(async () => {
     const generation = ++requestGeneration.current
     try {
       const data = await queryBudget(selectedMonth)
-      if (
-        generation !== requestGeneration.current ||
-        selectedMonth !== selectedMonthRef.current
-      ) {
+      if (generation !== requestGeneration.current) {
         return
       }
-
+      setBudgets(data.budgets)
       setBudget(data.budget)
       setSubsections(data.subsections)
       setAllocations(data.allocations)
       setCategories(data.categories)
       setErrorMessage(null)
     } catch (error) {
-      if (
-        generation !== requestGeneration.current ||
-        selectedMonth !== selectedMonthRef.current
-      ) {
-        return
+      if (generation === requestGeneration.current) {
+        setErrorMessage(
+          error instanceof Error ? error.message : 'We could not load this budget.',
+        )
       }
-
-      setErrorMessage(
-        error instanceof Error ? error.message : 'We could not load this budget.',
-      )
     } finally {
-      if (
-        generation === requestGeneration.current &&
-        selectedMonth === selectedMonthRef.current
-      ) {
+      if (generation === requestGeneration.current) {
         setIsLoading(false)
       }
     }
   }, [selectedMonth])
 
   useEffect(() => {
-    const generation = ++requestGeneration.current
-
-    void queryBudget(selectedMonth)
-      .then((data) => {
-        if (
-          generation !== requestGeneration.current ||
-          selectedMonth !== selectedMonthRef.current
-        ) {
-          return
-        }
-
-        setBudget(data.budget)
-        setSubsections(data.subsections)
-        setAllocations(data.allocations)
-        setCategories(data.categories)
-        setErrorMessage(null)
-      })
-      .catch((error: unknown) => {
-        if (
-          generation === requestGeneration.current &&
-          selectedMonth === selectedMonthRef.current
-        ) {
-          setErrorMessage(
-            error instanceof Error
-              ? error.message
-              : 'We could not load this budget.',
-          )
-        }
-      })
-      .finally(() => {
-        if (
-          generation === requestGeneration.current &&
-          selectedMonth === selectedMonthRef.current
-        ) {
-          setIsLoading(false)
-        }
-      })
-  }, [activityRevision, categoriesRevision, selectedMonth])
-
-  const allocatedCategoryIds = new Set(
-    allocations.map((allocation) => allocation.category_id),
-  )
-  const availableCategories = categories.filter(
-    (category) => !allocatedCategoryIds.has(category.id),
-  )
-  const selectedCategoryId = availableCategories.some(
-    (category) => category.id === categoryId,
-  )
-    ? categoryId
-    : (availableCategories[0]?.id ?? '')
-  const selectedSubsectionId = subsections.some(
-    (subsection) => subsection.id === allocationSubsectionId,
-  )
-    ? allocationSubsectionId
-    : ''
+    // oxlint-disable-next-line react/set-state-in-effect -- This effect synchronizes the selected month with Supabase.
+    void loadBudget()
+    return () => {
+      requestGeneration.current += 1
+    }
+  }, [activityRevision, categoriesRevision, loadBudget])
 
   async function runMutation(
     id: string,
     mutation: () => PromiseLike<{ error: { message: string } | null }>,
-  ) {
-    setBusyId(id)
-    setErrorMessage(null)
-    const { error } = await mutation()
-    setBusyId(null)
-
-    if (error) {
-      setErrorMessage(error.message)
+  ): Promise<boolean> {
+    if (mutationBusy.current) {
       return false
     }
-
-    if (selectedMonth === selectedMonthRef.current) {
+    mutationBusy.current = true
+    setBusyId(id)
+    setErrorMessage(null)
+    try {
+      const { error } = await mutation()
+      if (error) {
+        setErrorMessage(error.message)
+        return false
+      }
       await loadBudget()
+      return true
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : 'The budget change could not be saved.',
+      )
+      return false
+    } finally {
+      mutationBusy.current = false
+      setBusyId(null)
     }
-    return true
   }
 
-  async function createBudget() {
-    await runMutation('create-budget', () =>
-      getSupabaseClient().rpc('create_monthly_budget', {
-        p_month: `${selectedMonth}-01`,
+  async function createCategory(name: string): Promise<Category> {
+    if (!user) {
+      throw new Error('Authentication is required.')
+    }
+    const { data, error } = await getSupabaseClient()
+      .from('categories')
+      .insert({ name: name.trim(), user_id: user.id })
+      .select('id, name')
+      .single()
+
+    if (error) {
+      throw new Error(
+        error.code === '23505' ? 'Category names must be unique.' : error.message,
+      )
+    }
+    setCategories((current) =>
+      [...current, data].sort((left, right) => left.name.localeCompare(right.name)),
+    )
+    onCategoriesChanged()
+    return data
+  }
+
+  async function addAllocation(
+    category: Category,
+    subsectionId: string | null,
+  ): Promise<void> {
+    if (!budget) {
+      throw new Error('Create this month before adding categories.')
+    }
+    const didSave = await runMutation(`add-${subsectionId ?? 'root'}`, () =>
+      getSupabaseClient().rpc('create_budget_category_allocation', {
+        p_budget_id: budget.id,
+        p_category_id: category.id,
+        p_subsection_id: subsectionId,
+        p_magnitude: 0,
+        p_direction: 'spending',
+      }),
+    )
+    if (!didSave) {
+      throw new Error('The category could not be added to this budget.')
+    }
+  }
+
+  async function updateAllocation(
+    allocation: BudgetAllocation,
+    magnitude: number,
+    direction = allocation.direction,
+  ): Promise<boolean> {
+    return runMutation(allocation.allocation_id, () =>
+      getSupabaseClient().rpc('update_budget_category_allocation', {
+        p_allocation_id: allocation.allocation_id,
+        p_magnitude: magnitude,
+        p_direction: direction,
       }),
     )
   }
@@ -292,7 +252,6 @@ export function BudgetPanel({
       setErrorMessage('Enter a subsection name.')
       return
     }
-
     if (
       await runMutation('add-subsection', () =>
         getSupabaseClient().rpc('add_budget_subsection', {
@@ -305,288 +264,150 @@ export function BudgetPanel({
     }
   }
 
-  async function addAllocation(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const amount = parseAmount(allocationAmount)
-    if (!budget || !selectedCategoryId) {
-      setErrorMessage('Choose a category to add.')
-      return
-    }
-
-    if (amount === null) {
-      setErrorMessage(
-        'Enter a signed amount with no more than two decimal places.',
-      )
-      return
-    }
-
-    if (
-      await runMutation('add-allocation', () =>
-        getSupabaseClient().rpc('add_budget_category_allocation', {
-          p_budget_id: budget.id,
-          p_category_id: selectedCategoryId,
-          p_subsection_id: selectedSubsectionId || null,
-          p_amount: amount,
-        }),
-      )
-    ) {
-      setAllocationAmount('')
+  function readDraggedItem(event: DragEvent): DraggedBudgetItem | null {
+    try {
+      return JSON.parse(
+        event.dataTransfer.getData(budgetDragType),
+      ) as DraggedBudgetItem
+    } catch {
+      return null
     }
   }
 
-  async function saveAllocation(event: FormEvent<HTMLFormElement>) {
+  async function dropSubsection(event: DragEvent, targetPosition: number) {
     event.preventDefault()
-    const amount = parseAmount(editingAmount)
-    if (!editingAllocationId || amount === null) {
-      setErrorMessage(
-        'Enter a signed amount with no more than two decimal places.',
-      )
+    const dragged = readDraggedItem(event)
+    if (!dragged || dragged.type !== 'subsection') {
       return
     }
-
-    if (
-      await runMutation(editingAllocationId, () =>
-        getSupabaseClient().rpc('update_budget_allocation_amount', {
-          p_allocation_id: editingAllocationId,
-          p_amount: amount,
-        }),
-      )
-    ) {
-      setEditingAllocationId(null)
-      setEditingAmount('')
-    }
-  }
-
-  async function deleteSubsection(subsection: BudgetSubsection) {
-    if (
-      !window.confirm(
-        `Delete ${subsection.name}? Its categories will move to Unsectioned.`,
-      )
-    ) {
+    if (!subsections.some((item) => item.id === dragged.id)) {
       return
     }
-
-    await runMutation(subsection.id, () =>
-      getSupabaseClient().rpc('delete_budget_subsection', {
-        p_subsection_id: subsection.id,
+    await runMutation(dragged.id, () =>
+      getSupabaseClient().rpc('place_budget_subsection', {
+        p_subsection_id: dragged.id,
+        p_position: targetPosition,
       }),
     )
   }
 
-  function renderAllocation(
-    allocation: BudgetAllocation,
-    index: number,
-    count: number,
+  async function dropAllocation(
+    event: DragEvent,
+    subsectionId: string | null,
+    targetPosition: number,
   ) {
-    const isEditing = editingAllocationId === allocation.allocation_id
-    const isInflow = allocation.budgeted_amount > 0
-    const isOutflow = allocation.budgeted_amount < 0
-
-    return (
-      <li
-        className={`budget-allocation${
-          isEditing ? ' budget-allocation--editing' : ''
-        }`}
-        key={allocation.allocation_id}
-      >
-        <div>
-          <h4>{allocation.category_name}</h4>
-          <p>
-            {isEditing
-              ? `Editing planned ${isInflow ? 'income' : isOutflow ? 'spending' : 'amount'}`
-              : isInflow
-                ? 'Planned income'
-                : isOutflow
-                  ? 'Planned spending'
-                  : 'Tracked without a planned amount'}
-          </p>
-        </div>
-        {isEditing ? (
-          <form className="budget-allocation__edit-form" onSubmit={saveAllocation}>
-            <label>
-              Budgeted amount
-              <input
-                type="text"
-                inputMode="decimal"
-                value={editingAmount}
-                onChange={(event) => setEditingAmount(event.target.value)}
-                disabled={busyId === allocation.allocation_id}
-                autoFocus
-              />
-            </label>
-            <div>
-              <button
-                className="text-button"
-                type="submit"
-                disabled={busyId === allocation.allocation_id}
-              >
-                {busyId === allocation.allocation_id ? 'Saving...' : 'Save'}
-              </button>
-              <button
-                className="text-button"
-                type="button"
-                onClick={() => setEditingAllocationId(null)}
-                disabled={busyId === allocation.allocation_id}
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        ) : (
-          <dl className="budget-allocation__amounts">
-            <div>
-              <dt>Budgeted</dt>
-              <dd
-                className={
-                  isInflow ? 'amount--inflow' : isOutflow ? 'amount--outflow' : ''
-                }
-              >
-                {formatAmount(allocation.budgeted_amount)}
-              </dd>
-            </div>
-            <div>
-              <dt>
-                {isInflow
-                  ? 'Received so far'
-                  : isOutflow
-                    ? 'Spent so far'
-                    : 'Activity so far'}
-              </dt>
-              <dd
-                className={
-                  allocation.actual_amount > 0
-                    ? 'amount--inflow'
-                    : allocation.actual_amount < 0
-                      ? 'amount--outflow'
-                      : ''
-                }
-              >
-                {formatAmount(allocation.actual_amount)}
-              </dd>
-            </div>
-          </dl>
-        )}
-        <div className="budget-allocation__actions">
-          {!isEditing && (
-            <button
-              className="text-button"
-              type="button"
-              onClick={() => {
-                setEditingAllocationId(allocation.allocation_id)
-                setEditingAmount(allocation.budgeted_amount.toFixed(2))
-                setErrorMessage(null)
-              }}
-            >
-              Edit amount
-            </button>
-          )}
-          {index > 0 && (
-            <button
-              className="text-button"
-              type="button"
-              onClick={() =>
-                void runMutation(allocation.allocation_id, () =>
-                  getSupabaseClient().rpc('move_budget_allocation', {
-                    p_allocation_id: allocation.allocation_id,
-                    p_direction: -1,
-                  }),
-                )
-              }
-              disabled={busyId === allocation.allocation_id}
-            >
-              Move up
-            </button>
-          )}
-          {index < count - 1 && (
-            <button
-              className="text-button"
-              type="button"
-              onClick={() =>
-                void runMutation(allocation.allocation_id, () =>
-                  getSupabaseClient().rpc('move_budget_allocation', {
-                    p_allocation_id: allocation.allocation_id,
-                    p_direction: 1,
-                  }),
-                )
-              }
-              disabled={busyId === allocation.allocation_id}
-            >
-              Move down
-            </button>
-          )}
-          <button
-            className="text-button text-button--danger"
-            type="button"
-            onClick={() =>
-              void runMutation(allocation.allocation_id, () =>
-                getSupabaseClient().rpc('remove_budget_allocation', {
-                  p_allocation_id: allocation.allocation_id,
-                }),
-              )
-            }
-            disabled={busyId === allocation.allocation_id}
-          >
-            {busyId === allocation.allocation_id ? 'Removing...' : 'Remove'}
-          </button>
-        </div>
-      </li>
+    event.preventDefault()
+    const dragged = readDraggedItem(event)
+    if (!dragged || dragged.type !== 'allocation') {
+      return
+    }
+    const source = allocations.find(
+      (item) => item.allocation_id === dragged.id,
+    )
+    if (!source) {
+      return
+    }
+    const sourceGroup = allocations.filter(
+      (allocation) =>
+        allocation.subsection_id === source.subsection_id,
+    )
+    const normalizedPosition =
+      source.subsection_id === subsectionId &&
+      targetPosition === sourceGroup.length
+        ? sourceGroup.length - 1
+        : targetPosition
+    await runMutation(dragged.id, () =>
+      getSupabaseClient().rpc('place_budget_category_allocation', {
+        p_allocation_id: dragged.id,
+        p_subsection_id: subsectionId,
+        p_position: normalizedPosition,
+      }),
     )
   }
 
+  const allocatedCategoryIds = allocations.map(
+    (allocation) => allocation.category_id,
+  )
+  const spendingAllocations = allocations.filter(
+    (allocation) => allocation.direction === 'spending',
+  )
+  const incomeAllocations = allocations.filter(
+    (allocation) => allocation.direction === 'income',
+  )
+  const plannedSpending = spendingAllocations.reduce(
+    (sum, allocation) => sum + Math.abs(allocation.budgeted_amount),
+    0,
+  )
+  const spent = spendingAllocations.reduce(
+    (sum, allocation) => sum + Math.max(0, -allocation.actual_amount),
+    0,
+  )
+  const plannedIncome = incomeAllocations.reduce(
+    (sum, allocation) => sum + allocation.budgeted_amount,
+    0,
+  )
+  const received = incomeAllocations.reduce(
+    (sum, allocation) => sum + Math.max(0, allocation.actual_amount),
+    0,
+  )
   const monthLabel = formatMonth(selectedMonth)
+  const selectorMonths = Array.from(
+    new Set([selectedMonth, ...budgets.map((item) => item.month.slice(0, 7))]),
+  ).sort((left, right) => right.localeCompare(left))
+  function changeMonth(month: string) {
+    setIsLoading(true)
+    setSelectedMonth(month)
+  }
 
   return (
-    <section
-      className="app-shell__content budget-panel"
-      aria-labelledby="budget-title"
-      aria-busy={isLoading}
-    >
-      <div className="budget-panel__header">
+    <main className="page budget-page" aria-busy={isLoading}>
+      <div className="page-head">
         <div>
           <p className="eyebrow">Monthly budget</p>
-          <h2 id="budget-title">
-            {budget ? `${monthLabel} budget` : monthLabel}
-          </h2>
-          <p>
-            {budget
-              ? 'Budgeted amounts use positive numbers for planned income and negative numbers for planned spending.'
-              : 'No budget has been created for this month yet.'}
+          <h1>{monthLabel}</h1>
+          <p className="subtle">
+            Plan your month and follow actual activity as transactions are categorized.
           </p>
         </div>
-        <form
-          className="month-picker"
-          onSubmit={(event) => {
-            event.preventDefault()
-            if (monthInput) {
-              requestGeneration.current += 1
-              setIsLoading(true)
-              if (monthInput === selectedMonth) {
-                void loadBudget()
-              } else {
-                selectedMonthRef.current = monthInput
-                setBudget(null)
-                setSubsections([])
-                setAllocations([])
-                setEditingAllocationId(null)
-                setSelectedMonth(monthInput)
-              }
-            }
-          }}
-        >
-          <label htmlFor="budget-month">Budget month</label>
-          <div className="month-picker__controls">
-            <input
-              id="budget-month"
-              type="month"
-              value={monthInput}
-              onChange={(event) => setMonthInput(event.target.value)}
-              required
-            />
-            <button className="button button--secondary" type="submit">
-              View month
-            </button>
-          </div>
-        </form>
+        <div className="toolbar-group month-toolbar">
+          <button
+            aria-label="Previous month"
+            className="icon-button"
+            disabled={busyId !== null}
+            type="button"
+            onClick={() => changeMonth(shiftMonth(selectedMonth, -1))}
+          >
+            &larr;
+          </button>
+          <label className="sr-only" htmlFor="budget-month-selector">
+            Budget month
+          </label>
+          <select
+            className="pill-select"
+            disabled={busyId !== null}
+            id="budget-month-selector"
+            value={selectedMonth}
+            onChange={(event) => changeMonth(event.target.value)}
+          >
+            {selectorMonths.map((month) => (
+              <option key={month} value={month}>
+                {formatMonth(month)}
+                {budgets.some((item) => item.month.slice(0, 7) === month)
+                  ? ''
+                  : ' (not created)'}
+              </option>
+            ))}
+          </select>
+          <button
+            aria-label="Next month"
+            className="icon-button"
+            disabled={busyId !== null}
+            type="button"
+            onClick={() => changeMonth(shiftMonth(selectedMonth, 1))}
+          >
+            &rarr;
+          </button>
+        </div>
       </div>
 
       {errorMessage && (
@@ -596,220 +417,381 @@ export function BudgetPanel({
       )}
 
       {isLoading ? (
-        <p className="transactions-panel__status" aria-live="polite">
+        <section className="panel empty-state" aria-live="polite">
           Loading budget...
-        </p>
+        </section>
       ) : !budget ? (
-        <div className="budget-empty-state">
-          <h3>Create the {monthLabel} budget</h3>
-          <p>
-            Start with an empty monthly budget. Categories and subsections can
-            be added after it is created.
+        <section className="panel empty-state">
+          <h2>Create the {monthLabel} budget</h2>
+          <p className="subtle">
+            Start with an empty monthly budget, then add subsections and categories.
           </p>
           <button
             className="button"
-            type="button"
-            onClick={() => void createBudget()}
             disabled={busyId === 'create-budget'}
+            type="button"
+            onClick={() =>
+              void runMutation('create-budget', () =>
+                getSupabaseClient().rpc('create_monthly_budget', {
+                  p_month: `${selectedMonth}-01`,
+                }),
+              )
+            }
           >
-            {busyId === 'create-budget' ? 'Creating budget...' : 'Create budget'}
+            {busyId === 'create-budget' ? 'Creating month...' : 'Create this month'}
           </button>
-        </div>
+        </section>
       ) : (
         <>
-          <div className="budget-editors">
-            <form className="budget-editor-card" onSubmit={addSubsection}>
-              <h3>Add subsection</h3>
-              <label htmlFor="subsection-name">Subsection name</label>
-              <div className="budget-editor-card__controls">
-                <input
-                  id="subsection-name"
-                  placeholder="e.g. Essentials"
-                  type="text"
-                  maxLength={100}
-                  value={subsectionName}
-                  onChange={(event) => setSubsectionName(event.target.value)}
-                  disabled={busyId === 'add-subsection'}
-                />
-                <button
-                  className="button"
-                  type="submit"
-                  disabled={busyId === 'add-subsection'}
-                >
-                  {busyId === 'add-subsection' ? 'Adding...' : 'Add subsection'}
-                </button>
-              </div>
-            </form>
-
-            <form className="budget-editor-card" onSubmit={addAllocation}>
-              <h3>Add category</h3>
-              <div className="budget-allocation-fields">
-                <label>
-                  Category
-                  <select
-                    value={selectedCategoryId}
-                    onChange={(event) => setCategoryId(event.target.value)}
-                    disabled={availableCategories.length === 0}
-                  >
-                    {availableCategories.length === 0 ? (
-                      <option value="">All categories are budgeted</option>
-                    ) : (
-                      availableCategories.map((category) => (
-                        <option key={category.id} value={category.id}>
-                          {category.name}
-                        </option>
-                      ))
-                    )}
-                  </select>
-                </label>
-                <label>
-                  Budgeted amount
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    placeholder="-150.00"
-                    value={allocationAmount}
-                    onChange={(event) => setAllocationAmount(event.target.value)}
-                  />
-                </label>
-                <label>
-                  Location
-                  <select
-                    value={selectedSubsectionId}
-                    onChange={(event) =>
-                      setAllocationSubsectionId(event.target.value)
-                    }
-                  >
-                    <option value="">Unsectioned</option>
-                    {subsections.map((subsection) => (
-                      <option key={subsection.id} value={subsection.id}>
-                        {subsection.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-              <button
-                className="button"
-                type="submit"
-                disabled={
-                  busyId === 'add-allocation' || availableCategories.length === 0
-                }
-              >
-                {busyId === 'add-allocation' ? 'Adding...' : 'Add to budget'}
-              </button>
-            </form>
-          </div>
-
-          <div className="budget-groups">
+          <section className="panel summary-strip" aria-label="Budget overview">
+            <BudgetMetric label="Planned spending" value={plannedSpending} />
+            <BudgetMetric label="Spent so far" value={spent} />
+            <BudgetMetric label="Planned income" value={plannedIncome} />
+            <BudgetMetric label="Received so far" value={received} />
+          </section>
+          <p className="interactive-hint">
+            Edit amounts directly and press Enter or leave the field to save.
+            Drag subsections and categories to reorder them.
+          </p>
+          <section className="panel budget-sheet">
             <BudgetGroup
-              label="Budget root"
               name="Unsectioned"
+              subsectionId={null}
               allocations={allocations.filter(
                 (allocation) => allocation.subsection_id === null,
               )}
-              renderAllocation={renderAllocation}
+              categories={categories}
+              allocatedCategoryIds={allocatedCategoryIds}
+              busyId={busyId}
+              onAddAllocation={addAllocation}
+              onCreateCategory={createCategory}
+              onDropAllocation={dropAllocation}
+              onUpdateAllocation={updateAllocation}
             />
-            {subsections.map((subsection, subsectionIndex) => (
-              <BudgetGroup
-                key={subsection.id}
-                label="Subsection"
-                name={subsection.name}
-                allocations={allocations.filter(
-                  (allocation) =>
-                    allocation.subsection_id === subsection.id,
-                )}
-                actions={
-                  <>
-                    {subsectionIndex > 0 && (
-                      <button
-                        className="text-button"
-                        type="button"
-                        onClick={() =>
-                          void runMutation(subsection.id, () =>
-                            getSupabaseClient().rpc('move_budget_subsection', {
-                              p_subsection_id: subsection.id,
-                              p_direction: -1,
-                            }),
-                          )
-                        }
-                        disabled={busyId === subsection.id}
-                      >
-                        Move up
-                      </button>
-                    )}
-                    {subsectionIndex < subsections.length - 1 && (
-                      <button
-                        className="text-button"
-                        type="button"
-                        onClick={() =>
-                          void runMutation(subsection.id, () =>
-                            getSupabaseClient().rpc('move_budget_subsection', {
-                              p_subsection_id: subsection.id,
-                              p_direction: 1,
-                            }),
-                          )
-                        }
-                        disabled={busyId === subsection.id}
-                      >
-                        Move down
-                      </button>
-                    )}
-                    <button
-                      className="text-button text-button--danger"
-                      type="button"
-                      onClick={() => void deleteSubsection(subsection)}
-                      disabled={busyId === subsection.id}
-                    >
-                      {busyId === subsection.id
-                        ? 'Deleting...'
-                        : 'Delete subsection'}
-                    </button>
-                  </>
-                }
-                renderAllocation={renderAllocation}
+            {subsections.map((subsection, index) => {
+              const groupAllocations = allocations.filter(
+                (allocation) => allocation.subsection_id === subsection.id,
+              )
+              return (
+                <section
+                  className="budget-group"
+                  draggable={busyId === null}
+                  key={subsection.id}
+                  onDragOver={(event) => event.preventDefault()}
+                  onDragStart={(event) => {
+                    event.dataTransfer.effectAllowed = 'move'
+                    event.dataTransfer.setData(
+                      budgetDragType,
+                      JSON.stringify({ id: subsection.id, type: 'subsection' }),
+                    )
+                  }}
+                  onDrop={(event) => void dropSubsection(event, index)}
+                >
+                  <BudgetGroup
+                    name={subsection.name}
+                    subsectionId={subsection.id}
+                    allocations={groupAllocations}
+                    categories={categories}
+                    allocatedCategoryIds={allocatedCategoryIds}
+                    busyId={busyId}
+                    onAddAllocation={addAllocation}
+                    onCreateCategory={createCategory}
+                    onDropAllocation={dropAllocation}
+                    onUpdateAllocation={updateAllocation}
+                    isNested
+                  />
+                </section>
+              )
+            })}
+            <form className="subsection-add" onSubmit={addSubsection}>
+              <label className="sr-only" htmlFor="subsection-name">
+                New subsection name
+              </label>
+              <input
+                disabled={busyId !== null}
+                id="subsection-name"
+                maxLength={100}
+                placeholder="e.g. Savings goals"
+                type="text"
+                value={subsectionName}
+                onChange={(event) => setSubsectionName(event.target.value)}
               />
-            ))}
-          </div>
+              <button
+                className="button"
+                disabled={busyId !== null}
+                type="submit"
+              >
+                {busyId === 'add-subsection' ? 'Adding...' : '+ Add subsection'}
+              </button>
+            </form>
+          </section>
         </>
       )}
-    </section>
+    </main>
+  )
+}
+
+function BudgetMetric({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="metric">
+      <span>{label}</span>
+      <strong>{formatMoney(value)}</strong>
+    </div>
   )
 }
 
 function BudgetGroup({
-  label,
   name,
+  subsectionId,
   allocations,
-  actions,
-  renderAllocation,
+  categories,
+  allocatedCategoryIds,
+  busyId,
+  isNested = false,
+  onAddAllocation,
+  onCreateCategory,
+  onDropAllocation,
+  onUpdateAllocation,
 }: {
-  label: string
   name: string
+  subsectionId: string | null
   allocations: BudgetAllocation[]
-  actions?: ReactNode
-  renderAllocation: (
+  categories: Category[]
+  allocatedCategoryIds: string[]
+  busyId: string | null
+  isNested?: boolean
+  onAddAllocation: (
+    category: Category,
+    subsectionId: string | null,
+  ) => Promise<void>
+  onCreateCategory: (name: string) => Promise<Category>
+  onDropAllocation: (
+    event: DragEvent,
+    subsectionId: string | null,
+    targetPosition: number,
+  ) => Promise<void>
+  onUpdateAllocation: (
     allocation: BudgetAllocation,
-    index: number,
-    count: number,
-  ) => ReactNode
+    magnitude: number,
+    direction?: BudgetDirection,
+  ) => Promise<boolean>
+}) {
+  const planned = allocations.reduce(
+    (sum, allocation) => sum + Math.abs(allocation.budgeted_amount),
+    0,
+  )
+  const activity = allocations.reduce(
+    (sum, allocation) => sum + Math.abs(allocation.actual_amount),
+    0,
+  )
+  const content = (
+    <>
+      <div className="group-head">
+        <div className="row-main">
+          {isNested && <span className="drag hover-reveal" aria-hidden="true">⠿</span>}
+          <div>
+            <h2>{name}</h2>
+            <p className="subtle">
+              {formatMoney(planned)} planned · {formatMoney(activity)} activity
+            </p>
+          </div>
+        </div>
+      </div>
+      {allocations.map((allocation, index) => (
+        <BudgetAllocationRow
+          allocation={allocation}
+          busy={busyId !== null}
+          key={`${allocation.allocation_id}-${allocation.budgeted_amount}-${allocation.direction}`}
+          onDrop={(event) =>
+            onDropAllocation(event, subsectionId, index)
+          }
+          onUpdate={onUpdateAllocation}
+        />
+      ))}
+      <div
+        className="inline-category-add"
+        onDragOver={(event) => event.preventDefault()}
+        onDrop={(event) =>
+          void onDropAllocation(event, subsectionId, allocations.length)
+        }
+      >
+        <CategoryCombobox
+          categories={categories}
+          disabled={busyId !== null}
+          excludedCategoryIds={allocatedCategoryIds}
+          label={`Add or create a category in ${name}`}
+          onCreate={onCreateCategory}
+          onSelect={(category) => onAddAllocation(category, subsectionId)}
+        />
+        <span className="subtle">Adds at $0 · Spending</span>
+      </div>
+    </>
+  )
+
+  if (isNested) {
+    return content
+  }
+  return <section className="budget-group">{content}</section>
+}
+
+function BudgetAllocationRow({
+  allocation,
+  busy,
+  onDrop,
+  onUpdate,
+}: {
+  allocation: BudgetAllocation
+  busy: boolean
+  onDrop: (event: DragEvent) => void
+  onUpdate: (
+    allocation: BudgetAllocation,
+    magnitude: number,
+    direction?: BudgetDirection,
+  ) => Promise<boolean>
+}) {
+  const plannedMagnitude = Math.abs(allocation.budgeted_amount)
+  const [magnitudeValue, setMagnitudeValue] = useState(plannedMagnitude.toFixed(2))
+  const isSaving = useRef(false)
+  const actualMagnitude =
+    allocation.direction === 'spending'
+      ? Math.max(0, -allocation.actual_amount)
+      : Math.max(0, allocation.actual_amount)
+  const progress =
+    plannedMagnitude === 0
+      ? 0
+      : Math.min(100, Math.round((actualMagnitude / plannedMagnitude) * 100))
+
+  async function saveMagnitude(
+    direction: BudgetDirection = allocation.direction,
+  ): Promise<boolean> {
+    if (isSaving.current) {
+      return false
+    }
+    const parsed = parseMagnitude(magnitudeValue)
+    if (parsed === null) {
+      setMagnitudeValue(plannedMagnitude.toFixed(2))
+      return false
+    }
+    if (
+      direction === allocation.direction &&
+      Math.round(parsed * 100) === Math.round(plannedMagnitude * 100)
+    ) {
+      setMagnitudeValue(parsed.toFixed(2))
+      return true
+    }
+    isSaving.current = true
+    const didSave = await onUpdate(allocation, parsed, direction)
+    isSaving.current = false
+    if (!didSave) {
+      setMagnitudeValue(plannedMagnitude.toFixed(2))
+    }
+    return didSave
+  }
+
+  return (
+    <div
+      className={`row budget-item budget-item--${allocation.direction}`}
+      draggable={!busy}
+      onDragOver={(event) => event.preventDefault()}
+      onDragStart={(event) => {
+        event.stopPropagation()
+        event.dataTransfer.effectAllowed = 'move'
+        event.dataTransfer.setData(
+          budgetDragType,
+          JSON.stringify({ id: allocation.allocation_id, type: 'allocation' }),
+        )
+      }}
+      onDrop={(event) => {
+        event.stopPropagation()
+        onDrop(event)
+      }}
+    >
+      <div className="row-main">
+        <span className="drag hover-reveal" aria-hidden="true">⠿</span>
+        <div>
+          <strong>{allocation.category_name}</strong>
+          <p>
+            {formatMoney(actualMagnitude)} of {formatMoney(plannedMagnitude)}{' '}
+            {allocation.direction === 'spending' ? 'spent' : 'received'}
+          </p>
+        </div>
+      </div>
+      <div className="mini-segmented" aria-label={`${allocation.category_name} direction`}>
+        {(['spending', 'income'] as const).map((direction) => (
+          <button
+            aria-pressed={allocation.direction === direction}
+            className={allocation.direction === direction ? 'selected' : ''}
+            disabled={busy}
+            key={direction}
+            type="button"
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => {
+              if (direction !== allocation.direction) {
+                void saveMagnitude(direction)
+              }
+            }}
+          >
+            {direction === 'spending' ? 'Spending' : 'Income'}
+          </button>
+        ))}
+      </div>
+      <div
+        aria-label={`${progress}% of planned ${allocation.direction}`}
+        className="progress"
+        role="progressbar"
+        aria-valuemax={100}
+        aria-valuemin={0}
+        aria-valuenow={progress}
+      >
+        <i style={{ width: `${progress}%` }} />
+      </div>
+      <MagnitudeInput
+        allocation={allocation}
+        busy={busy}
+        value={magnitudeValue}
+        onBlur={() => void saveMagnitude()}
+        onChange={setMagnitudeValue}
+        onReset={() => setMagnitudeValue(plannedMagnitude.toFixed(2))}
+      />
+    </div>
+  )
+}
+
+function MagnitudeInput({
+  allocation,
+  busy,
+  value,
+  onBlur,
+  onChange,
+  onReset,
+}: {
+  allocation: BudgetAllocation
+  busy: boolean
+  value: string
+  onBlur: () => void
+  onChange: (value: string) => void
+  onReset: () => void
 }) {
   return (
-    <section className="budget-group">
-      <div className="budget-group__header">
-        <div>
-          <p className="budget-group__label">{label}</p>
-          <h3>{name}</h3>
-        </div>
-        {actions && <div className="budget-group__actions">{actions}</div>}
-      </div>
-      {allocations.length > 0 && (
-        <ul className="budget-allocation-list">
-          {allocations.map((allocation, index) =>
-            renderAllocation(allocation, index, allocations.length),
-          )}
-        </ul>
-      )}
-    </section>
+    <input
+      aria-label={`${allocation.category_name} planned magnitude`}
+      className="amount-input"
+      disabled={busy}
+      inputMode="decimal"
+      type="text"
+      value={value}
+      onBlur={onBlur}
+      onChange={(event) => onChange(event.target.value)}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault()
+          event.currentTarget.blur()
+        }
+        if (event.key === 'Escape') {
+          onReset()
+          event.currentTarget.blur()
+        }
+      }}
+    />
   )
 }
