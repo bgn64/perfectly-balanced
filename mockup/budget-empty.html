@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Empty budget state - Invite Only App mockup</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <nav class="mockup-nav" aria-label="Mockup screens">
+      <a href="index.html">Sign in</a>
+      <a href="dashboard.html">Dashboard</a>
+      <a aria-current="page" href="budget-empty.html">Empty budget state</a>
+      <a href="configuration-error.html">Configuration error</a>
+    </nav>
+
+    <main class="app-shell">
+      <header class="app-shell__header">
+        <div>
+          <p class="eyebrow">Invite Only App</p>
+          <h1>Welcome</h1>
+        </div>
+        <div class="app-shell__account">
+          <span>you@example.com</span>
+          <button class="button button--secondary" type="button">Sign out</button>
+        </div>
+      </header>
+
+      <section class="app-shell__content budget-panel" aria-labelledby="budget-title">
+        <div class="budget-panel__header">
+          <div>
+            <p class="eyebrow">Monthly budget</p>
+            <h2 id="budget-title">September 2026</h2>
+            <p>No budget has been created for this month yet.</p>
+          </div>
+          <form class="month-picker">
+            <label for="budget-month">Budget month</label>
+            <div class="month-picker__controls">
+              <input id="budget-month" type="month" value="2026-09" />
+              <button class="button button--secondary" type="button">
+                View month
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div class="budget-empty-state">
+          <h3>Create the September 2026 budget</h3>
+          <p>
+            Start with an empty monthly budget. Categories and subsections can
+            be added after it is created.
+          </p>
+          <button class="button" type="button">Create budget</button>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

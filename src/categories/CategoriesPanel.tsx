@@ -20,7 +20,7 @@ function categoryErrorMessage(error: {
   }
 
   if (error.code === '23503') {
-    return 'This category is assigned to a transaction and cannot be deleted.'
+    return 'This category is used by a transaction or budget and cannot be deleted.'
   }
 
   return error.message
