@@ -1,4 +1,4 @@
-import { useId, useMemo, useRef, useState } from 'react'
+import { useId, useMemo, useRef, useState, type Ref } from 'react'
 import type { Category } from './types.ts'
 
 export function CategoryCombobox({
@@ -7,6 +7,7 @@ export function CategoryCombobox({
   categories,
   createAlternativeLabel,
   excludedCategoryIds = [],
+  inputRef,
   label,
   onCancel,
   placeholder = 'Search categories or enter a new name...',
@@ -21,6 +22,7 @@ export function CategoryCombobox({
   categories: Category[]
   createAlternativeLabel?: (name: string) => string
   excludedCategoryIds?: string[]
+  inputRef?: Ref<HTMLInputElement>
   label: string
   onCancel?: () => void
   placeholder?: string
@@ -161,6 +163,7 @@ export function CategoryCombobox({
     >
       <label className="sr-only">{label}</label>
       <input
+        ref={inputRef}
         aria-activedescendant={
           isOpen && menuOptions[activeIndex]
             ? `${optionIdPrefix}-${menuOptions[activeIndex].id}`

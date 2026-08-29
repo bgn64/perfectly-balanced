@@ -146,6 +146,13 @@ function splitsMatchEvenDistribution(
   return actual.every((amount, index) => amount === expected[index])
 }
 
+function isTextEntryTarget(target: EventTarget | null): boolean {
+  return (
+    target instanceof HTMLElement &&
+    target.closest('input, textarea, select, [contenteditable="true"]') !== null
+  )
+}
+
 export function TransactionsPanel({
   categoriesRevision,
   onCategoriesChanged,
@@ -176,6 +183,13 @@ export function TransactionsPanel({
   const [focusedSplitKey, setFocusedSplitKey] = useState<string | null>(null)
   const requestGeneration = useRef(0)
   const selectedTransactionIdRef = useRef<string | null>(null)
+  const transactionButtonRefs = useRef(
+    new Map<string, HTMLButtonElement>(),
+  )
+  const splitCategoryInputRefs = useRef(
+    new Map<string, HTMLInputElement>(),
+  )
+  const addCategoryInputRef = useRef<HTMLInputElement>(null)
 
   const refreshTransactions = useCallback(async () => {
     const generation = ++requestGeneration.current
@@ -340,44 +354,148 @@ export function TransactionsPanel({
       ) ?? null
     : null
 
-  function selectTransaction(transaction: Transaction) {
-    const transactionSplits = splitsByTransaction.get(transaction.id) ?? []
-    selectedTransactionIdRef.current = transaction.id
-    setSelectedTransactionId(transaction.id)
-    setDraftSplits(
-      transactionSplits.map((split) => ({
-        key: split.id,
-        categoryId: split.category_id,
-        amount: split.amount.toFixed(2),
-      })),
-    )
-    setIsManualSplit(
-      !splitsMatchEvenDistribution(transaction.amount, transactionSplits),
-    )
-    setSplitError(
-      transaction.currency_code === 'USD'
-        ? null
-        : 'Only USD transactions can be categorized.',
-    )
-    setFocusedSplitKey(null)
-  }
+  const selectTransaction = useCallback(
+    (transaction: Transaction) => {
+      const transactionSplits = splitsByTransaction.get(transaction.id) ?? []
+      selectedTransactionIdRef.current = transaction.id
+      setSelectedTransactionId(transaction.id)
+      setDraftSplits(
+        transactionSplits.map((split) => ({
+          key: split.id,
+          categoryId: split.category_id,
+          amount: split.amount.toFixed(2),
+        })),
+      )
+      setIsManualSplit(
+        !splitsMatchEvenDistribution(transaction.amount, transactionSplits),
+      )
+      setSplitError(
+        transaction.currency_code === 'USD'
+          ? null
+          : 'Only USD transactions can be categorized.',
+      )
+      setFocusedSplitKey(null)
+    },
+    [splitsByTransaction],
+  )
 
-  function quickCategorize(transaction: Transaction) {
-    selectTransaction(transaction)
-    if (transaction.currency_code !== 'USD') {
-      return
+  const quickCategorize = useCallback(
+    (transaction: Transaction) => {
+      selectTransaction(transaction)
+      if (transaction.currency_code !== 'USD') {
+        return
+      }
+      const key = window.crypto.randomUUID()
+      setDraftSplits([
+        {
+          key,
+          categoryId: null,
+          amount: transaction.amount.toFixed(2),
+        },
+      ])
+      setIsManualSplit(false)
+      setFocusedSplitKey(key)
+    },
+    [selectTransaction],
+  )
+
+  useEffect(() => {
+    function focusTransaction(transactionId: string) {
+      window.requestAnimationFrame(() => {
+        const button = transactionButtonRefs.current.get(transactionId)
+        button?.focus({ preventScroll: true })
+        button?.scrollIntoView({ block: 'nearest' })
+      })
     }
-    const key = window.crypto.randomUUID()
-    setDraftSplits([
-      {
-        key,
-        categoryId: null,
-        amount: transaction.amount.toFixed(2),
-      },
-    ])
-    setIsManualSplit(false)
-    setFocusedSplitKey(key)
-  }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (
+        event.defaultPrevented ||
+        event.altKey ||
+        event.metaKey ||
+        isTextEntryTarget(event.target)
+      ) {
+        return
+      }
+
+      const key = event.key.toLocaleLowerCase()
+      const focusedTransactionRow =
+        event.target instanceof HTMLElement
+          ? event.target.closest<HTMLButtonElement>('.transaction-select')
+          : null
+      const direction =
+        !event.ctrlKey && !event.shiftKey && key === 'j'
+          ? 1
+          : !event.ctrlKey && !event.shiftKey && key === 'k'
+            ? -1
+            : focusedTransactionRow && event.key === 'ArrowDown'
+              ? 1
+              : focusedTransactionRow && event.key === 'ArrowUp'
+                ? -1
+                : null
+      if (direction !== null) {
+        if (displayedTransactions.length === 0) {
+          return
+        }
+        event.preventDefault()
+        const originTransactionId =
+          focusedTransactionRow?.dataset.transactionId ??
+          selectedTransactionId
+        const currentIndex = displayedTransactions.findIndex(
+          (transaction) => transaction.id === originTransactionId,
+        )
+        const nextIndex =
+          currentIndex === -1
+            ? direction === 1
+              ? 0
+              : displayedTransactions.length - 1
+            : Math.max(
+                0,
+                Math.min(
+                  displayedTransactions.length - 1,
+                  currentIndex + direction,
+                ),
+              )
+        const transaction = displayedTransactions[nextIndex]
+        if (transaction.id !== selectedTransactionId) {
+          selectTransaction(transaction)
+        }
+        focusTransaction(transaction.id)
+        return
+      }
+
+      if (
+        key === 'c' &&
+        !event.ctrlKey &&
+        !event.shiftKey &&
+        selectedTransaction?.currency_code === 'USD'
+      ) {
+        event.preventDefault()
+        const transactionSplits =
+          splitsByTransaction.get(selectedTransaction.id) ?? []
+        if (transactionSplits.length === 0) {
+          if (draftSplits.length === 0) {
+            quickCategorize(selectedTransaction)
+          } else {
+            splitCategoryInputRefs.current.get(draftSplits[0].key)?.focus()
+          }
+        } else {
+          addCategoryInputRef.current?.focus()
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [
+    displayedTransactions,
+    draftSplits,
+    quickCategorize,
+    selectTransaction,
+    selectedTransaction,
+    selectedTransactionId,
+    splitsByTransaction,
+  ])
 
   async function createCategory(name: string): Promise<Category> {
     if (!user) {
@@ -723,7 +841,16 @@ export function TransactionsPanel({
                   key={transaction.id}
                 >
                   <button
+                    aria-pressed={isSelected}
                     className="transaction-select"
+                    data-transaction-id={transaction.id}
+                    ref={(button) => {
+                      if (button) {
+                        transactionButtonRefs.current.set(transaction.id, button)
+                      } else {
+                        transactionButtonRefs.current.delete(transaction.id)
+                      }
+                    }}
                     type="button"
                     onClick={() => selectTransaction(transaction)}
                   >
@@ -842,6 +969,13 @@ export function TransactionsPanel({
                         ? (name) => `+ Create “${name}” and add to budget`
                         : undefined
                     }
+                    inputRef={(input) => {
+                      if (input) {
+                        splitCategoryInputRefs.current.set(split.key, input)
+                      } else {
+                        splitCategoryInputRefs.current.delete(split.key)
+                      }
+                    }}
                     onCreate={createCategory}
                     onCreateAlternative={
                       applicableBudget
@@ -913,6 +1047,7 @@ export function TransactionsPanel({
                     ).filter(
                       (categoryId): categoryId is string => categoryId !== null,
                     )}
+                    inputRef={addCategoryInputRef}
                     label="Add or create a split category"
                     placeholder="Search or create a category..."
                     onCreate={createCategory}
