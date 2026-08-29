@@ -55,43 +55,61 @@
         </section>
         <p class="interactive-hint">Amounts and Spending/Income controls are editable. Press Enter to save an amount; hover a row to reveal its drag handle.</p>
         <section class="panel budget-sheet">
-          <section class="budget-group">
+          <section class="budget-group" draggable="true">
             <div class="group-head">
               <div class="row-main"><span class="drag hover-reveal">⠿</span><div><h3>Essentials</h3><p class="subtle">$2,650 planned · $2,463 spent</p></div></div>
             </div>
-            <div class="row budget-item">
+            <div class="drop-target"><span>Drop here</span></div>
+            <div class="row budget-item" draggable="true">
               <div class="row-main"><span class="drag hover-reveal">⠿</span><div><strong>Housing</strong><p>$1,800 of $1,800 spent</p></div></div>
               <div class="mini-segmented"><label><input checked name="housing-direction" type="radio" value="spending" /><span>Spending</span></label><label><input name="housing-direction" type="radio" value="income" /><span>Income</span></label></div>
               <div class="progress"><i style="--progress: 100%"></i></div>
               <input class="amount-cell amount-input" aria-label="Housing planned amount" value="1800.00" />
             </div>
-            <div class="row budget-item">
+            <div class="drop-target"><span>Drop here</span></div>
+            <div class="row budget-item" draggable="true">
               <div class="row-main"><span class="drag hover-reveal">⠿</span><div><strong>Groceries</strong><p>$475 of $600 spent</p></div></div>
               <div class="mini-segmented"><label><input checked name="groceries-direction" type="radio" value="spending" /><span>Spending</span></label><label><input name="groceries-direction" type="radio" value="income" /><span>Income</span></label></div>
               <div class="progress"><i style="--progress: 79%"></i></div>
               <input class="amount-cell amount-input" aria-label="Groceries planned amount" value="600.00" />
             </div>
-            <div class="row budget-item">
+            <div class="drop-target"><span>Drop here</span></div>
+            <div class="row budget-item" draggable="true">
               <div class="row-main"><span class="drag hover-reveal">⠿</span><div><strong>Utilities</strong><p>$188 of $250 spent</p></div></div>
               <div class="mini-segmented"><label><input checked name="utilities-direction" type="radio" value="spending" /><span>Spending</span></label><label><input name="utilities-direction" type="radio" value="income" /><span>Income</span></label></div>
               <div class="progress"><i style="--progress: 75%"></i></div>
               <input class="amount-cell amount-input" aria-label="Utilities planned amount" value="250.00" />
             </div>
-            <details class="quick-add">
-              <summary>＋ Add or create category</summary>
-              <div class="quick-add-content">
-                <div class="combo">
-                  <input value="Childcare" aria-label="Find or create category" />
-                  <div class="combo-menu">
-                    <button class="combo-option highlighted" type="button"><em>Create “Childcare”</em></button>
-                    <button class="combo-option" type="button">Child expenses</button>
+            <div class="drop-target"><span>Drop here</span></div>
+            <div class="inline-create-flow">
+              <label class="inline-create-trigger" for="essentials-category-name">＋ Add or create category</label>
+              <div class="row budget-item provisional-budget-item">
+                <div class="row-main">
+                  <span class="drag">⠿</span>
+                  <div class="combo keyboard-combo">
+                    <input
+                      autofocus
+                      id="essentials-category-name"
+                      aria-label="Find or create category in Essentials"
+                      autocomplete="off"
+                      value="Child"
+                    />
+                    <div class="combo-menu">
+                      <button class="combo-option highlighted" type="button"><strong>Child expenses</strong></button>
+                      <button class="combo-option" type="button">Childcare</button>
+                      <div class="combo-divider"></div>
+                      <button class="combo-option combo-option--create" type="button"><em>＋ Create “Child”</em></button>
+                    </div>
                   </div>
                 </div>
-                <span class="subtle">Adds at $0 · Spending</span>
+                <div class="mini-segmented"><label><input checked name="child-direction" type="radio" value="spending" /><span>Spending</span></label><label><input name="child-direction" type="radio" value="income" /><span>Income</span></label></div>
+                <div class="progress"><i style="--progress: 0%"></i></div>
+                <input class="amount-cell amount-input" aria-label="New category planned amount" value="0.00" />
               </div>
-            </details>
+            </div>
           </section>
-          <section class="budget-group">
+          <div class="section-drop-target"><span>Drop here</span></div>
+          <section class="budget-group" draggable="true">
             <div class="group-head">
               <div class="row-main"><span class="drag hover-reveal">⠿</span><div><h3>Flexible spending</h3><p class="subtle">$600 planned · $301 spent</p></div></div>
             </div>
@@ -107,9 +125,18 @@
               <div class="progress"><i style="--progress: 61%"></i></div>
               <input class="amount-cell amount-input" aria-label="Entertainment planned amount" value="350.00" />
             </div>
-            <details class="quick-add"><summary>＋ Add or create category</summary><div class="quick-add-content"><div class="combo"><input placeholder="Search categories or enter a new name…" /><div class="combo-options"><button type="button">Groceries</button><button type="button">Gas</button><button class="create" type="button">＋ Create “Travel”</button></div></div><button class="button" type="button">Add</button></div></details>
+            <div class="inline-create-flow">
+              <label class="inline-create-trigger" for="flexible-category-name">＋ Add or create category</label>
+              <div class="row budget-item provisional-budget-item">
+                <div class="row-main"><span class="drag">⠿</span><div class="combo keyboard-combo"><input id="flexible-category-name" aria-label="Find or create category in Flexible spending" placeholder="Search or create a category…" /><div class="combo-menu"><button class="combo-option highlighted" type="button"><strong>Travel</strong></button><button class="combo-option" type="button">Gas</button><div class="combo-divider"></div><button class="combo-option combo-option--create" type="button"><em>＋ Create new category</em></button></div></div></div>
+                <div class="mini-segmented"><label><input checked name="flexible-new-direction" type="radio" value="spending" /><span>Spending</span></label><label><input name="flexible-new-direction" type="radio" value="income" /><span>Income</span></label></div>
+                <div class="progress"><i style="--progress: 0%"></i></div>
+                <input class="amount-cell amount-input" aria-label="New category planned amount" value="0.00" />
+              </div>
+            </div>
           </section>
-          <section class="budget-group">
+          <div class="section-drop-target"><span>Drop here</span></div>
+          <section class="budget-group" draggable="true">
             <div class="group-head">
               <div class="row-main"><span class="drag hover-reveal">⠿</span><div><h3>Income</h3><p class="subtle">$5,000 planned · $2,500 received</p></div></div>
             </div>
@@ -119,15 +146,40 @@
               <div class="progress"><i style="--progress: 50%"></i></div>
               <input class="amount-cell amount-input" aria-label="Paycheck planned amount" value="5000.00" />
             </div>
-            <details class="quick-add"><summary>＋ Add or create category</summary><div class="quick-add-content"><div class="combo"><input placeholder="Search categories or enter a new name…" /><div class="combo-options"><button type="button">Paycheck</button><button type="button">Freelance</button><button class="create" type="button">＋ Create “Bonus”</button></div></div><button class="button" type="button">Add</button></div></details>
-          </section>
-          <details class="quick-add" style="margin-top: 1rem; border: 1px dashed var(--line); border-radius: 0.75rem">
-            <summary>＋ Add subsection at the end</summary>
-            <div class="quick-add-content">
-              <div class="combo"><input aria-label="Subsection name" placeholder="e.g. Savings goals" /></div>
-              <button class="button" type="button">Add subsection</button>
+            <div class="inline-create-flow">
+              <label class="inline-create-trigger" for="income-category-name">＋ Add or create category</label>
+              <div class="row budget-item provisional-budget-item">
+                <div class="row-main"><span class="drag">⠿</span><div class="combo keyboard-combo"><input id="income-category-name" aria-label="Find or create category in Income" placeholder="Search or create a category…" /><div class="combo-menu"><button class="combo-option highlighted" type="button"><strong>Freelance</strong></button><div class="combo-divider"></div><button class="combo-option combo-option--create" type="button"><em>＋ Create new category</em></button></div></div></div>
+                <div class="mini-segmented"><label><input name="income-new-direction" type="radio" value="spending" /><span>Spending</span></label><label><input checked name="income-new-direction" type="radio" value="income" /><span>Income</span></label></div>
+                <div class="progress"><i style="--progress: 0%"></i></div>
+                <input class="amount-cell amount-input" aria-label="New category planned amount" value="0.00" />
+              </div>
             </div>
-          </details>
+          </section>
+          <div class="section-drop-target"><span>Drop here</span></div>
+          <div class="inline-create-flow subsection-create-flow">
+            <label class="inline-create-trigger" for="new-subsection-name">＋ Add subsection at the end</label>
+            <section class="budget-group provisional-subsection">
+              <div class="group-head">
+                <div class="row-main">
+                  <span class="drag">⠿</span>
+                  <div class="combo">
+                    <input id="new-subsection-name" aria-label="New subsection name" placeholder="Subsection name…" />
+                  </div>
+                </div>
+                <span class="subtle">$0 planned · $0 spent</span>
+              </div>
+              <div class="inline-create-flow">
+                <label class="inline-create-trigger" for="new-subsection-category">＋ Add or create category</label>
+                <div class="row budget-item provisional-budget-item">
+                  <div class="row-main"><span class="drag">⠿</span><div class="combo"><input id="new-subsection-category" placeholder="Search or create a category…" /></div></div>
+                  <div class="mini-segmented"><label><input checked name="subsection-new-direction" type="radio" value="spending" /><span>Spending</span></label><label><input name="subsection-new-direction" type="radio" value="income" /><span>Income</span></label></div>
+                  <div class="progress"><i style="--progress: 0%"></i></div>
+                  <input class="amount-cell amount-input" aria-label="New category planned amount" value="0.00" />
+                </div>
+              </div>
+            </section>
+          </div>
         </section>
       </main>
     </div>

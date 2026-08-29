@@ -119,6 +119,8 @@ export function BudgetPanel({
   const [allocations, setAllocations] = useState<BudgetAllocation[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [subsectionName, setSubsectionName] = useState('')
+  const [isAddingSubsection, setIsAddingSubsection] = useState(false)
+  const [draggedItem, setDraggedItem] = useState<DraggedBudgetItem | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -261,6 +263,7 @@ export function BudgetPanel({
       )
     ) {
       setSubsectionName('')
+      setIsAddingSubsection(false)
     }
   }
 
@@ -274,7 +277,7 @@ export function BudgetPanel({
     }
   }
 
-  async function dropSubsection(event: DragEvent, targetPosition: number) {
+  async function dropSubsection(event: DragEvent, targetGap: number) {
     event.preventDefault()
     const dragged = readDraggedItem(event)
     if (!dragged || dragged.type !== 'subsection') {
@@ -283,6 +286,12 @@ export function BudgetPanel({
     if (!subsections.some((item) => item.id === dragged.id)) {
       return
     }
+    const sourcePosition = subsections.findIndex(
+      (subsection) => subsection.id === dragged.id,
+    )
+    const targetPosition =
+      sourcePosition < targetGap ? targetGap - 1 : targetGap
+    setDraggedItem(null)
     await runMutation(dragged.id, () =>
       getSupabaseClient().rpc('place_budget_subsection', {
         p_subsection_id: dragged.id,
@@ -307,15 +316,12 @@ export function BudgetPanel({
     if (!source) {
       return
     }
-    const sourceGroup = allocations.filter(
-      (allocation) =>
-        allocation.subsection_id === source.subsection_id,
-    )
     const normalizedPosition =
       source.subsection_id === subsectionId &&
-      targetPosition === sourceGroup.length
-        ? sourceGroup.length - 1
+      source.position < targetPosition
+        ? targetPosition - 1
         : targetPosition
+    setDraggedItem(null)
     await runMutation(dragged.id, () =>
       getSupabaseClient().rpc('place_budget_category_allocation', {
         p_allocation_id: dragged.id,
@@ -355,6 +361,9 @@ export function BudgetPanel({
     new Set([selectedMonth, ...budgets.map((item) => item.month.slice(0, 7))]),
   ).sort((left, right) => right.localeCompare(left))
   function changeMonth(month: string) {
+    setSubsectionName('')
+    setIsAddingSubsection(false)
+    setDraggedItem(null)
     setIsLoading(true)
     setSelectedMonth(month)
   }
@@ -458,6 +467,7 @@ export function BudgetPanel({
               (allocation) => allocation.subsection_id === null,
             ) && (
               <BudgetGroup
+                key={`${budget.id}:root`}
                 name="Unsectioned"
                 subsectionId={null}
                 allocations={allocations.filter(
@@ -466,9 +476,12 @@ export function BudgetPanel({
                 categories={categories}
                 allocatedCategoryIds={allocatedCategoryIds}
                 busyId={busyId}
+                draggedItem={draggedItem}
                 onAddAllocation={addAllocation}
                 onCreateCategory={createCategory}
                 onDropAllocation={dropAllocation}
+                onDragEnd={() => setDraggedItem(null)}
+                onDragStart={setDraggedItem}
                 onUpdateAllocation={updateAllocation}
               />
             )}
@@ -477,63 +490,112 @@ export function BudgetPanel({
                 (allocation) => allocation.subsection_id === subsection.id,
               )
               return (
-                <section
-                  className="budget-group"
-                  draggable={busyId === null}
-                  key={subsection.id}
-                  onDragOver={(event) => event.preventDefault()}
-                  onDragStart={(event) => {
-                    event.dataTransfer.effectAllowed = 'move'
-                    event.dataTransfer.setData(
-                      budgetDragType,
-                      JSON.stringify({ id: subsection.id, type: 'subsection' }),
-                    )
-                  }}
-                  onDrop={(event) => void dropSubsection(event, index)}
-                >
-                  <BudgetGroup
-                    name={subsection.name}
-                    subsectionId={subsection.id}
-                    allocations={groupAllocations}
-                    categories={categories}
-                    allocatedCategoryIds={allocatedCategoryIds}
-                    busyId={busyId}
-                    onAddAllocation={addAllocation}
-                    onCreateCategory={createCategory}
-                    onDropAllocation={dropAllocation}
-                    onUpdateAllocation={updateAllocation}
-                    isNested
-                  />
-                </section>
+                <div className="budget-group-slot" key={subsection.id}>
+                  {draggedItem?.type === 'subsection' && (
+                    <BudgetDropTarget
+                      onDrop={(event) => void dropSubsection(event, index)}
+                    />
+                  )}
+                  <section
+                    className="budget-group"
+                    draggable={busyId === null}
+                    onDragEnd={() => setDraggedItem(null)}
+                    onDragStart={(event) => {
+                      const item: DraggedBudgetItem = {
+                        id: subsection.id,
+                        type: 'subsection',
+                      }
+                      event.dataTransfer.effectAllowed = 'move'
+                      event.dataTransfer.setData(
+                        budgetDragType,
+                        JSON.stringify(item),
+                      )
+                      setDraggedItem(item)
+                    }}
+                  >
+                    <BudgetGroup
+                      name={subsection.name}
+                      subsectionId={subsection.id}
+                      allocations={groupAllocations}
+                      categories={categories}
+                      allocatedCategoryIds={allocatedCategoryIds}
+                      busyId={busyId}
+                      draggedItem={draggedItem}
+                      onAddAllocation={addAllocation}
+                      onCreateCategory={createCategory}
+                      onDropAllocation={dropAllocation}
+                      onDragEnd={() => setDraggedItem(null)}
+                      onDragStart={setDraggedItem}
+                      onUpdateAllocation={updateAllocation}
+                      isNested
+                    />
+                  </section>
+                </div>
               )
             })}
-            <details className="quick-add subsection-disclosure">
-              <summary>＋ Add subsection at the end</summary>
-              <form
-                className="quick-add-content subsection-add"
-                onSubmit={addSubsection}
+            {draggedItem?.type === 'subsection' && (
+              <BudgetDropTarget
+                onDrop={(event) =>
+                  void dropSubsection(event, subsections.length)
+                }
+              />
+            )}
+            <div className="subsection-create-flow">
+              <button
+                className="inline-create-trigger"
+                disabled={busyId !== null}
+                type="button"
+                onClick={() => setIsAddingSubsection(true)}
               >
-                <label className="sr-only" htmlFor="subsection-name">
-                  New subsection name
-                </label>
-                <input
-                  disabled={busyId !== null}
-                  id="subsection-name"
-                  maxLength={100}
-                  placeholder="e.g. Savings goals"
-                  type="text"
-                  value={subsectionName}
-                  onChange={(event) => setSubsectionName(event.target.value)}
-                />
-                <button
-                  className="button"
-                  disabled={busyId !== null}
-                  type="submit"
-                >
-                  {busyId === 'add-subsection' ? 'Adding...' : 'Add subsection'}
-                </button>
-              </form>
-            </details>
+                ＋ Add subsection at the end
+              </button>
+              {isAddingSubsection && (
+                <section className="budget-group provisional-subsection">
+                  <form
+                    className="group-head provisional-subsection__head"
+                    onBlur={(event) => {
+                      if (
+                        !event.currentTarget.contains(event.relatedTarget) &&
+                        !subsectionName.trim()
+                      ) {
+                        setIsAddingSubsection(false)
+                      }
+                    }}
+                    onSubmit={addSubsection}
+                  >
+                    <span className="drag" aria-hidden="true">⠿</span>
+                    <label className="sr-only" htmlFor="subsection-name">
+                      New subsection name
+                    </label>
+                    <input
+                      autoFocus
+                      disabled={busyId !== null}
+                      id="subsection-name"
+                      maxLength={100}
+                      placeholder="Subsection name..."
+                      type="text"
+                      value={subsectionName}
+                      onChange={(event) => setSubsectionName(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Escape') {
+                          event.preventDefault()
+                          setSubsectionName('')
+                          setIsAddingSubsection(false)
+                        }
+                      }}
+                    />
+                    <span className="subtle">$0 planned · $0 spent</span>
+                  </form>
+                  <button
+                    className="inline-create-trigger"
+                    disabled
+                    type="button"
+                  >
+                    ＋ Add or create category
+                  </button>
+                </section>
+              )}
+            </div>
           </section>
         </>
       )}
@@ -557,10 +619,13 @@ function BudgetGroup({
   categories,
   allocatedCategoryIds,
   busyId,
+  draggedItem,
   isNested = false,
   onAddAllocation,
   onCreateCategory,
   onDropAllocation,
+  onDragEnd,
+  onDragStart,
   onUpdateAllocation,
 }: {
   name: string
@@ -569,6 +634,7 @@ function BudgetGroup({
   categories: Category[]
   allocatedCategoryIds: string[]
   busyId: string | null
+  draggedItem: DraggedBudgetItem | null
   isNested?: boolean
   onAddAllocation: (
     category: Category,
@@ -580,12 +646,15 @@ function BudgetGroup({
     subsectionId: string | null,
     targetPosition: number,
   ) => Promise<void>
+  onDragEnd: () => void
+  onDragStart: (item: DraggedBudgetItem) => void
   onUpdateAllocation: (
     allocation: BudgetAllocation,
     magnitude: number,
     direction?: BudgetDirection,
   ) => Promise<boolean>
 }) {
+  const [isAddingCategory, setIsAddingCategory] = useState(false)
   const planned = allocations.reduce(
     (sum, allocation) => sum + Math.abs(allocation.budgeted_amount),
     0,
@@ -616,36 +685,84 @@ function BudgetGroup({
         </div>
       </div>
       {allocations.map((allocation, index) => (
-        <BudgetAllocationRow
-          allocation={allocation}
-          busy={busyId !== null}
-          key={`${allocation.allocation_id}-${allocation.budgeted_amount}-${allocation.direction}`}
-          onDrop={(event) =>
-            onDropAllocation(event, subsectionId, index)
-          }
-          onUpdate={onUpdateAllocation}
-        />
-      ))}
-      <details
-        className="quick-add"
-        onDragOver={(event) => event.preventDefault()}
-        onDrop={(event) =>
-          void onDropAllocation(event, subsectionId, allocations.length)
-        }
-      >
-        <summary>＋ Add or create category</summary>
-        <div className="quick-add-content">
-          <CategoryCombobox
-            categories={categories}
-            disabled={busyId !== null}
-            excludedCategoryIds={allocatedCategoryIds}
-            label={`Add or create a category in ${name}`}
-            onCreate={onCreateCategory}
-            onSelect={(category) => onAddAllocation(category, subsectionId)}
+        <div className="budget-allocation-slot" key={allocation.allocation_id}>
+          {draggedItem?.type === 'allocation' && (
+            <BudgetDropTarget
+              onDrop={(event) =>
+                void onDropAllocation(event, subsectionId, index)
+              }
+            />
+          )}
+          <BudgetAllocationRow
+            allocation={allocation}
+            busy={busyId !== null}
+            key={`${allocation.allocation_id}-${allocation.budgeted_amount}-${allocation.direction}`}
+            onDragEnd={onDragEnd}
+            onDragStart={onDragStart}
+            onUpdate={onUpdateAllocation}
           />
-          <span className="subtle">Adds at $0 · Spending</span>
         </div>
-      </details>
+      ))}
+      {draggedItem?.type === 'allocation' && (
+        <BudgetDropTarget
+          onDrop={(event) =>
+            void onDropAllocation(event, subsectionId, allocations.length)
+          }
+        />
+      )}
+      <div className="inline-create-flow">
+        <button
+          className="inline-create-trigger"
+          disabled={busyId !== null}
+          type="button"
+          onClick={() => setIsAddingCategory(true)}
+        >
+          ＋ Add or create category
+        </button>
+        {isAddingCategory && (
+          <div className="budget-item provisional-budget-item">
+            <div className="row-main">
+              <span className="drag" aria-hidden="true">⠿</span>
+              <CategoryCombobox
+                autoFocus
+                cancelOnBlur
+                categories={categories}
+                disabled={busyId !== null}
+                excludedCategoryIds={allocatedCategoryIds}
+                label={`Add or create a category in ${name}`}
+                onCancel={() => setIsAddingCategory(false)}
+                onCreate={onCreateCategory}
+                onSelect={async (category) => {
+                  await onAddAllocation(category, subsectionId)
+                  setIsAddingCategory(false)
+                }}
+              />
+            </div>
+            <div className="mini-segmented" aria-label="New category direction">
+              <button className="selected" disabled type="button">
+                Spending
+              </button>
+              <button disabled type="button">Income</button>
+            </div>
+            <div
+              aria-label="0% of planned spending"
+              className="progress"
+              role="progressbar"
+              aria-valuemax={100}
+              aria-valuemin={0}
+              aria-valuenow={0}
+            >
+              <i style={{ width: '0%' }} />
+            </div>
+            <input
+              aria-label="New category planned magnitude"
+              className="amount-input"
+              disabled
+              value="0.00"
+            />
+          </div>
+        )}
+      </div>
     </>
   )
 
@@ -658,12 +775,14 @@ function BudgetGroup({
 function BudgetAllocationRow({
   allocation,
   busy,
-  onDrop,
+  onDragEnd,
+  onDragStart,
   onUpdate,
 }: {
   allocation: BudgetAllocation
   busy: boolean
-  onDrop: (event: DragEvent) => void
+  onDragEnd: () => void
+  onDragStart: (item: DraggedBudgetItem) => void
   onUpdate: (
     allocation: BudgetAllocation,
     magnitude: number,
@@ -713,18 +832,19 @@ function BudgetAllocationRow({
     <div
       className={`row budget-item budget-item--${allocation.direction}`}
       draggable={!busy}
-      onDragOver={(event) => event.preventDefault()}
+      onDragEnd={onDragEnd}
       onDragStart={(event) => {
+        const item: DraggedBudgetItem = {
+          id: allocation.allocation_id,
+          type: 'allocation',
+        }
         event.stopPropagation()
         event.dataTransfer.effectAllowed = 'move'
         event.dataTransfer.setData(
           budgetDragType,
-          JSON.stringify({ id: allocation.allocation_id, type: 'allocation' }),
+          JSON.stringify(item),
         )
-      }}
-      onDrop={(event) => {
-        event.stopPropagation()
-        onDrop(event)
+        onDragStart(item)
       }}
     >
       <div className="row-main">
@@ -775,6 +895,40 @@ function BudgetAllocationRow({
         onChange={setMagnitudeValue}
         onReset={() => setMagnitudeValue(plannedMagnitude.toFixed(2))}
       />
+    </div>
+  )
+}
+
+function BudgetDropTarget({
+  onDrop,
+}: {
+  onDrop: (event: DragEvent) => void
+}) {
+  const [isActive, setIsActive] = useState(false)
+  return (
+    <div
+      className={`budget-drop-target${isActive ? ' active' : ''}`}
+      onDragEnter={(event) => {
+        event.preventDefault()
+        setIsActive(true)
+      }}
+      onDragLeave={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+          setIsActive(false)
+        }
+      }}
+      onDragOver={(event) => {
+        event.preventDefault()
+        event.dataTransfer.dropEffect = 'move'
+      }}
+      onDrop={(event) => {
+        event.preventDefault()
+        event.stopPropagation()
+        setIsActive(false)
+        onDrop(event)
+      }}
+    >
+      <span>Drop here</span>
     </div>
   )
 }

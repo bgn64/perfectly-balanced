@@ -31,7 +31,7 @@ interface TransactionsData {
 
 interface DraftSplit {
   key: string
-  categoryId: string
+  categoryId: string | null
   amount: string
 }
 
@@ -173,6 +173,7 @@ export function TransactionsPanel({
   const [isManualSplit, setIsManualSplit] = useState(false)
   const [splitError, setSplitError] = useState<string | null>(null)
   const [isSavingSplits, setIsSavingSplits] = useState(false)
+  const [focusedSplitKey, setFocusedSplitKey] = useState<string | null>(null)
   const requestGeneration = useRef(0)
   const selectedTransactionIdRef = useRef<string | null>(null)
 
@@ -332,6 +333,12 @@ export function TransactionsPanel({
   const selectedTransaction =
     transactions.find((transaction) => transaction.id === selectedTransactionId) ??
     null
+  const applicableBudget = selectedTransaction
+    ? budgets.find(
+        (candidate) =>
+          monthKey(candidate.month) === monthKey(selectedTransaction.transaction_date),
+      ) ?? null
+    : null
 
   function selectTransaction(transaction: Transaction) {
     const transactionSplits = splitsByTransaction.get(transaction.id) ?? []
@@ -352,6 +359,24 @@ export function TransactionsPanel({
         ? null
         : 'Only USD transactions can be categorized.',
     )
+    setFocusedSplitKey(null)
+  }
+
+  function quickCategorize(transaction: Transaction) {
+    selectTransaction(transaction)
+    if (transaction.currency_code !== 'USD') {
+      return
+    }
+    const key = window.crypto.randomUUID()
+    setDraftSplits([
+      {
+        key,
+        categoryId: null,
+        amount: transaction.amount.toFixed(2),
+      },
+    ])
+    setIsManualSplit(false)
+    setFocusedSplitKey(key)
   }
 
   async function createCategory(name: string): Promise<Category> {
@@ -373,6 +398,42 @@ export function TransactionsPanel({
     )
     onCategoriesChanged()
     return data
+  }
+
+  async function createCategoryAndAddToBudget(name: string): Promise<Category> {
+    if (!applicableBudget) {
+      throw new Error('This transaction month does not have a budget.')
+    }
+    const { data, error } = await getSupabaseClient().rpc(
+      'create_category_with_root_budget_allocation',
+      {
+        p_budget_id: applicableBudget.id,
+        p_name: name.trim(),
+      },
+    )
+    if (error) {
+      throw new Error(
+        error.code === '23505' ? 'Category names must be unique.' : error.message,
+      )
+    }
+    if (
+      !data ||
+      typeof data !== 'object' ||
+      !('id' in data) ||
+      !('name' in data) ||
+      typeof data.id !== 'string' ||
+      typeof data.name !== 'string'
+    ) {
+      throw new Error('The created category could not be read.')
+    }
+    const category = { id: data.id, name: data.name }
+    setCategories((current) =>
+      [...current, category].sort((left, right) =>
+        left.name.localeCompare(right.name),
+      ),
+    )
+    onCategoriesChanged()
+    return category
   }
 
   function addCategoryToSplit(category: Category) {
@@ -425,12 +486,16 @@ export function TransactionsPanel({
         split.key === key ? { ...split, categoryId: category.id } : split,
       ),
     )
+    setFocusedSplitKey(null)
     setSplitError(null)
   }
 
   function validateSplits(transaction: Transaction): string | null {
     if (draftSplits.length === 0) {
       return null
+    }
+    if (draftSplits.some((split) => !split.categoryId)) {
+      return 'Choose a category for every split.'
     }
     const amounts = draftSplits.map((split) => parseSplitAmount(split.amount))
     if (amounts.some((amount) => amount === null || amount === 0)) {
@@ -472,10 +537,15 @@ export function TransactionsPanel({
       'replace_transaction_category_splits',
       {
         p_transaction_id: selectedTransaction.id,
-        p_splits: draftSplits.map((split) => ({
-          category_id: split.categoryId,
-          amount: Number(split.amount),
-        })),
+        p_splits: draftSplits.map((split) => {
+          if (!split.categoryId) {
+            throw new Error('Choose a category for every split.')
+          }
+          return {
+            category_id: split.categoryId,
+            amount: Number(split.amount),
+          }
+        }),
       },
     )
     setIsSavingSplits(false)
@@ -646,40 +716,52 @@ export function TransactionsPanel({
                 splitsByTransaction.get(transaction.id) ?? []
               const isSelected = transaction.id === selectedTransactionId
               return (
-                <button
+                <div
                   className={`transaction-row${
                     isSelected ? ' selected-transaction' : ''
                   }`}
                   key={transaction.id}
-                  type="button"
-                  onClick={() => selectTransaction(transaction)}
                 >
-                  <div className="transaction-main">
-                    <strong>{transactionDescription(transaction)}</strong>
-                    <p>
-                      {new Intl.DateTimeFormat(undefined, {
-                        day: 'numeric',
-                        month: 'short',
-                      }).format(new Date(`${transaction.transaction_date}T00:00:00`))}
-                      {' · '}
-                      {transaction.account_name}
-                      {transaction.is_pending ? ' · Pending' : ''}
-                    </p>
-                  </div>
-                  <strong
-                    className={`transaction-amount ${
-                      transaction.amount >= 0 ? 'positive' : 'negative'
-                    }`}
+                  <button
+                    className="transaction-select"
+                    type="button"
+                    onClick={() => selectTransaction(transaction)}
                   >
-                    {formatMoney(
-                      transaction.amount,
-                      transaction.currency_code ?? 'USD',
-                    )}
-                  </strong>
-                  <span
+                    <div className="transaction-main">
+                      <strong>{transactionDescription(transaction)}</strong>
+                      <p>
+                        {new Intl.DateTimeFormat(undefined, {
+                          day: 'numeric',
+                          month: 'short',
+                        }).format(
+                          new Date(`${transaction.transaction_date}T00:00:00`),
+                        )}
+                        {' · '}
+                        {transaction.account_name}
+                        {transaction.is_pending ? ' · Pending' : ''}
+                      </p>
+                    </div>
+                    <strong
+                      className={`transaction-amount ${
+                        transaction.amount >= 0 ? 'positive' : 'negative'
+                      }`}
+                    >
+                      {formatMoney(
+                        transaction.amount,
+                        transaction.currency_code ?? 'USD',
+                      )}
+                    </strong>
+                  </button>
+                  <button
                     className={`category-chip${
                       transactionSplits.length === 0 ? ' empty' : ''
                     }`}
+                    type="button"
+                    onClick={() =>
+                      transactionSplits.length === 0
+                        ? quickCategorize(transaction)
+                        : selectTransaction(transaction)
+                    }
                   >
                     {transactionSplits.length === 0
                       ? '+ Categorize'
@@ -687,8 +769,8 @@ export function TransactionsPanel({
                         ? categoriesById.get(transactionSplits[0].category_id)
                             ?.name ?? '1 category'
                         : `${transactionSplits.length} categories`}
-                  </span>
-                </button>
+                  </button>
+                </div>
               )
             })
           )}
@@ -737,23 +819,55 @@ export function TransactionsPanel({
                   key={`${split.key}-${split.categoryId}`}
                 >
                   <CategoryCombobox
+                    autoFocus={focusedSplitKey === split.key}
                     categories={categories}
                     disabled={isSavingSplits}
                     excludedCategoryIds={draftSplits
                       .filter((candidate) => candidate.key !== split.key)
-                      .map((candidate) => candidate.categoryId)}
+                      .flatMap((candidate) =>
+                        candidate.categoryId ? [candidate.categoryId] : [],
+                      )}
                     label={`${
-                      categoriesById.get(split.categoryId)?.name ?? 'Category'
+                      (split.categoryId
+                        ? categoriesById.get(split.categoryId)?.name
+                        : null) ?? 'Category'
                     } category`}
-                    selectedCategory={categoriesById.get(split.categoryId)}
+                    selectedCategory={
+                      split.categoryId
+                        ? categoriesById.get(split.categoryId)
+                        : undefined
+                    }
+                    createAlternativeLabel={
+                      applicableBudget
+                        ? (name) => `+ Create “${name}” and add to budget`
+                        : undefined
+                    }
                     onCreate={createCategory}
+                    onCreateAlternative={
+                      applicableBudget
+                        ? createCategoryAndAddToBudget
+                        : undefined
+                    }
+                    onCancel={
+                      split.categoryId === null
+                        ? () =>
+                            setDraftSplits((current) =>
+                              current.filter(
+                                (candidate) => candidate.key !== split.key,
+                              ),
+                            )
+                        : undefined
+                    }
                     onSelect={(category) =>
                       changeSplitCategory(split.key, category)
                     }
                   />
                   <label>
                     <span className="sr-only">
-                      {categoriesById.get(split.categoryId)?.name} amount
+                      {split.categoryId
+                        ? categoriesById.get(split.categoryId)?.name
+                        : 'Category'}{' '}
+                      amount
                     </span>
                     <input
                       aria-invalid={splitError ? 'true' : undefined}
@@ -776,7 +890,9 @@ export function TransactionsPanel({
                   </label>
                   <button
                     aria-label={`Remove ${
-                      categoriesById.get(split.categoryId)?.name ?? 'category'
+                      (split.categoryId
+                        ? categoriesById.get(split.categoryId)?.name
+                        : null) ?? 'category'
                     }`}
                     className="icon-button"
                     disabled={isSavingSplits}
@@ -794,10 +910,22 @@ export function TransactionsPanel({
                     disabled={isSavingSplits}
                     excludedCategoryIds={draftSplits.map(
                       (split) => split.categoryId,
+                    ).filter(
+                      (categoryId): categoryId is string => categoryId !== null,
                     )}
                     label="Add or create a split category"
                     placeholder="Search or create a category..."
                     onCreate={createCategory}
+                    createAlternativeLabel={
+                      applicableBudget
+                        ? (name) => `+ Create “${name}” and add to budget`
+                        : undefined
+                    }
+                    onCreateAlternative={
+                      applicableBudget
+                        ? createCategoryAndAddToBudget
+                        : undefined
+                    }
                     onSelect={addCategoryToSplit}
                   />
                 </div>
