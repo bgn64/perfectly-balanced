@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hybrid MVP — Budget</title>
+    <link rel="stylesheet" href="mvp-concepts.css" />
+  </head>
+  <body class="hybrid-shell">
+    <nav class="concept-switcher" aria-label="Mockup navigation">
+      <strong>Proposed hybrid</strong>
+      <a aria-current="page" href="hybrid-budget.html">Budget</a>
+      <a href="hybrid-transactions.html">Transactions</a>
+      <a href="hybrid-insights.html">Insights</a>
+      <a href="concept-workspace.html">View earlier concepts</a>
+      <a href="dashboard.html">Current test UI</a>
+    </nav>
+    <div class="app-frame">
+      <header class="topbar">
+        <div class="brand"><span class="brand-mark">P</span>Perfectly Balanced</div>
+        <nav class="primary-nav" aria-label="Primary">
+          <a class="active" href="hybrid-budget.html">Budgets</a>
+          <a href="hybrid-transactions.html">Transactions</a>
+          <a href="hybrid-insights.html">Insights</a>
+        </nav>
+        <div class="account-chip"><span class="avatar">BG</span>Ben</div>
+      </header>
+      <main class="page">
+        <div class="page-head">
+          <div>
+            <p class="eyebrow">Monthly budget</p>
+            <h1>August 2026</h1>
+            <p class="subtle">Plan your month and follow actual activity as transactions are categorized.</p>
+          </div>
+          <div class="toolbar-group">
+            <button class="icon-button" type="button" aria-label="Previous budget">←</button>
+            <details class="filter-wrap">
+              <summary class="pill-button">August 2026⌄</summary>
+              <div class="popover scope-menu">
+                <a href="#">October 2026</a>
+                <a href="#">September 2026</a>
+                <a class="active" href="#">August 2026</a>
+                <a href="#">July 2026</a>
+                <a href="#">＋ Create another month</a>
+              </div>
+            </details>
+            <button class="icon-button" type="button" aria-label="Next budget">→</button>
+          </div>
+        </div>
+        <section class="panel summary-strip" aria-label="Budget overview">
+          <div class="metric"><span>Planned spending</span><strong>$3,250</strong></div>
+          <div class="metric"><span>Spent so far</span><strong>$1,864</strong></div>
+          <div class="metric"><span>Planned income</span><strong>$5,000</strong></div>
+          <div class="metric"><span>Received so far</span><strong>$2,500</strong></div>
+        </section>
+        <p class="interactive-hint">Amounts and Spending/Income controls are editable. Press Enter to save an amount; hover a row to reveal its drag handle.</p>
+        <section class="panel budget-sheet">
+          <section class="budget-group">
+            <div class="group-head">
+              <div class="row-main"><span class="drag hover-reveal">⠿</span><div><h3>Essentials</h3><p class="subtle">$2,650 planned · $2,463 spent</p></div></div>
+            </div>
+            <div class="row budget-item">
+              <div class="row-main"><span class="drag hover-reveal">⠿</span><div><strong>Housing</strong><p>$1,800 of $1,800 spent</p></div></div>
+              <div class="mini-segmented"><label><input checked name="housing-direction" type="radio" value="spending" /><span>Spending</span></label><label><input name="housing-direction" type="radio" value="income" /><span>Income</span></label></div>
+              <div class="progress"><i style="--progress: 100%"></i></div>
+              <input class="amount-cell amount-input" aria-label="Housing planned amount" value="1800.00" />
+            </div>
+            <div class="row budget-item">
+              <div class="row-main"><span class="drag hover-reveal">⠿</span><div><strong>Groceries</strong><p>$475 of $600 spent</p></div></div>
+              <div class="mini-segmented"><label><input checked name="groceries-direction" type="radio" value="spending" /><span>Spending</span></label><label><input name="groceries-direction" type="radio" value="income" /><span>Income</span></label></div>
+              <div class="progress"><i style="--progress: 79%"></i></div>
+              <input class="amount-cell amount-input" aria-label="Groceries planned amount" value="600.00" />
+            </div>
+            <div class="row budget-item">
+              <div class="row-main"><span class="drag hover-reveal">⠿</span><div><strong>Utilities</strong><p>$188 of $250 spent</p></div></div>
+              <div class="mini-segmented"><label><input checked name="utilities-direction" type="radio" value="spending" /><span>Spending</span></label><label><input name="utilities-direction" type="radio" value="income" /><span>Income</span></label></div>
+              <div class="progress"><i style="--progress: 75%"></i></div>
+              <input class="amount-cell amount-input" aria-label="Utilities planned amount" value="250.00" />
+            </div>
+            <details class="quick-add">
+              <summary>＋ Add or create category</summary>
+              <div class="quick-add-content">
+                <div class="combo">
+                  <input value="Childcare" aria-label="Find or create category" />
+                  <div class="combo-menu">
+                    <button class="combo-option highlighted" type="button"><em>Create “Childcare”</em></button>
+                    <button class="combo-option" type="button">Child expenses</button>
+                  </div>
+                </div>
+                <span class="subtle">Adds at $0 · Spending</span>
+              </div>
+            </details>
+          </section>
+          <section class="budget-group">
+            <div class="group-head">
+              <div class="row-main"><span class="drag hover-reveal">⠿</span><div><h3>Flexible spending</h3><p class="subtle">$600 planned · $301 spent</p></div></div>
+            </div>
+            <div class="row budget-item">
+              <div class="row-main"><span class="drag hover-reveal">⠿</span><div><strong>Restaurants</strong><p>$89 of $250 spent</p></div></div>
+              <div class="mini-segmented"><label><input checked name="restaurants-direction" type="radio" value="spending" /><span>Spending</span></label><label><input name="restaurants-direction" type="radio" value="income" /><span>Income</span></label></div>
+              <div class="progress"><i style="--progress: 36%"></i></div>
+              <input class="amount-cell amount-input" aria-label="Restaurants planned amount" value="250.00" />
+            </div>
+            <div class="row budget-item">
+              <div class="row-main"><span class="drag hover-reveal">⠿</span><div><strong>Entertainment</strong><p>$212 of $350 spent</p></div></div>
+              <div class="mini-segmented"><label><input checked name="entertainment-direction" type="radio" value="spending" /><span>Spending</span></label><label><input name="entertainment-direction" type="radio" value="income" /><span>Income</span></label></div>
+              <div class="progress"><i style="--progress: 61%"></i></div>
+              <input class="amount-cell amount-input" aria-label="Entertainment planned amount" value="350.00" />
+            </div>
+            <details class="quick-add"><summary>＋ Add or create category</summary><div class="quick-add-content"><div class="combo"><input placeholder="Search categories or enter a new name…" /><div class="combo-options"><button type="button">Groceries</button><button type="button">Gas</button><button class="create" type="button">＋ Create “Travel”</button></div></div><button class="button" type="button">Add</button></div></details>
+          </section>
+          <section class="budget-group">
+            <div class="group-head">
+              <div class="row-main"><span class="drag hover-reveal">⠿</span><div><h3>Income</h3><p class="subtle">$5,000 planned · $2,500 received</p></div></div>
+            </div>
+            <div class="row budget-item">
+              <div class="row-main"><span class="drag hover-reveal">⠿</span><div><strong>Paycheck</strong><p>$2,500 of $5,000 received</p></div></div>
+              <div class="mini-segmented"><label><input name="paycheck-direction" type="radio" value="spending" /><span>Spending</span></label><label><input checked name="paycheck-direction" type="radio" value="income" /><span>Income</span></label></div>
+              <div class="progress"><i style="--progress: 50%"></i></div>
+              <input class="amount-cell amount-input" aria-label="Paycheck planned amount" value="5000.00" />
+            </div>
+            <details class="quick-add"><summary>＋ Add or create category</summary><div class="quick-add-content"><div class="combo"><input placeholder="Search categories or enter a new name…" /><div class="combo-options"><button type="button">Paycheck</button><button type="button">Freelance</button><button class="create" type="button">＋ Create “Bonus”</button></div></div><button class="button" type="button">Add</button></div></details>
+          </section>
+          <details class="quick-add" style="margin-top: 1rem; border: 1px dashed var(--line); border-radius: 0.75rem">
+            <summary>＋ Add subsection at the end</summary>
+            <div class="quick-add-content">
+              <div class="combo"><input aria-label="Subsection name" placeholder="e.g. Savings goals" /></div>
+              <button class="button" type="button">Add subsection</button>
+            </div>
+          </details>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>
