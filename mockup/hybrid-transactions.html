@@ -1,16 +1,117 @@
 <!doctype html>
 <html lang="en">
-  <head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>Hybrid MVP — Transactions</title><link rel="stylesheet" href="mvp-concepts.css" /></head>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hybrid MVP — Transactions</title>
+    <link rel="stylesheet" href="mvp-concepts.css" />
+  </head>
   <body class="hybrid-shell">
-    <nav class="concept-switcher"><strong>Proposed hybrid</strong><a href="hybrid-budget.html">Budget</a><a aria-current="page" href="hybrid-transactions.html">Transactions</a><a href="hybrid-insights.html">Insights</a><a href="concept-workspace.html">View earlier concepts</a><a href="dashboard.html">Current test UI</a></nav>
-    <header class="topbar"><div class="brand"><span class="brand-mark">P</span>Perfectly Balanced</div><nav class="primary-nav"><a href="hybrid-budget.html">Budgets</a><a class="active" href="hybrid-transactions.html">Transactions</a><a href="hybrid-insights.html">Insights</a></nav><div class="account-chip"><span class="avatar">BG</span>Ben</div></header>
-    <main class="page"><div class="page-head"><div><p class="eyebrow">Complete transaction stream</p><h1>Transactions</h1><p class="subtle">Search, filter, and categorize activity from every connected account.</p></div><span class="subtle">2,418 transactions</span></div>
-      <div class="toolbar"><div class="search"><input placeholder="Search merchant name…" /></div><div class="toolbar-group"><span class="filter-chip">August 2026 budget <button>×</button></span><span class="filter-chip">Uncategorized <button>×</button></span><span class="filter-chip">Groceries <button>×</button></span><details class="filter-wrap"><summary class="pill-button">☷ Filter · 3</summary><div class="popover"><h4>Budget or month</h4><label class="radio"><input checked type="radio" /> August 2026 budget</label><h4>Categories · match any</h4><label class="check"><input checked type="checkbox" /> Uncategorized</label><label class="check"><input checked type="checkbox" /> Groceries</label><label class="check"><input type="checkbox" /> Restaurants</label></div></details><details class="filter-wrap"><summary class="pill-button">↕ Newest first</summary><div class="popover"><label class="radio"><input checked type="radio" /> Date · newest</label><label class="radio"><input type="radio" /> Merchant · A–Z</label><label class="radio"><input type="radio" /> Amount · highest</label></div></details></div></div>
-      <div class="transaction-layout with-detail">
-        <section class="panel transactions"><div class="transaction-row categorize-open selected-transaction"><div class="transaction-main"><strong>Co-op Market</strong><p>Aug 24 · Checking · Pending</p></div><strong class="transaction-amount negative">−$84.01</strong><button class="category-chip">2 categories</button></div><div class="transaction-row"><div class="transaction-main"><strong>Costco</strong><p>Aug 26 · Visa Credit Card</p></div><strong class="transaction-amount negative">−$237.42</strong><button class="category-chip">Groceries</button></div><div class="transaction-row"><div class="transaction-main"><strong>Corner Coffee</strong><p>Aug 25 · Checking</p></div><strong class="transaction-amount negative">−$12.80</strong><button class="category-chip empty">＋ Categorize</button></div></section>
-        <aside class="detail-panel"><p class="eyebrow">Selected transaction</p><div class="section-head"><div><h2>Co-op Market</h2><p class="subtle">Aug 24 · Checking</p></div><strong class="negative">−$84.01</strong></div><h3 style="margin-top: 1.25rem">Category split</h3><div class="split-line"><input value="Groceries" /><input value="$42.01" /><button class="icon-button">×</button></div><div class="split-line"><input value="Household" /><input value="$42.00" /><button class="icon-button">×</button></div><button class="button ghost" style="margin-top: 0.6rem">＋ Add category</button><p class="split-note">Evenly split on add. Amounts are manual after editing.</p><button class="button" style="width: 100%; margin-top: 1rem">Done</button></aside>
+    <nav class="concept-switcher">
+      <strong>Proposed hybrid</strong>
+      <a href="hybrid-budget.html">Budget</a>
+      <a aria-current="page" href="hybrid-transactions.html">Transactions</a>
+      <a href="hybrid-insights.html">Insights</a>
+      <a href="concept-workspace.html">View earlier concepts</a>
+      <a href="dashboard.html">Current test UI</a>
+    </nav>
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark">P</span>Perfectly Balanced</div>
+      <nav class="primary-nav">
+        <a href="hybrid-budget.html">Budgets</a>
+        <a class="active" href="hybrid-transactions.html">Transactions</a>
+        <a href="hybrid-insights.html">Insights</a>
+      </nav>
+      <div class="account-chip"><span class="avatar">BG</span>Ben</div>
+    </header>
+    <main class="page">
+      <div class="page-head">
+        <div>
+          <p class="eyebrow">Complete transaction stream</p>
+          <h1>Transactions</h1>
+          <p class="subtle">Search, filter, and categorize activity from every connected account.</p>
+        </div>
+        <span class="subtle">2,418 transactions</span>
       </div>
-      <p class="concept-note" style="margin-top: 1rem">Selecting a transaction opens its category editor in the persistent right panel. New split categories divide the amount evenly; editing any amount switches the split to manual values.</p>
+      <div class="toolbar">
+        <div class="search"><input placeholder="Search merchant name…" /></div>
+        <div class="toolbar-group">
+          <span class="filter-chip">August 2026 budget <button>×</button></span>
+          <span class="filter-chip">Uncategorized <button>×</button></span>
+          <details class="filter-wrap">
+            <summary class="pill-button">☷ Filter · 2</summary>
+            <div class="popover">
+              <h4>Budget or month</h4>
+              <label class="radio"><input checked type="radio" /> August 2026 budget</label>
+              <h4>Categories · match any</h4>
+              <label class="check"><input checked type="checkbox" /> Uncategorized</label>
+              <label class="check"><input type="checkbox" /> Groceries</label>
+              <label class="check"><input type="checkbox" /> Restaurants</label>
+            </div>
+          </details>
+          <details class="filter-wrap">
+            <summary class="pill-button">↕ Newest first</summary>
+            <div class="popover">
+              <label class="radio"><input checked type="radio" /> Date · newest</label>
+              <label class="radio"><input type="radio" /> Merchant · A–Z</label>
+              <label class="radio"><input type="radio" /> Amount · highest</label>
+            </div>
+          </details>
+        </div>
+      </div>
+      <div class="transaction-layout with-detail quick-categorize-demo">
+        <section class="panel transactions">
+          <div class="transaction-row">
+            <div class="transaction-main"><strong>Co-op Market</strong><p>Aug 24 · Checking · Pending</p></div>
+            <strong class="transaction-amount negative">−$84.01</strong>
+            <button class="category-chip">2 categories</button>
+          </div>
+          <div class="transaction-row">
+            <div class="transaction-main"><strong>Costco</strong><p>Aug 26 · Visa Credit Card</p></div>
+            <strong class="transaction-amount negative">−$237.42</strong>
+            <button class="category-chip">Groceries</button>
+          </div>
+          <div class="transaction-row selected-transaction">
+            <div class="transaction-main"><strong>Corner Coffee</strong><p>Aug 25 · Checking</p></div>
+            <strong class="transaction-amount negative">−$12.80</strong>
+            <label class="category-chip empty" for="quick-category-input">＋ Categorize</label>
+          </div>
+        </section>
+        <aside class="detail-panel">
+          <p class="eyebrow">Selected transaction</p>
+          <div class="section-head">
+            <div><h2>Corner Coffee</h2><p class="subtle">Aug 25 · Checking</p></div>
+            <strong class="negative">−$12.80</strong>
+          </div>
+          <h3 style="margin-top: 1.25rem">Category split</h3>
+          <div class="split-line split-line--editing">
+            <div class="combo keyboard-combo">
+              <input
+                autofocus
+                id="quick-category-input"
+                aria-label="Category for Corner Coffee"
+                autocomplete="off"
+                placeholder="Search or create a category…"
+                value="Gro"
+              />
+              <div class="combo-menu">
+                <button class="combo-option highlighted" type="button"><strong>Groceries</strong></button>
+                <button class="combo-option" type="button">Grocery delivery</button>
+                <div class="combo-divider"></div>
+                <button class="combo-option combo-option--create" type="button"><em>＋ Create “Gro”</em></button>
+                <button class="combo-option combo-option--budget" type="button">
+                  <em>＋ Create “Gro” and add to budget</em>
+                </button>
+              </div>
+            </div>
+            <input aria-label="Split amount" value="$12.80" />
+            <button class="icon-button" type="button">×</button>
+          </div>
+          <button class="button ghost add-split-button" type="button">＋ Add category</button>
+          <p class="split-note">Evenly split on add. Amounts are manual after editing.</p>
+          <button class="button" style="width: 100%; margin-top: 1rem">Done</button>
+        </aside>
+      </div>
     </main>
   </body>
 </html>

@@ -422,6 +422,74 @@ details > summary::-webkit-details-marker {
   background: var(--highlight);
 }
 
+.inline-create-flow {
+  position: relative;
+  border-top: 1px dashed var(--line);
+}
+
+.inline-create-trigger {
+  display: block;
+  padding: 0.75rem 1rem;
+  color: var(--accent);
+  font-size: 0.84rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.inline-create-trigger:hover,
+.inline-create-flow:focus-within > .inline-create-trigger {
+  background: var(--highlight);
+}
+
+.provisional-budget-item,
+.provisional-subsection {
+  max-height: 0;
+  margin: 0;
+  overflow: hidden;
+  border-width: 0;
+  opacity: 0;
+  padding-block: 0;
+  transition:
+    max-height 180ms ease,
+    opacity 140ms ease,
+    padding 180ms ease;
+}
+
+.inline-create-flow:focus-within > .provisional-budget-item {
+  max-height: 280px;
+  overflow: visible;
+  border-top-width: 1px;
+  opacity: 1;
+  padding-block: 0.65rem;
+}
+
+.subsection-create-flow {
+  margin-top: 1rem;
+  border: 1px dashed var(--line);
+  border-radius: 0.75rem;
+}
+
+.subsection-create-flow:focus-within > .provisional-subsection {
+  max-height: 480px;
+  overflow: visible;
+  border-width: 1px;
+  opacity: 1;
+}
+
+.provisional-budget-item .combo-menu {
+  display: none;
+}
+
+.provisional-budget-item .combo:focus-within .combo-menu {
+  display: block;
+}
+
+.provisional-budget-item .combo input:focus,
+.provisional-subsection .combo input:focus {
+  border-color: var(--accent);
+  outline: 3px solid color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
 .empty-state {
   padding: 2.5rem 1rem;
   color: var(--muted);
@@ -437,6 +505,78 @@ details > summary::-webkit-details-marker {
   border: 1px solid var(--line);
   border-radius: 0.85rem;
   background: var(--surface);
+}
+
+.drop-target,
+.section-drop-target {
+  position: relative;
+  display: grid;
+  height: 8px;
+  place-items: center;
+  transition: height 120ms ease;
+}
+
+.drop-target::before,
+.section-drop-target::before {
+  position: absolute;
+  right: 0.75rem;
+  left: 0.75rem;
+  height: 2px;
+  border-radius: 99px;
+  background: transparent;
+  content: "";
+}
+
+.drop-target span,
+.section-drop-target span {
+  position: relative;
+  z-index: 1;
+  display: none;
+  padding: 0.2rem 0.55rem;
+  border-radius: 99px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.hybrid-shell:has(.budget-item[draggable="true"]:active) .drop-target:hover,
+.hybrid-shell:has(
+    .budget-group[draggable="true"]:active:not(:has(.budget-item:active))
+  )
+  .section-drop-target:hover {
+  height: 30px;
+}
+
+.hybrid-shell:has(.budget-item[draggable="true"]:active) .drop-target:hover::before,
+.hybrid-shell:has(
+    .budget-group[draggable="true"]:active:not(:has(.budget-item:active))
+  )
+  .section-drop-target:hover::before {
+  background: var(--accent);
+}
+
+.hybrid-shell:has(.budget-item[draggable="true"]:active) .drop-target:hover span,
+.hybrid-shell:has(
+    .budget-group[draggable="true"]:active:not(:has(.budget-item:active))
+  )
+  .section-drop-target:hover span {
+  display: inline-block;
+}
+
+.section-drop-target {
+  margin: 0.2rem 0;
+}
+
+.budget-item[draggable="true"],
+.budget-group[draggable="true"] .group-head {
+  cursor: grab;
+}
+
+.budget-item[draggable="true"]:active,
+.budget-group[draggable="true"] .group-head:active {
+  cursor: grabbing;
+  opacity: 0.6;
 }
 
 .group-head {
@@ -595,7 +735,8 @@ details > summary::-webkit-details-marker {
 }
 
 .combo-option:hover,
-.combo-option.highlighted {
+.combo-option.highlighted,
+.combo-option:focus-visible {
   background: var(--soft);
 }
 
@@ -603,6 +744,17 @@ details > summary::-webkit-details-marker {
   color: var(--accent);
   font-style: normal;
   font-weight: 800;
+}
+
+.combo-divider {
+  height: 1px;
+  margin: 0.35rem 0;
+  background: var(--line);
+}
+
+.combo-option--budget {
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line));
+  background: var(--highlight);
 }
 
 .toolbar {
@@ -698,6 +850,7 @@ details.filter-wrap .popover {
 }
 
 .category-chip {
+  display: inline-block;
   min-width: 170px;
   padding: 0.5rem 0.65rem;
   border: 1px solid var(--line);
@@ -705,6 +858,7 @@ details.filter-wrap .popover {
   background: var(--soft);
   color: var(--ink);
   font-size: 0.82rem;
+  text-align: center;
 }
 
 .category-chip.empty {
@@ -743,6 +897,24 @@ details.filter-wrap .popover {
 
 .detail-panel .split-line {
   grid-template-columns: 1fr 88px 28px;
+}
+
+.split-line--editing {
+  align-items: start;
+  margin-bottom: 14.5rem;
+}
+
+.keyboard-combo .combo-menu {
+  display: block;
+}
+
+.keyboard-combo input:focus {
+  border-color: var(--accent);
+  outline: 3px solid color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.add-split-button {
+  margin-top: 0.6rem;
 }
 
 .placement-switcher {
