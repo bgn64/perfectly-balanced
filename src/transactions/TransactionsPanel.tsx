@@ -419,6 +419,15 @@ export function TransactionsPanel({
     setSplitError(null)
   }
 
+  function changeSplitCategory(key: string, category: Category) {
+    setDraftSplits((current) =>
+      current.map((split) =>
+        split.key === key ? { ...split, categoryId: category.id } : split,
+      ),
+    )
+    setSplitError(null)
+  }
+
   function validateSplits(transaction: Transaction): string | null {
     if (draftSplits.length === 0) {
       return null
@@ -723,10 +732,25 @@ export function TransactionsPanel({
               </div>
               <h3 className="split-heading">Category split</h3>
               {draftSplits.map((split) => (
-                <div className="split-line" key={split.key}>
-                  <span className="split-category">
-                    {categoriesById.get(split.categoryId)?.name ?? 'Category'}
-                  </span>
+                <div
+                  className="split-line"
+                  key={`${split.key}-${split.categoryId}`}
+                >
+                  <CategoryCombobox
+                    categories={categories}
+                    disabled={isSavingSplits}
+                    excludedCategoryIds={draftSplits
+                      .filter((candidate) => candidate.key !== split.key)
+                      .map((candidate) => candidate.categoryId)}
+                    label={`${
+                      categoriesById.get(split.categoryId)?.name ?? 'Category'
+                    } category`}
+                    selectedCategory={categoriesById.get(split.categoryId)}
+                    onCreate={createCategory}
+                    onSelect={(category) =>
+                      changeSplitCategory(split.key, category)
+                    }
+                  />
                   <label>
                     <span className="sr-only">
                       {categoriesById.get(split.categoryId)?.name} amount

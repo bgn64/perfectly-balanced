@@ -6,6 +6,7 @@ export function CategoryCombobox({
   excludedCategoryIds = [],
   label,
   placeholder = 'Search categories or enter a new name...',
+  selectedCategory,
   disabled = false,
   onCreate,
   onSelect,
@@ -14,12 +15,13 @@ export function CategoryCombobox({
   excludedCategoryIds?: string[]
   label: string
   placeholder?: string
+  selectedCategory?: Category
   disabled?: boolean
   onCreate: (name: string) => Promise<Category>
   onSelect: (category: Category) => Promise<void> | void
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
-  const [query, setQuery] = useState('')
+  const [query, setQuery] = useState(selectedCategory?.name ?? '')
   const [isOpen, setIsOpen] = useState(false)
   const [isBusy, setIsBusy] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -48,7 +50,7 @@ export function CategoryCombobox({
     setErrorMessage(null)
     try {
       await onSelect(category)
-      setQuery('')
+      setQuery(selectedCategory ? category.name : '')
       setIsOpen(false)
     } catch (error) {
       setErrorMessage(
@@ -65,7 +67,7 @@ export function CategoryCombobox({
     try {
       const category = await onCreate(normalizedQuery)
       await onSelect(category)
-      setQuery('')
+      setQuery(selectedCategory ? category.name : '')
       setIsOpen(false)
     } catch (error) {
       setErrorMessage(
@@ -105,7 +107,12 @@ export function CategoryCombobox({
           setIsOpen(true)
           setErrorMessage(null)
         }}
-        onFocus={() => setIsOpen(true)}
+        onFocus={(event) => {
+          setIsOpen(true)
+          if (selectedCategory && query === selectedCategory.name) {
+            event.currentTarget.select()
+          }
+        }}
       />
       {isOpen && (
         <div className="combo-menu" role="listbox">

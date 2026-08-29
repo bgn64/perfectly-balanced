@@ -10,7 +10,7 @@ import type {
 } from '../finance/types.ts'
 import {
   currentMonth,
-  formatMoney,
+  formatDisplayMoney,
   formatMonth,
   monthKey,
   shiftMonth,
@@ -389,7 +389,7 @@ function InsightChart({
     transactionIdsWithSplits,
   })
   const selectedSlice =
-    slices.find((slice) => slice.id === selectedSliceId) ?? slices[0] ?? null
+    slices.find((slice) => slice.id === selectedSliceId) ?? null
   const categoryInsights = selectedSlice
     ? buildCategoryInsights({
         selectedSlice,
@@ -404,6 +404,15 @@ function InsightChart({
         transactionIdsWithSplits,
       })
     : []
+  const categorySlices = categoryInsights.map((category) => ({
+    id: category.id,
+    label: category.label,
+    value: category.value,
+  }))
+  const categoryTotal = categorySlices.reduce(
+    (sum, category) => sum + category.value,
+    0,
+  )
   const total = slices.reduce((sum, slice) => sum + slice.value, 0)
   const plannedTotal = allocations
     .filter((allocation) => allocation.direction === direction)
@@ -443,10 +452,13 @@ function InsightChart({
               className={mode === value ? 'selected' : ''}
               key={value}
               type="button"
-              onClick={() => onModeChange(value)}
+              onClick={() => {
+                setSelectedSliceId(null)
+                onModeChange(value)
+              }}
             >
               {value[0].toUpperCase() + value.slice(1)} ·{' '}
-              {formatMoney(valueTotal)}
+              {formatDisplayMoney(valueTotal)}
             </button>
           ))}
         </div>
@@ -468,26 +480,39 @@ function InsightChart({
               >
                 <i style={{ background: chartColors[index % chartColors.length] }} />
                 <span>{slice.label}</span>
-                <strong>{formatMoney(slice.value)}</strong>
+                <strong>{formatDisplayMoney(slice.value)}</strong>
               </button>
             ))}
           </div>
           {selectedSlice && (
             <aside className="drilldown">
               <p className="eyebrow">Selected subsection</p>
-              <h3>{selectedSlice.label}</h3>
-              <div className="category-drilldown">
-                {categoryInsights.map((category) => (
-                  <div key={category.id}>
-                    <span>
-                      {category.label}
-                      <small>
-                        Net activity {formatMoney(category.netActivity, 'USD', true)}
-                      </small>
-                    </span>
-                    <strong>{formatMoney(category.value)}</strong>
-                  </div>
-                ))}
+              <div className="chart-head">
+                <h3>{selectedSlice.label}</h3>
+                <button
+                  className="button ghost"
+                  type="button"
+                  onClick={() => setSelectedSliceId(null)}
+                >
+                  Close
+                </button>
+              </div>
+              <div className="drilldown-body">
+                <Donut slices={categorySlices} total={categoryTotal} />
+                <div className="legend detail-legend">
+                  {categoryInsights.map((category, index) => (
+                    <div key={category.id}>
+                      <i
+                        style={{
+                          background:
+                            chartColors[index % chartColors.length],
+                        }}
+                      />
+                      <span>{category.label}</span>
+                      <strong>{formatDisplayMoney(category.value)}</strong>
+                    </div>
+                  ))}
+                </div>
               </div>
             </aside>
           )}
@@ -674,12 +699,12 @@ function Donut({ slices, total }: { slices: InsightSlice[]; total: number }) {
 
   return (
     <div
-      aria-label={`Total ${formatMoney(total)}`}
+      aria-label={`Total ${formatDisplayMoney(total)}`}
       className="donut"
       role="img"
       style={{ background: `conic-gradient(${stops.join(', ')})` }}
     >
-      <span>{formatMoney(total)}</span>
+      <span>{formatDisplayMoney(total)}</span>
     </div>
   )
 }
@@ -749,11 +774,12 @@ function VarianceList({
           <div>
             <strong>{item.name}</strong>
             <small>
-              {formatMoney(item.spent)} spent · {formatMoney(item.planned)} planned
+              {formatDisplayMoney(item.spent)} spent ·{' '}
+              {formatDisplayMoney(item.planned)} planned
             </small>
           </div>
           <strong className={isOver ? 'negative' : 'positive'}>
-            {formatMoney(Math.abs(item.variance))}
+            {formatDisplayMoney(Math.abs(item.variance))}
           </strong>
         </li>
       ))}
