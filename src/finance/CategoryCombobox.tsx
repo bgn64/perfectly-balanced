@@ -1,30 +1,44 @@
-import { useMemo, useRef, useState } from 'react'
+import { useId, useMemo, useRef, useState, type Ref } from 'react'
 import type { Category } from './types.ts'
 
 export function CategoryCombobox({
+  autoFocus = false,
+  cancelOnBlur = false,
   categories,
+  createAlternativeLabel,
   excludedCategoryIds = [],
+  inputRef,
   label,
+  onCancel,
   placeholder = 'Search categories or enter a new name...',
   selectedCategory,
   disabled = false,
   onCreate,
+  onCreateAlternative,
   onSelect,
 }: {
+  autoFocus?: boolean
+  cancelOnBlur?: boolean
   categories: Category[]
+  createAlternativeLabel?: (name: string) => string
   excludedCategoryIds?: string[]
+  inputRef?: Ref<HTMLInputElement>
   label: string
+  onCancel?: () => void
   placeholder?: string
   selectedCategory?: Category
   disabled?: boolean
   onCreate: (name: string) => Promise<Category>
+  onCreateAlternative?: (name: string) => Promise<Category>
   onSelect: (category: Category) => Promise<void> | void
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
+  const optionIdPrefix = useId()
   const [query, setQuery] = useState(selectedCategory?.name ?? '')
   const [isOpen, setIsOpen] = useState(false)
   const [isBusy, setIsBusy] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [activeIndex, setActiveIndex] = useState(0)
   const excluded = useMemo(
     () => new Set(excludedCategoryIds),
     [excludedCategoryIds],
@@ -44,6 +58,32 @@ export function CategoryCombobox({
         category.name.toLocaleLowerCase() ===
         normalizedQuery.toLocaleLowerCase(),
     )
+  const menuOptions = [
+    ...options.map((category) => ({
+      id: `category-${category.id}`,
+      label: category.name,
+      kind: 'category' as const,
+      category,
+    })),
+    ...(canCreate
+      ? [
+          {
+            id: 'create',
+            label: `+ Create “${normalizedQuery}”`,
+            kind: 'create' as const,
+          },
+        ]
+      : []),
+    ...(canCreate && onCreateAlternative && createAlternativeLabel
+      ? [
+          {
+            id: 'create-alternative',
+            label: createAlternativeLabel(normalizedQuery),
+            kind: 'create-alternative' as const,
+          },
+        ]
+      : []),
+  ]
 
   async function choose(category: Category) {
     setIsBusy(true)
@@ -61,11 +101,13 @@ export function CategoryCombobox({
     }
   }
 
-  async function createAndChoose() {
+  async function createAndChoose(
+    create: (name: string) => Promise<Category> = onCreate,
+  ) {
     setIsBusy(true)
     setErrorMessage(null)
     try {
-      const category = await onCreate(normalizedQuery)
+      const category = await create(normalizedQuery)
       await onSelect(category)
       setQuery(selectedCategory ? category.name : '')
       setIsOpen(false)
@@ -80,6 +122,32 @@ export function CategoryCombobox({
     }
   }
 
+  async function chooseActiveOption() {
+    const option = menuOptions[activeIndex]
+    if (!option) {
+      return
+    }
+    if (option.kind === 'category') {
+      await choose(option.category)
+      return
+    }
+    await createAndChoose(
+      option.kind === 'create-alternative' && onCreateAlternative
+        ? onCreateAlternative
+        : onCreate,
+    )
+  }
+
+  function moveActiveOption(direction: 1 | -1) {
+    if (menuOptions.length === 0) {
+      return
+    }
+    setIsOpen(true)
+    setActiveIndex((current) =>
+      (current + direction + menuOptions.length) % menuOptions.length,
+    )
+  }
+
   return (
     <div
       className="category-combobox"
@@ -87,14 +155,25 @@ export function CategoryCombobox({
       onBlur={(event) => {
         if (!containerRef.current?.contains(event.relatedTarget)) {
           setIsOpen(false)
+          if (cancelOnBlur && !query.trim()) {
+            onCancel?.()
+          }
         }
       }}
     >
       <label className="sr-only">{label}</label>
       <input
+        ref={inputRef}
+        aria-activedescendant={
+          isOpen && menuOptions[activeIndex]
+            ? `${optionIdPrefix}-${menuOptions[activeIndex].id}`
+            : undefined
+        }
         aria-label={label}
         aria-autocomplete="list"
         aria-expanded={isOpen}
+        aria-controls={`${optionIdPrefix}-listbox`}
+        autoFocus={autoFocus}
         autoComplete="off"
         disabled={disabled || isBusy}
         maxLength={100}
@@ -105,40 +184,77 @@ export function CategoryCombobox({
         onChange={(event) => {
           setQuery(event.target.value)
           setIsOpen(true)
+          setActiveIndex(0)
           setErrorMessage(null)
         }}
         onFocus={(event) => {
           setIsOpen(true)
+          setActiveIndex(0)
           if (selectedCategory && query === selectedCategory.name) {
             event.currentTarget.select()
           }
         }}
+        onKeyDown={(event) => {
+          const key = event.key.toLocaleLowerCase()
+          if (event.key === 'ArrowDown' || (event.ctrlKey && key === 'n')) {
+            event.preventDefault()
+            moveActiveOption(1)
+          } else if (
+            event.key === 'ArrowUp' ||
+            (event.ctrlKey && key === 'p')
+          ) {
+            event.preventDefault()
+            moveActiveOption(-1)
+          } else if (event.key === 'Enter' && isOpen) {
+            event.preventDefault()
+            void chooseActiveOption()
+          } else if (event.key === 'Escape') {
+            event.preventDefault()
+            setQuery(selectedCategory?.name ?? '')
+            setIsOpen(false)
+            onCancel?.()
+          }
+        }}
       />
       {isOpen && (
-        <div className="combo-menu" role="listbox">
-          {canCreate && (
+        <div
+          className="combo-menu"
+          id={`${optionIdPrefix}-listbox`}
+          role="listbox"
+        >
+          {menuOptions.map((option, index) => (
             <button
-              className="combo-option combo-option--create"
+              aria-selected={index === activeIndex}
+              className={`combo-option${
+                option.kind === 'category'
+                  ? ''
+                  : option.kind === 'create'
+                    ? ' combo-option--create'
+                    : ' combo-option--create combo-option--budget'
+              }${index === activeIndex ? ' highlighted' : ''}`}
               disabled={isBusy}
-              type="button"
-              onClick={() => void createAndChoose()}
-            >
-              + Create &ldquo;{normalizedQuery}&rdquo;
-            </button>
-          )}
-          {options.map((category) => (
-            <button
-              className="combo-option"
-              disabled={isBusy}
-              key={category.id}
+              id={`${optionIdPrefix}-${option.id}`}
+              key={option.id}
               role="option"
               type="button"
-              onClick={() => void choose(category)}
+              onMouseEnter={() => setActiveIndex(index)}
+              onClick={() => {
+                if (option.kind === 'category') {
+                  void choose(option.category)
+                } else {
+                  void createAndChoose(
+                    option.kind === 'create-alternative' &&
+                      onCreateAlternative
+                      ? onCreateAlternative
+                      : onCreate,
+                  )
+                }
+              }}
             >
-              {category.name}
+              {option.label}
             </button>
           ))}
-          {!canCreate && options.length === 0 && (
+          {menuOptions.length === 0 && (
             <span className="combo-empty">No available categories</span>
           )}
         </div>
