@@ -17,7 +17,7 @@ import type {
 } from '../finance/types.ts'
 import {
   currentMonth,
-  formatMoney,
+  formatDisplayMoney,
   formatMonth,
   parseMagnitude,
   shiftMonth,
@@ -450,24 +450,28 @@ export function BudgetPanel({
             <BudgetMetric label="Received so far" value={received} />
           </section>
           <p className="interactive-hint">
-            Edit amounts directly and press Enter or leave the field to save.
-            Drag subsections and categories to reorder them.
+            Amounts and Spending/Income controls are editable. Press Enter to
+            save an amount; hover a row to reveal its drag handle.
           </p>
           <section className="panel budget-sheet">
-            <BudgetGroup
-              name="Unsectioned"
-              subsectionId={null}
-              allocations={allocations.filter(
-                (allocation) => allocation.subsection_id === null,
-              )}
-              categories={categories}
-              allocatedCategoryIds={allocatedCategoryIds}
-              busyId={busyId}
-              onAddAllocation={addAllocation}
-              onCreateCategory={createCategory}
-              onDropAllocation={dropAllocation}
-              onUpdateAllocation={updateAllocation}
-            />
+            {allocations.some(
+              (allocation) => allocation.subsection_id === null,
+            ) && (
+              <BudgetGroup
+                name="Unsectioned"
+                subsectionId={null}
+                allocations={allocations.filter(
+                  (allocation) => allocation.subsection_id === null,
+                )}
+                categories={categories}
+                allocatedCategoryIds={allocatedCategoryIds}
+                busyId={busyId}
+                onAddAllocation={addAllocation}
+                onCreateCategory={createCategory}
+                onDropAllocation={dropAllocation}
+                onUpdateAllocation={updateAllocation}
+              />
+            )}
             {subsections.map((subsection, index) => {
               const groupAllocations = allocations.filter(
                 (allocation) => allocation.subsection_id === subsection.id,
@@ -503,27 +507,33 @@ export function BudgetPanel({
                 </section>
               )
             })}
-            <form className="subsection-add" onSubmit={addSubsection}>
-              <label className="sr-only" htmlFor="subsection-name">
-                New subsection name
-              </label>
-              <input
-                disabled={busyId !== null}
-                id="subsection-name"
-                maxLength={100}
-                placeholder="e.g. Savings goals"
-                type="text"
-                value={subsectionName}
-                onChange={(event) => setSubsectionName(event.target.value)}
-              />
-              <button
-                className="button"
-                disabled={busyId !== null}
-                type="submit"
+            <details className="quick-add subsection-disclosure">
+              <summary>＋ Add subsection at the end</summary>
+              <form
+                className="quick-add-content subsection-add"
+                onSubmit={addSubsection}
               >
-                {busyId === 'add-subsection' ? 'Adding...' : '+ Add subsection'}
-              </button>
-            </form>
+                <label className="sr-only" htmlFor="subsection-name">
+                  New subsection name
+                </label>
+                <input
+                  disabled={busyId !== null}
+                  id="subsection-name"
+                  maxLength={100}
+                  placeholder="e.g. Savings goals"
+                  type="text"
+                  value={subsectionName}
+                  onChange={(event) => setSubsectionName(event.target.value)}
+                />
+                <button
+                  className="button"
+                  disabled={busyId !== null}
+                  type="submit"
+                >
+                  {busyId === 'add-subsection' ? 'Adding...' : 'Add subsection'}
+                </button>
+              </form>
+            </details>
           </section>
         </>
       )}
@@ -535,7 +545,7 @@ function BudgetMetric({ label, value }: { label: string; value: number }) {
   return (
     <div className="metric">
       <span>{label}</span>
-      <strong>{formatMoney(value)}</strong>
+      <strong>{formatDisplayMoney(value)}</strong>
     </div>
   )
 }
@@ -584,6 +594,13 @@ function BudgetGroup({
     (sum, allocation) => sum + Math.abs(allocation.actual_amount),
     0,
   )
+  const activityLabel = allocations.every(
+    (allocation) => allocation.direction === 'income',
+  )
+    ? 'received'
+    : allocations.every((allocation) => allocation.direction === 'spending')
+      ? 'spent'
+      : 'activity'
   const content = (
     <>
       <div className="group-head">
@@ -592,7 +609,8 @@ function BudgetGroup({
           <div>
             <h2>{name}</h2>
             <p className="subtle">
-              {formatMoney(planned)} planned · {formatMoney(activity)} activity
+              {formatDisplayMoney(planned)} planned ·{' '}
+              {formatDisplayMoney(activity)} {activityLabel}
             </p>
           </div>
         </div>
@@ -608,23 +626,26 @@ function BudgetGroup({
           onUpdate={onUpdateAllocation}
         />
       ))}
-      <div
-        className="inline-category-add"
+      <details
+        className="quick-add"
         onDragOver={(event) => event.preventDefault()}
         onDrop={(event) =>
           void onDropAllocation(event, subsectionId, allocations.length)
         }
       >
-        <CategoryCombobox
-          categories={categories}
-          disabled={busyId !== null}
-          excludedCategoryIds={allocatedCategoryIds}
-          label={`Add or create a category in ${name}`}
-          onCreate={onCreateCategory}
-          onSelect={(category) => onAddAllocation(category, subsectionId)}
-        />
-        <span className="subtle">Adds at $0 · Spending</span>
-      </div>
+        <summary>＋ Add or create category</summary>
+        <div className="quick-add-content">
+          <CategoryCombobox
+            categories={categories}
+            disabled={busyId !== null}
+            excludedCategoryIds={allocatedCategoryIds}
+            label={`Add or create a category in ${name}`}
+            onCreate={onCreateCategory}
+            onSelect={(category) => onAddAllocation(category, subsectionId)}
+          />
+          <span className="subtle">Adds at $0 · Spending</span>
+        </div>
+      </details>
     </>
   )
 
@@ -711,7 +732,8 @@ function BudgetAllocationRow({
         <div>
           <strong>{allocation.category_name}</strong>
           <p>
-            {formatMoney(actualMagnitude)} of {formatMoney(plannedMagnitude)}{' '}
+            {formatDisplayMoney(actualMagnitude)} of{' '}
+            {formatDisplayMoney(plannedMagnitude)}{' '}
             {allocation.direction === 'spending' ? 'spent' : 'received'}
           </p>
         </div>

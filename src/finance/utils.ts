@@ -35,6 +35,21 @@ export function formatMoney(
   return sign && amount > 0 ? `+${formatted}` : formatted
 }
 
+export function formatDisplayMoney(
+  amount: number,
+  currencyCode = 'USD',
+  sign = false,
+): string {
+  const formatted = new Intl.NumberFormat(undefined, {
+    currency: currencyCode,
+    maximumFractionDigits: 2,
+    minimumFractionDigits: Number.isInteger(amount) ? 0 : 2,
+    style: 'currency',
+  }).format(amount)
+
+  return sign && amount > 0 ? `+${formatted}` : formatted
+}
+
 export function parseMagnitude(value: string): number | null {
   const normalized = value.trim().replace(/[$,\s]/g, '')
   if (!/^\d+(?:\.\d{1,2})?$/.test(normalized)) {
