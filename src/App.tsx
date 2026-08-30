@@ -630,8 +630,10 @@ function AuthenticatedShell({
             <span>focus {focusedWorkspaceControl} of {workspaceControlCount}</span>
           </div>
           <div>
-            <span><kbd>Enter</kbd> {statusContext.action}</span>
-            {statusContext.action === 'edit' && (
+            {statusContext.action !== 'amount' && (
+              <span><kbd>Enter</kbd> {statusContext.action}</span>
+            )}
+            {statusContext.action === 'amount' && (
               <span><kbd>a</kbd> amount</span>
             )}
             <span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> move</span>

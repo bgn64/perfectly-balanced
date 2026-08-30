@@ -488,6 +488,50 @@ h3 {
   text-align: left;
 }
 
+.category-name {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.direction-tag {
+  flex: 0 0 auto;
+  border: 1px solid #414868;
+  border-radius: 999px;
+  padding: 0.2rem 0.45rem;
+  background: #24283b;
+  color: #7dcfff;
+  font: inherit;
+  font-size: 0.62rem;
+}
+
+.direction-tag:hover,
+.direction-tag:focus-visible {
+  border-color: #7aa2f7;
+  background: #292e42;
+  color: #c0caf5;
+}
+
+.amount-cell {
+  min-width: 0;
+  border: 1px solid transparent;
+  border-radius: 0.25rem;
+  padding: 0.3rem 0.4rem;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: inherit;
+  text-align: right;
+}
+
+.amount-cell:hover,
+.amount-cell:focus-visible {
+  border-color: #7aa2f7;
+  background: #1a1b26;
+  outline: none;
+}
+
 .budget-row:hover,
 .budget-row:focus-visible {
   outline: none;
