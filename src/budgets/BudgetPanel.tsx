@@ -1,7 +1,6 @@
 import {
   useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState,
   type DragEvent,
@@ -20,7 +19,6 @@ import {
   currentMonth,
   formatDisplayMoney,
   formatMonth,
-  isTextEntryTarget,
   parseMagnitude,
   shiftMonth,
 } from '../finance/utils.ts'
@@ -39,13 +37,7 @@ interface DraggedBudgetItem {
   type: 'subsection' | 'allocation'
 }
 
-interface AddCategoryRequest {
-  groupKey: string
-  id: number
-}
-
 const budgetDragType = 'application/x-perfectly-balanced-budget-item'
-const rootGroupKey = 'root'
 
 async function queryBudget(month: string): Promise<BudgetData> {
   const client = getSupabaseClient()
@@ -135,12 +127,8 @@ export function BudgetPanel({
   const [selectedAllocationId, setSelectedAllocationId] = useState<string | null>(
     null,
   )
-  const [addCategoryRequest, setAddCategoryRequest] =
-    useState<AddCategoryRequest | null>(null)
   const requestGeneration = useRef(0)
   const mutationBusy = useRef(false)
-  const allocationRowRefs = useRef(new Map<string, HTMLDivElement>())
-  const amountInputRefs = useRef(new Map<string, HTMLInputElement>())
 
   const loadBudget = useCallback(async () => {
     const generation = ++requestGeneration.current
@@ -383,139 +371,13 @@ export function BudgetPanel({
   const selectorMonths = Array.from(
     new Set([selectedMonth, ...budgets.map((item) => item.month.slice(0, 7))]),
   ).sort((left, right) => right.localeCompare(left))
-  const keyboardAllocations = useMemo(
-    () => [
-      ...allocations.filter((allocation) => allocation.subsection_id === null),
-      ...subsections.flatMap((subsection) =>
-        allocations.filter(
-          (allocation) => allocation.subsection_id === subsection.id,
-        ),
-      ),
-    ],
-    [allocations, subsections],
-  )
   const changeMonth = useCallback((month: string) => {
     setSubsectionName('')
     setIsAddingSubsection(false)
     setDraggedItem(null)
-    setAddCategoryRequest(null)
     setIsLoading(true)
     setSelectedMonth(month)
   }, [])
-
-  const focusAllocation = useCallback((allocationId: string) => {
-    window.requestAnimationFrame(() => {
-      const row = allocationRowRefs.current.get(allocationId)
-      row?.focus({ preventScroll: true })
-      row?.scrollIntoView({ block: 'nearest' })
-    })
-  }, [])
-
-  const registerAllocationRow = useCallback(
-    (allocationId: string, row: HTMLDivElement | null) => {
-      if (row) {
-        allocationRowRefs.current.set(allocationId, row)
-      } else {
-        allocationRowRefs.current.delete(allocationId)
-      }
-    },
-    [],
-  )
-
-  const registerAmountInput = useCallback(
-    (allocationId: string, input: HTMLInputElement | null) => {
-      if (input) {
-        amountInputRefs.current.set(allocationId, input)
-      } else {
-        amountInputRefs.current.delete(allocationId)
-      }
-    },
-    [],
-  )
-
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      if (
-        event.defaultPrevented ||
-        event.altKey ||
-        event.ctrlKey ||
-        event.metaKey ||
-        event.shiftKey ||
-        isTextEntryTarget(event.target)
-      ) {
-        return
-      }
-
-      const key = event.key.toLocaleLowerCase()
-      if ((key === 'h' || key === 'l') && busyId === null) {
-        event.preventDefault()
-        changeMonth(shiftMonth(selectedMonth, key === 'h' ? -1 : 1))
-        return
-      }
-
-      if (key === 'j' || key === 'k') {
-        if (keyboardAllocations.length === 0) {
-          return
-        }
-        event.preventDefault()
-        const currentIndex = keyboardAllocations.findIndex(
-          (allocation) => allocation.allocation_id === selectedAllocationId,
-        )
-        const nextIndex =
-          currentIndex === -1
-            ? key === 'j'
-              ? 0
-              : keyboardAllocations.length - 1
-            : (currentIndex +
-                (key === 'j' ? 1 : -1) +
-                keyboardAllocations.length) %
-              keyboardAllocations.length
-        const nextAllocation = keyboardAllocations[nextIndex]
-        setSelectedAllocationId(nextAllocation.allocation_id)
-        focusAllocation(nextAllocation.allocation_id)
-        return
-      }
-
-      const selectedAllocation = allocations.find(
-        (allocation) => allocation.allocation_id === selectedAllocationId,
-      )
-      if (!selectedAllocation) {
-        return
-      }
-
-      if (key === 'e') {
-        const amountInput = amountInputRefs.current.get(
-          selectedAllocation.allocation_id,
-        )
-        if (!amountInput || amountInput.disabled) {
-          return
-        }
-        event.preventDefault()
-        amountInput.focus()
-        amountInput.select()
-        return
-      }
-
-      if (key === 'a' && busyId === null) {
-        event.preventDefault()
-        setAddCategoryRequest((current) => ({
-          groupKey: selectedAllocation.subsection_id ?? rootGroupKey,
-          id: (current?.id ?? 0) + 1,
-        }))
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [
-    allocations,
-    busyId,
-    changeMonth,
-    focusAllocation,
-    keyboardAllocations,
-    selectedAllocationId,
-    selectedMonth,
-  ])
 
   return (
     <main className="page budget-page" aria-busy={isLoading}>
@@ -535,7 +397,7 @@ export function BudgetPanel({
             type="button"
             onClick={() => changeMonth(shiftMonth(selectedMonth, -1))}
           >
-            <span aria-hidden="true">&larr;</span> <kbd>h</kbd>
+            &larr; Previous
           </button>
           <label className="sr-only" htmlFor="budget-month-selector">
             Budget month
@@ -563,7 +425,7 @@ export function BudgetPanel({
             type="button"
             onClick={() => changeMonth(shiftMonth(selectedMonth, 1))}
           >
-            <kbd>l</kbd> <span aria-hidden="true">&rarr;</span>
+            Next &rarr;
           </button>
         </div>
       </div>
@@ -608,8 +470,7 @@ export function BudgetPanel({
             <BudgetMetric label="Received so far" value={received} />
           </section>
           <p className="interactive-hint">
-            Use j/k to select a category, e to edit its amount, and a to add a
-            category in the selected group.
+            Use h/j/k/l to move between controls and Enter to activate one.
           </p>
           <section className="panel budget-sheet">
             {allocations.some(
@@ -617,11 +478,6 @@ export function BudgetPanel({
             ) && (
               <BudgetGroup
                 key={`${budget.id}:root`}
-                addCategoryRequestId={
-                  addCategoryRequest?.groupKey === rootGroupKey
-                    ? addCategoryRequest.id
-                    : undefined
-                }
                 name="Unsectioned"
                 subsectionId={null}
                 allocations={allocations.filter(
@@ -636,8 +492,6 @@ export function BudgetPanel({
                 onDropAllocation={dropAllocation}
                 onDragEnd={() => setDraggedItem(null)}
                 onDragStart={setDraggedItem}
-                onAmountInputRef={registerAmountInput}
-                onAllocationRowRef={registerAllocationRow}
                 onSelectAllocation={setSelectedAllocationId}
                 onUpdateAllocation={updateAllocation}
                 selectedAllocationId={selectedAllocationId}
@@ -672,11 +526,6 @@ export function BudgetPanel({
                     }}
                   >
                     <BudgetGroup
-                      addCategoryRequestId={
-                        addCategoryRequest?.groupKey === subsection.id
-                          ? addCategoryRequest.id
-                          : undefined
-                      }
                       name={subsection.name}
                       subsectionId={subsection.id}
                       allocations={groupAllocations}
@@ -689,8 +538,6 @@ export function BudgetPanel({
                       onDropAllocation={dropAllocation}
                       onDragEnd={() => setDraggedItem(null)}
                       onDragStart={setDraggedItem}
-                      onAmountInputRef={registerAmountInput}
-                      onAllocationRowRef={registerAllocationRow}
                       onSelectAllocation={setSelectedAllocationId}
                       onUpdateAllocation={updateAllocation}
                       isNested
@@ -780,7 +627,6 @@ function BudgetMetric({ label, value }: { label: string; value: number }) {
 }
 
 function BudgetGroup({
-  addCategoryRequestId,
   name,
   subsectionId,
   allocations,
@@ -794,13 +640,10 @@ function BudgetGroup({
   onDropAllocation,
   onDragEnd,
   onDragStart,
-  onAmountInputRef,
-  onAllocationRowRef,
   onSelectAllocation,
   onUpdateAllocation,
   selectedAllocationId,
 }: {
-  addCategoryRequestId?: number
   name: string
   subsectionId: string | null
   allocations: BudgetAllocation[]
@@ -821,14 +664,6 @@ function BudgetGroup({
   ) => Promise<void>
   onDragEnd: () => void
   onDragStart: (item: DraggedBudgetItem) => void
-  onAmountInputRef: (
-    allocationId: string,
-    input: HTMLInputElement | null,
-  ) => void
-  onAllocationRowRef: (
-    allocationId: string,
-    row: HTMLDivElement | null,
-  ) => void
   onSelectAllocation: (allocationId: string) => void
   onUpdateAllocation: (
     allocation: BudgetAllocation,
@@ -838,12 +673,6 @@ function BudgetGroup({
   selectedAllocationId: string | null
 }) {
   const [isAddingCategory, setIsAddingCategory] = useState(false)
-  useEffect(() => {
-    if (addCategoryRequestId !== undefined) {
-      // oxlint-disable-next-line react/set-state-in-effect -- A keyboard request opens this group-owned combobox.
-      setIsAddingCategory(true)
-    }
-  }, [addCategoryRequestId])
   const planned = allocations.reduce(
     (sum, allocation) => sum + Math.abs(allocation.budgeted_amount),
     0,
@@ -888,8 +717,6 @@ function BudgetGroup({
             key={`${allocation.allocation_id}-${allocation.budgeted_amount}-${allocation.direction}`}
             onDragEnd={onDragEnd}
             onDragStart={onDragStart}
-            onAmountInputRef={onAmountInputRef}
-            onAllocationRowRef={onAllocationRowRef}
             onSelect={onSelectAllocation}
             onUpdate={onUpdateAllocation}
             selected={allocation.allocation_id === selectedAllocationId}
@@ -970,8 +797,6 @@ function BudgetAllocationRow({
   busy,
   onDragEnd,
   onDragStart,
-  onAmountInputRef,
-  onAllocationRowRef,
   onSelect,
   onUpdate,
   selected,
@@ -980,14 +805,6 @@ function BudgetAllocationRow({
   busy: boolean
   onDragEnd: () => void
   onDragStart: (item: DraggedBudgetItem) => void
-  onAmountInputRef: (
-    allocationId: string,
-    input: HTMLInputElement | null,
-  ) => void
-  onAllocationRowRef: (
-    allocationId: string,
-    row: HTMLDivElement | null,
-  ) => void
   onSelect: (allocationId: string) => void
   onUpdate: (
     allocation: BudgetAllocation,
@@ -1044,9 +861,7 @@ function BudgetAllocationRow({
       }`}
       data-budget-row-selected={selected ? 'true' : undefined}
       draggable={!busy}
-      ref={(row) => onAllocationRowRef(allocation.allocation_id, row)}
       role="group"
-      tabIndex={selected ? 0 : -1}
       onClick={() => onSelect(allocation.allocation_id)}
       onDragEnd={onDragEnd}
       onDragStart={(event) => {
@@ -1107,7 +922,6 @@ function BudgetAllocationRow({
       <MagnitudeInput
         allocation={allocation}
         busy={busy}
-        inputRef={(input) => onAmountInputRef(allocation.allocation_id, input)}
         value={magnitudeValue}
         onBlur={() => void saveMagnitude()}
         onChange={setMagnitudeValue}
@@ -1155,7 +969,6 @@ function MagnitudeInput({
   allocation,
   busy,
   value,
-  inputRef,
   onBlur,
   onChange,
   onReset,
@@ -1163,7 +976,6 @@ function MagnitudeInput({
   allocation: BudgetAllocation
   busy: boolean
   value: string
-  inputRef: (input: HTMLInputElement | null) => void
   onBlur: () => void
   onChange: (value: string) => void
   onReset: () => void
@@ -1174,7 +986,6 @@ function MagnitudeInput({
       className="amount-input"
       disabled={busy}
       inputMode="decimal"
-      ref={inputRef}
       type="text"
       value={value}
       onBlur={onBlur}
