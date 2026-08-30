@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type DragEvent,
@@ -382,6 +383,17 @@ export function BudgetPanel({
   const selectorMonths = Array.from(
     new Set([selectedMonth, ...budgets.map((item) => item.month.slice(0, 7))]),
   ).sort((left, right) => right.localeCompare(left))
+  const keyboardAllocations = useMemo(
+    () => [
+      ...allocations.filter((allocation) => allocation.subsection_id === null),
+      ...subsections.flatMap((subsection) =>
+        allocations.filter(
+          (allocation) => allocation.subsection_id === subsection.id,
+        ),
+      ),
+    ],
+    [allocations, subsections],
+  )
   const changeMonth = useCallback((month: string) => {
     setSubsectionName('')
     setIsAddingSubsection(false)
@@ -442,26 +454,23 @@ export function BudgetPanel({
       }
 
       if (key === 'j' || key === 'k') {
-        if (allocations.length === 0) {
+        if (keyboardAllocations.length === 0) {
           return
         }
         event.preventDefault()
-        const currentIndex = allocations.findIndex(
+        const currentIndex = keyboardAllocations.findIndex(
           (allocation) => allocation.allocation_id === selectedAllocationId,
         )
         const nextIndex =
           currentIndex === -1
             ? key === 'j'
               ? 0
-              : allocations.length - 1
-            : Math.max(
-                0,
-                Math.min(
-                  allocations.length - 1,
-                  currentIndex + (key === 'j' ? 1 : -1),
-                ),
-              )
-        const nextAllocation = allocations[nextIndex]
+              : keyboardAllocations.length - 1
+            : (currentIndex +
+                (key === 'j' ? 1 : -1) +
+                keyboardAllocations.length) %
+              keyboardAllocations.length
+        const nextAllocation = keyboardAllocations[nextIndex]
         setSelectedAllocationId(nextAllocation.allocation_id)
         focusAllocation(nextAllocation.allocation_id)
         return
@@ -503,6 +512,7 @@ export function BudgetPanel({
     busyId,
     changeMonth,
     focusAllocation,
+    keyboardAllocations,
     selectedAllocationId,
     selectedMonth,
   ])
