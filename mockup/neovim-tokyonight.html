@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Perfectly Balanced — Tokyo Night workspace mockup</title>
+    <link rel="stylesheet" href="neovim-tokyonight.css" />
+  </head>
+  <body>
+    <div class="terminal-app">
+      <header class="titlebar">
+        <a class="brand" href="#budget" aria-label="Perfectly Balanced home">
+          <span class="brand-mark">pb</span>
+          <span>perfectly-balanced</span>
+        </a>
+        <p>August 2026 · Personal budget</p>
+        <button class="profile" type="button" aria-label="Open profile menu">
+          <span>BG</span>
+          ben@local
+        </button>
+      </header>
+
+      <aside class="sidebar" aria-label="Application navigation">
+        <nav class="main-nav">
+          <a class="nav-item is-active" href="#budget">
+            <kbd>g b</kbd>
+            <span>Budget</span>
+          </a>
+          <a class="nav-item" href="#transactions">
+            <kbd>g t</kbd>
+            <span>Transactions</span>
+            <strong>12</strong>
+          </a>
+          <a class="nav-item" href="#reports">
+            <kbd>g r</kbd>
+            <span>Reports</span>
+          </a>
+        </nav>
+
+        <section class="sidebar-section" aria-labelledby="months-title">
+          <h2 id="months-title">Months</h2>
+          <a href="#july"><kbd>h</kbd> July 2026</a>
+          <a class="is-current" href="#august"><kbd>l</kbd> August 2026</a>
+          <a href="#september"><kbd>l</kbd> September 2026</a>
+        </section>
+
+        <section class="sidebar-section keyboard-guide" aria-labelledby="keymap-title">
+          <h2 id="keymap-title">Keymap</h2>
+          <dl>
+            <div><dt><kbd>j</kbd><kbd>k</kbd></dt><dd>move selection</dd></div>
+            <div><dt><kbd>e</kbd></dt><dd>edit amount</dd></div>
+            <div><dt><kbd>a</kbd></dt><dd>add category</dd></div>
+            <div><dt><kbd>:</kbd></dt><dd>command menu</dd></div>
+            <div><dt><kbd>?</kbd></dt><dd>all shortcuts</dd></div>
+          </dl>
+        </section>
+      </aside>
+
+      <main id="budget" class="workspace">
+        <header class="workspace-head">
+          <div>
+            <p class="eyebrow">Budget / 2026 / 08</p>
+            <h1>August 2026</h1>
+            <p class="subtitle">Plan with the keyboard. Review with a glance.</p>
+          </div>
+          <div class="month-controls" aria-label="Month navigation">
+            <button type="button" aria-label="Previous month">← <kbd>h</kbd></button>
+            <button type="button" aria-label="Next month"><kbd>l</kbd> →</button>
+          </div>
+        </header>
+
+        <section class="summary" aria-label="August budget summary">
+          <div>
+            <span>Available</span>
+            <strong class="available">$1,386.00</strong>
+          </div>
+          <div>
+            <span>Planned</span>
+            <strong>$3,250.00</strong>
+          </div>
+          <div>
+            <span>Spent</span>
+            <strong class="spent">$1,864.32</strong>
+          </div>
+          <div>
+            <span>Uncategorized</span>
+            <strong class="warning">12 transactions</strong>
+          </div>
+        </section>
+
+        <section class="budget-table" aria-labelledby="budget-heading">
+          <div class="table-head">
+            <div>
+              <p class="eyebrow">Monthly plan</p>
+              <h2 id="budget-heading">Categories</h2>
+            </div>
+            <button class="new-category" type="button"><span>+</span> Add category <kbd>a</kbd></button>
+          </div>
+
+          <div class="column-head" aria-hidden="true">
+            <span>Category</span>
+            <span>Planned</span>
+            <span>Spent</span>
+            <span>Remaining</span>
+          </div>
+
+          <section class="budget-group" aria-labelledby="essentials-heading">
+            <header>
+              <h3 id="essentials-heading"><span>⌄</span> Essentials</h3>
+              <strong>$2,650.00</strong>
+            </header>
+            <button class="budget-row is-selected" type="button">
+              <span class="category-name"><i class="selection-caret">›</i>Housing</span>
+              <span>$1,800.00</span>
+              <span class="spent">$1,800.00</span>
+              <span>$0.00</span>
+            </button>
+            <button class="budget-row" type="button">
+              <span class="category-name">Groceries</span>
+              <span>$600.00</span>
+              <span class="spent">$475.26</span>
+              <span class="available">$124.74</span>
+            </button>
+            <button class="budget-row" type="button">
+              <span class="category-name">Utilities</span>
+              <span>$250.00</span>
+              <span class="spent">$178.67</span>
+              <span class="available">$71.33</span>
+            </button>
+          </section>
+
+          <section class="budget-group" aria-labelledby="flexible-heading">
+            <header>
+              <h3 id="flexible-heading"><span>⌄</span> Flexible spending</h3>
+              <strong>$600.00</strong>
+            </header>
+            <button class="budget-row" type="button">
+              <span class="category-name">Restaurants</span>
+              <span>$250.00</span>
+              <span class="spent">$89.42</span>
+              <span class="available">$160.58</span>
+            </button>
+            <button class="budget-row" type="button">
+              <span class="category-name">Fun money</span>
+              <span>$200.00</span>
+              <span class="spent">$121.97</span>
+              <span class="available">$78.03</span>
+            </button>
+            <button class="budget-row" type="button">
+              <span class="category-name">Transit</span>
+              <span>$150.00</span>
+              <span class="spent">$72.00</span>
+              <span class="available">$78.00</span>
+            </button>
+          </section>
+        </section>
+      </main>
+
+      <aside class="command-panel" aria-labelledby="command-title">
+        <div class="command-panel__head">
+          <h2 id="command-title">Command</h2>
+          <span><kbd>Esc</kbd> close</span>
+        </div>
+        <label class="command-input">
+          <span aria-hidden="true">:</span>
+          <input value="go " aria-label="Command" />
+        </label>
+        <ul class="command-list">
+          <li class="is-highlighted"><kbd>↵</kbd><strong>Go to transactions</strong><span>g t</span></li>
+          <li><kbd>↵</kbd><strong>Go to reports</strong><span>g r</span></li>
+          <li><kbd>↵</kbd><strong>Go to category</strong><span>g c</span></li>
+        </ul>
+        <p class="command-hint"><kbd>↑</kbd><kbd>↓</kbd> navigate <kbd>Enter</kbd> run</p>
+      </aside>
+
+      <footer class="statusline">
+        <div><strong>NORMAL</strong><span>budget</span><span>August 2026</span></div>
+        <div><span>row 1 of 6</span><span><kbd>:</kbd> commands</span><span><kbd>?</kbd> help</span></div>
+      </footer>
+    </div>
+  </body>
+</html>
