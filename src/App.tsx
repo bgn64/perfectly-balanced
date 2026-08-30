@@ -27,6 +27,11 @@ interface AppProps {
 type AppView = 'budgets' | 'transactions' | 'insights'
 type FocusDirection = 'left' | 'down' | 'up' | 'right'
 
+interface StatusContext {
+  action: string
+  label: string
+}
+
 const navigationItems: ReadonlyArray<{
   view: AppView
   label: string
@@ -119,6 +124,13 @@ function findDirectionalControl(
         left.crossDistance - right.crossDistance ||
         left.primaryDistance - right.primaryDistance,
     )[0]?.control ?? null
+}
+
+function getStatusContext(control: HTMLElement | null): StatusContext {
+  return {
+    action: control?.dataset.statusAction ?? 'activate',
+    label: control?.dataset.statusLabel ?? 'budget',
+  }
 }
 
 function App({ appName }: AppProps) {
@@ -257,9 +269,16 @@ function AuthenticatedShell({
   const [categoriesRevision, setCategoriesRevision] = useState(0)
   const [budgetActivityRevision, setBudgetActivityRevision] = useState(0)
   const [commandQuery, setCommandQuery] = useState('go')
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
   const [focusedWorkspaceControl, setFocusedWorkspaceControl] = useState(1)
   const [workspaceControlCount, setWorkspaceControlCount] = useState(18)
+  const [statusContext, setStatusContext] = useState<StatusContext>({
+    action: 'select',
+    label: 'budget / navigation',
+  })
   const workspaceShellRef = useRef<HTMLDivElement>(null)
+  const commandInputRef = useRef<HTMLInputElement>(null)
+  const previousFocusRef = useRef<HTMLElement | null>(null)
   const handleTransactionsChanged = useCallback(() => {
     setBudgetActivityRevision((revision) => revision + 1)
   }, [])
@@ -286,6 +305,31 @@ function AuthenticatedShell({
     control.focus({ preventScroll: true })
     control.scrollIntoView({ block: 'nearest', inline: 'nearest' })
   }, [])
+  const closeCommandPalette = useCallback(() => {
+    setIsCommandPaletteOpen(false)
+    const previousFocus = previousFocusRef.current
+    window.requestAnimationFrame(() => {
+      if (previousFocus?.isConnected) {
+        focusWorkspaceControl(previousFocus)
+        return
+      }
+      const firstControl = workspaceShellRef.current
+        ? getWorkspaceControls(workspaceShellRef.current).find((control) =>
+            control.matches('.nav-item.is-active'),
+          )
+        : null
+      if (firstControl) {
+        focusWorkspaceControl(firstControl)
+      }
+    })
+  }, [focusWorkspaceControl])
+  const openCommandPalette = useCallback(() => {
+    previousFocusRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null
+    setCommandQuery('go')
+    setIsCommandPaletteOpen(true)
+    window.requestAnimationFrame(() => commandInputRef.current?.focus())
+  }, [])
 
   useEffect(() => {
     if (activeView !== 'budgets') {
@@ -309,6 +353,7 @@ function AuthenticatedShell({
           ? controls.indexOf(activeControl) + 1
           : 1,
       )
+      setStatusContext(getStatusContext(activeControl))
     }
     const scheduleFocusStatusUpdate = () => {
       window.cancelAnimationFrame(animationFrame)
@@ -338,9 +383,16 @@ function AuthenticatedShell({
         event.altKey ||
         event.ctrlKey ||
         event.metaKey ||
-        event.shiftKey ||
         isTextEntryTarget(event.target)
       ) {
+        return
+      }
+      if (event.key === ':') {
+        event.preventDefault()
+        openCommandPalette()
+        return
+      }
+      if (event.shiftKey) {
         return
       }
       const root = workspaceShellRef.current
@@ -378,7 +430,7 @@ function AuthenticatedShell({
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [focusWorkspaceControl])
+  }, [focusWorkspaceControl, openCommandPalette])
 
   async function handleSignOut() {
     setIsSigningOut(true)
@@ -397,7 +449,12 @@ function AuthenticatedShell({
 
   if (activeView === 'budgets') {
     return (
-      <div className="authenticated-app terminal-app" ref={workspaceShellRef}>
+      <div
+        className={`authenticated-app terminal-app${
+          isCommandPaletteOpen ? '' : ' command-closed'
+        }`}
+        ref={workspaceShellRef}
+      >
         <header className="titlebar">
           <button
             className="brand"
@@ -435,6 +492,8 @@ function AuthenticatedShell({
                 className={`nav-item${
                   activeView === item.view ? ' is-active is-focused' : ''
                 }`}
+                data-status-action="select"
+                data-status-label={`budget / ${item.label.toLocaleLowerCase()}`}
                 key={item.view}
                 type="button"
                 onClick={() => navigateToView(item.view)}
@@ -448,6 +507,8 @@ function AuthenticatedShell({
             {adjacentMonths.map((month) => (
               <button
                 className={month === selectedMonth ? 'is-current' : ''}
+                data-status-action="select month"
+                data-status-label={`budget / ${formatMonth(month)}`}
                 key={month}
                 type="button"
                 onClick={() => setSelectedMonth(month)}
@@ -455,13 +516,6 @@ function AuthenticatedShell({
                 {formatMonth(month)}
               </button>
             ))}
-          </section>
-          <section className="sidebar-section keyboard-guide" aria-labelledby="keymap-title">
-            <h2 id="keymap-title">Keymap</h2>
-            <dl>
-              <div><dt><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd></dt><dd>move focus</dd></div>
-              <div><dt><kbd>Enter</kbd></dt><dd>activate control</dd></div>
-            </dl>
           </section>
         </aside>
 
@@ -480,49 +534,77 @@ function AuthenticatedShell({
           />
         </main>
 
-        <aside className="command-panel" aria-label="Command">
-          <div className="command-panel__head">
-            <h2>Command</h2>
-          </div>
-          <label className="command-input">
-            <span aria-hidden="true">:</span>
-            <input
-              aria-label="Command"
-              value={commandQuery}
-              onChange={(event) => setCommandQuery(event.target.value)}
-            />
-          </label>
-          <ul className="command-list">
-            <li className="is-highlighted">
-              <button type="button" onClick={() => navigateToView('transactions')}>
-                Go to transactions
-              </button>
-            </li>
-            <li>
-              <button type="button" onClick={() => navigateToView('insights')}>
-                Go to reports
-              </button>
-            </li>
-            <li>
-              <button
-                type="button"
-                onClick={() =>
-                  document.getElementById('add-category')?.focus()
-                }
-              >
-                Go to category
-              </button>
-            </li>
-          </ul>
-        </aside>
+        {isCommandPaletteOpen && (
+          <aside className="command-panel" aria-label="Command">
+            <div className="command-panel__head">
+              <h2>Command</h2>
+            </div>
+            <label className="command-input">
+              <span aria-hidden="true">:</span>
+              <input
+                ref={commandInputRef}
+                aria-label="Command"
+                value={commandQuery}
+                onChange={(event) => setCommandQuery(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Escape') {
+                    event.preventDefault()
+                    closeCommandPalette()
+                  }
+                }}
+              />
+            </label>
+            <ul className="command-list">
+              <li className="is-highlighted">
+                <button
+                  data-status-action="open"
+                  data-status-label="command / transactions"
+                  type="button"
+                  onClick={() => navigateToView('transactions')}
+                >
+                  Go to transactions
+                </button>
+              </li>
+              <li>
+                <button
+                  data-status-action="open"
+                  data-status-label="command / reports"
+                  type="button"
+                  onClick={() => navigateToView('insights')}
+                >
+                  Go to reports
+                </button>
+              </li>
+              <li>
+                <button
+                  data-status-action="focus"
+                  data-status-label="command / category"
+                  type="button"
+                  onClick={() => {
+                    closeCommandPalette()
+                    window.requestAnimationFrame(() =>
+                      document.getElementById('add-category')?.focus(),
+                    )
+                  }}
+                >
+                  Go to category
+                </button>
+              </li>
+            </ul>
+          </aside>
+        )}
 
         <footer className="statusline">
           <div>
             <strong>NAVIGATE</strong>
-            <span>budget</span>
+            <span>{statusContext.label}</span>
             <span>focus {focusedWorkspaceControl} of {workspaceControlCount}</span>
           </div>
-          <div><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> move</span><span><kbd>Enter</kbd> activate</span></div>
+          <div>
+            <span><kbd>Enter</kbd> {statusContext.action}</span>
+            <span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> move</span>
+            <span><kbd>:</kbd> command</span>
+          </div>
         </footer>
       </div>
     )

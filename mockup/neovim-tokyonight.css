@@ -6,14 +6,20 @@
   text-rendering: optimizeLegibility;
 }
 
+html {
+  height: 100%;
+  overflow: hidden;
+}
+
 * {
   box-sizing: border-box;
 }
 
 body {
   min-width: 320px;
-  min-height: 100vh;
+  height: 100dvh;
   margin: 0;
+  overflow: hidden;
   background:
     linear-gradient(rgb(122 162 247 / 3%) 1px, transparent 1px),
     linear-gradient(90deg, rgb(122 162 247 / 3%) 1px, transparent 1px),
@@ -63,13 +69,21 @@ kbd {
     "status status status" auto
     / 15.5rem minmax(31rem, 1fr) 22rem;
   width: min(100% - 3rem, 96rem);
-  height: min(100vh - 3rem, 58rem);
+  height: calc(100dvh - 3rem);
   margin: 1.5rem auto;
   overflow: hidden;
   border: 1px solid #3b4261;
   border-radius: 0.65rem;
   background: #1a1b26;
   box-shadow: 0 1.5rem 4.5rem rgb(0 0 0 / 35%);
+}
+
+.terminal-app.command-closed {
+  grid-template:
+    "title title" auto
+    "sidebar main" minmax(0, 1fr)
+    "status status" auto
+    / 15.5rem minmax(0, 1fr);
 }
 
 .titlebar {
@@ -634,12 +648,12 @@ input:focus-visible {
   .terminal-app {
     grid-template:
       "title" auto
-      "main" auto
       "sidebar" auto
+      "main" minmax(0, 1fr)
       "status" auto
       / 1fr;
     width: 100%;
-    min-height: 100vh;
+    height: 100dvh;
     margin: 0;
     border: 0;
     border-radius: 0;
