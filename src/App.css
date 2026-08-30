@@ -2054,6 +2054,9 @@ summary:focus-visible {
   background: #1a1b26;
   color: #c0caf5;
   font-family: "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+  height: calc(100dvh - 3rem);
+  min-height: 0;
+  margin: 1.5rem auto;
 }
 
 .authenticated-app.terminal-app h1,
