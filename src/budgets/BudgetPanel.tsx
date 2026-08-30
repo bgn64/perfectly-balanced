@@ -3,7 +3,6 @@ import {
   useEffect,
   useRef,
   useState,
-  type FormEvent,
 } from 'react'
 import { CategoryCombobox } from '../finance/CategoryCombobox.tsx'
 import { collectPages } from '../finance/query.ts'
@@ -551,46 +550,74 @@ function BudgetGroup({
         const isSelected = allocation.allocation_id === selectedAllocationId
         return (
           <div key={allocation.allocation_id}>
-            <button
-              aria-pressed={isSelected}
+            <div
+              aria-current={isSelected ? 'true' : undefined}
               className={`budget-row${isSelected ? ' is-selected' : ''}`}
               data-allocation-id={allocation.allocation_id}
               data-semantic-id={`budget-row-${allocation.allocation_id}`}
               data-semantic-kind="budget-row"
               data-semantic-region="workspace"
-              data-status-action="edit"
+              data-status-action="amount"
               data-status-label={`budget / ${allocation.category_name.toLocaleLowerCase()}`}
-              disabled={busy}
               id={`budget-row-${allocation.allocation_id}`}
-              type="button"
-              onClick={() => {
-                onSelect(allocation.allocation_id)
-                onEdit(allocation.allocation_id)
-                onAmountEditorOpenChange(true)
-              }}
+              tabIndex={0}
+              onFocus={() => onSelect(allocation.allocation_id)}
             >
               <span className="category-name">
                 {isSelected ? <i className="selection-caret">›</i> : null}
                 {allocation.category_name}
+                <button
+                  aria-label={`Toggle ${allocation.category_name} between spending and income`}
+                  className="direction-tag"
+                  data-status-action="toggle direction"
+                  data-status-label={`budget / ${allocation.category_name.toLocaleLowerCase()}`}
+                  disabled={busy}
+                  type="button"
+                  onClick={() => {
+                    onEdit(null)
+                    onAmountEditorOpenChange(false)
+                    void onUpdate(
+                      allocation,
+                      plannedAmount,
+                      allocation.direction === 'spending' ? 'income' : 'spending',
+                    )
+                  }}
+                >
+                  {allocation.direction === 'spending' ? 'Spending' : 'Income'}
+                </button>
               </span>
-              <span>{formatDisplayMoney(plannedAmount)}</span>
+              {editingAllocationId === allocation.allocation_id ? (
+                <InlineBudgetAmount
+                  allocation={allocation}
+                  busy={busy}
+                  onCancel={() => {
+                    onEdit(null)
+                    onAmountEditorOpenChange(false)
+                    onAmountEditorClosed(allocation.allocation_id)
+                  }}
+                  onUpdate={onUpdate}
+                />
+              ) : (
+                <button
+                  className="amount-cell"
+                  data-status-action="edit amount"
+                  data-status-label={`budget / ${allocation.category_name.toLocaleLowerCase()}`}
+                  disabled={busy}
+                  type="button"
+                  onClick={() => {
+                    onSelect(allocation.allocation_id)
+                    onEdit(allocation.allocation_id)
+                    onAmountEditorOpenChange(true)
+                  }}
+                >
+                  {formatDisplayMoney(plannedAmount)}
+                </button>
+              )}
               <span className="spent">{formatDisplayMoney(spentAmount)}</span>
               <span className={remaining < 0 ? 'spent' : 'available'}>
                 {formatDisplayMoney(remaining)}
               </span>
-            </button>
-            {editingAllocationId === allocation.allocation_id && (
-              <BudgetAllocationEditor
-                allocation={allocation}
-                busy={busy}
-                onClose={() => {
-                  onEdit(null)
-                  onAmountEditorOpenChange(false)
-                  onAmountEditorClosed(allocation.allocation_id)
-                }}
-                onUpdate={onUpdate}
-              />
-            )}
+            </div>
           </div>
         )
       })}
@@ -598,15 +625,15 @@ function BudgetGroup({
   )
 }
 
-function BudgetAllocationEditor({
+function InlineBudgetAmount({
   allocation,
   busy,
-  onClose,
+  onCancel,
   onUpdate,
 }: {
   allocation: BudgetAllocation
   busy: boolean
-  onClose: () => void
+  onCancel: () => void
   onUpdate: (
     allocation: BudgetAllocation,
     magnitude: number,
@@ -616,7 +643,6 @@ function BudgetAllocationEditor({
   const [magnitude, setMagnitude] = useState(
     Math.abs(allocation.budgeted_amount).toFixed(2),
   )
-  const [direction, setDirection] = useState<BudgetDirection>(allocation.direction)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const amountInputRef = useRef<HTMLInputElement>(null)
 
@@ -625,82 +651,46 @@ function BudgetAllocationEditor({
     amountInputRef.current?.select()
   }, [])
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
+  async function saveAmount() {
     const parsed = parseMagnitude(magnitude)
     if (parsed === null) {
       setErrorMessage('Enter an amount with no more than two decimal places.')
       return
     }
-    const didSave = await onUpdate(allocation, parsed, direction)
+    const didSave = await onUpdate(allocation, parsed, allocation.direction)
     if (didSave) {
-      onClose()
+      onCancel()
     }
   }
 
   return (
-    <form
-      className="budget-row-editor"
-      onKeyDown={(event) => {
-        if (event.key === 'Escape') {
-          event.preventDefault()
-          onClose()
-        }
-      }}
-      onSubmit={handleSubmit}
-    >
-      <label>
-        Planned amount
-        <input
-          autoFocus
-          data-status-action="edit amount"
-          data-status-label={`budget / ${allocation.category_name.toLocaleLowerCase()}`}
-          disabled={busy}
-          inputMode="decimal"
-          ref={amountInputRef}
-          type="text"
-          value={magnitude}
-          onChange={(event) => {
-            setMagnitude(event.target.value)
-            setErrorMessage(null)
-          }}
-        />
-      </label>
-      <label>
-        Direction
-        <select
-          data-status-action="change direction"
-          data-status-label={`budget / ${allocation.category_name.toLocaleLowerCase()}`}
-          disabled={busy}
-          value={direction}
-          onChange={(event) =>
-            setDirection(
-              event.target.value === 'income' ? 'income' : 'spending',
-            )
+    <div className="inline-amount-editor">
+      <input
+        autoFocus
+        aria-invalid={errorMessage ? 'true' : undefined}
+        className="amount-cell amount-cell--editing"
+        data-status-action="save amount"
+        data-status-label={`budget / ${allocation.category_name.toLocaleLowerCase()}`}
+        disabled={busy}
+        inputMode="decimal"
+        ref={amountInputRef}
+        type="text"
+        value={magnitude}
+        onChange={(event) => {
+          setMagnitude(event.target.value)
+          setErrorMessage(null)
+        }}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') {
+            event.preventDefault()
+            void saveAmount()
+          } else if (event.key === 'Escape') {
+            event.preventDefault()
+            onCancel()
           }
-        >
-          <option value="spending">Spending</option>
-          <option value="income">Income</option>
-        </select>
-      </label>
-      <button
-        data-status-action="save"
-        data-status-label={`budget / ${allocation.category_name.toLocaleLowerCase()}`}
-        disabled={busy}
-        type="submit"
-      >
-        Save
-      </button>
-      <button
-        data-status-action="cancel"
-        data-status-label={`budget / ${allocation.category_name.toLocaleLowerCase()}`}
-        disabled={busy}
-        type="button"
-        onClick={onClose}
-      >
-        Cancel
-      </button>
-      {errorMessage && <p role="alert">{errorMessage}</p>}
-    </form>
+        }}
+      />
+      {errorMessage && <span className="inline-error" role="alert">{errorMessage}</span>}
+    </div>
   )
 }

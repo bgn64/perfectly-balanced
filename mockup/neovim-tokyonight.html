@@ -96,24 +96,24 @@
               <h3 id="essentials-heading"><span>⌄</span> Essentials</h3>
               <strong>$2,650.00</strong>
             </header>
-            <button class="budget-row is-selected" type="button">
-              <span class="category-name"><i class="selection-caret">›</i>Housing</span>
-              <span>$1,800.00</span>
+            <div class="budget-row is-selected" tabindex="0">
+              <span class="category-name"><i class="selection-caret">›</i>Housing <button class="direction-tag" type="button">Spending</button></span>
+              <input class="amount-cell" aria-label="Housing planned amount" value="$1,800.00" />
               <span class="spent">$1,800.00</span>
               <span>$0.00</span>
-            </button>
-            <button class="budget-row" type="button">
-              <span class="category-name">Groceries</span>
-              <span>$600.00</span>
+            </div>
+            <div class="budget-row" tabindex="0">
+              <span class="category-name">Groceries <button class="direction-tag" type="button">Spending</button></span>
+              <input class="amount-cell" aria-label="Groceries planned amount" value="$600.00" />
               <span class="spent">$475.26</span>
               <span class="available">$124.74</span>
-            </button>
-            <button class="budget-row" type="button">
-              <span class="category-name">Utilities</span>
-              <span>$250.00</span>
+            </div>
+            <div class="budget-row" tabindex="0">
+              <span class="category-name">Utilities <button class="direction-tag" type="button">Spending</button></span>
+              <input class="amount-cell" aria-label="Utilities planned amount" value="$250.00" />
               <span class="spent">$178.67</span>
               <span class="available">$71.33</span>
-            </button>
+            </div>
           </section>
 
           <section class="budget-group" aria-labelledby="flexible-heading">
@@ -121,31 +121,31 @@
               <h3 id="flexible-heading"><span>⌄</span> Flexible spending</h3>
               <strong>$600.00</strong>
             </header>
-            <button class="budget-row" type="button">
-              <span class="category-name">Restaurants</span>
-              <span>$250.00</span>
+            <div class="budget-row" tabindex="0">
+              <span class="category-name">Restaurants <button class="direction-tag" type="button">Spending</button></span>
+              <input class="amount-cell" aria-label="Restaurants planned amount" value="$250.00" />
               <span class="spent">$89.42</span>
               <span class="available">$160.58</span>
-            </button>
-            <button class="budget-row" type="button">
-              <span class="category-name">Fun money</span>
-              <span>$200.00</span>
+            </div>
+            <div class="budget-row" tabindex="0">
+              <span class="category-name">Fun money <button class="direction-tag" type="button">Spending</button></span>
+              <input class="amount-cell" aria-label="Fun money planned amount" value="$200.00" />
               <span class="spent">$121.97</span>
               <span class="available">$78.03</span>
-            </button>
-            <button class="budget-row" type="button">
-              <span class="category-name">Transit</span>
-              <span>$150.00</span>
+            </div>
+            <div class="budget-row" tabindex="0">
+              <span class="category-name">Transit <button class="direction-tag" type="button">Spending</button></span>
+              <input class="amount-cell" aria-label="Transit planned amount" value="$150.00" />
               <span class="spent">$72.00</span>
               <span class="available">$78.00</span>
-            </button>
+            </div>
           </section>
         </section>
       </main>
 
       <footer class="statusline">
         <div><strong>NAVIGATE</strong><span>budget / housing</span></div>
-        <div><span><kbd>Enter</kbd> edit</span><span><kbd>a</kbd> amount</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> move</span><span><kbd>:</kbd> command</span></div>
+        <div><span><kbd>a</kbd> amount</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> move</span><span><kbd>:</kbd> command</span></div>
       </footer>
     </div>
   </body>
