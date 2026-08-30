@@ -303,6 +303,8 @@ export function BudgetPanel({
         </div>
         <div className="month-controls" aria-label="Month navigation">
           <button
+            data-status-action="previous month"
+            data-status-label="budget / previous month"
             disabled={busyId !== null}
             type="button"
             onClick={() => onMonthChange(shiftMonth(selectedMonth, -1))}
@@ -310,6 +312,8 @@ export function BudgetPanel({
             ← Previous
           </button>
           <button
+            data-status-action="next month"
+            data-status-label="budget / next month"
             disabled={busyId !== null}
             type="button"
             onClick={() => onMonthChange(shiftMonth(selectedMonth, 1))}
@@ -334,6 +338,8 @@ export function BudgetPanel({
           <h2>Create the {formatMonth(selectedMonth)} budget</h2>
           <p>Start with an empty monthly budget, then add categories.</p>
           <button
+            data-status-action="create budget"
+            data-status-label="budget / empty month"
             type="button"
             disabled={busyId === 'create-budget'}
             onClick={() =>
@@ -374,6 +380,8 @@ export function BudgetPanel({
               <button
                 id="add-category"
                 className="new-category"
+                data-status-action="add category"
+                data-status-label="budget / categories"
                 disabled={busyId !== null}
                 type="button"
                 onClick={() => setIsAddingCategory(true)}
@@ -507,6 +515,8 @@ function BudgetGroup({
             <button
               aria-pressed={isSelected}
               className={`budget-row${isSelected ? ' is-selected' : ''}`}
+              data-status-action="edit"
+              data-status-label={`budget / ${allocation.category_name.toLocaleLowerCase()}`}
               disabled={busy}
               type="button"
               onClick={() => {
@@ -579,6 +589,8 @@ function BudgetAllocationEditor({
         Planned amount
         <input
           autoFocus
+          data-status-action="edit amount"
+          data-status-label={`budget / ${allocation.category_name.toLocaleLowerCase()}`}
           disabled={busy}
           inputMode="decimal"
           type="text"
@@ -592,6 +604,8 @@ function BudgetAllocationEditor({
       <label>
         Direction
         <select
+          data-status-action="change direction"
+          data-status-label={`budget / ${allocation.category_name.toLocaleLowerCase()}`}
           disabled={busy}
           value={direction}
           onChange={(event) => setDirection(event.target.value as BudgetDirection)}
@@ -600,8 +614,23 @@ function BudgetAllocationEditor({
           <option value="income">Income</option>
         </select>
       </label>
-      <button disabled={busy} type="submit">Save</button>
-      <button disabled={busy} type="button" onClick={onClose}>Cancel</button>
+      <button
+        data-status-action="save"
+        data-status-label={`budget / ${allocation.category_name.toLocaleLowerCase()}`}
+        disabled={busy}
+        type="submit"
+      >
+        Save
+      </button>
+      <button
+        data-status-action="cancel"
+        data-status-label={`budget / ${allocation.category_name.toLocaleLowerCase()}`}
+        disabled={busy}
+        type="button"
+        onClick={onClose}
+      >
+        Cancel
+      </button>
       {errorMessage && <p role="alert">{errorMessage}</p>}
     </form>
   )

@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="neovim-tokyonight.css" />
   </head>
   <body>
-    <div class="terminal-app">
+    <div class="terminal-app command-closed">
       <header class="titlebar">
         <a class="brand" href="#budget" aria-label="Perfectly Balanced home">
           <span class="brand-mark">pb</span>
@@ -41,13 +41,6 @@
           <a href="#september">September 2026</a>
         </section>
 
-        <section class="sidebar-section keyboard-guide" aria-labelledby="keymap-title">
-          <h2 id="keymap-title">Keymap</h2>
-          <dl>
-            <div><dt><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd></dt><dd>move focus</dd></div>
-            <div><dt><kbd>Enter</kbd></dt><dd>activate control</dd></div>
-          </dl>
-        </section>
       </aside>
 
       <main id="budget" class="workspace">
@@ -150,24 +143,9 @@
         </section>
       </main>
 
-      <aside class="command-panel" aria-labelledby="command-title">
-        <div class="command-panel__head">
-          <h2 id="command-title">Command</h2>
-        </div>
-        <label class="command-input">
-          <span aria-hidden="true">:</span>
-          <input value="go " aria-label="Command" />
-        </label>
-        <ul class="command-list">
-          <li class="is-highlighted"><strong>Go to transactions</strong></li>
-          <li><strong>Go to reports</strong></li>
-          <li><strong>Go to category</strong></li>
-        </ul>
-      </aside>
-
       <footer class="statusline">
-        <div><strong>NAVIGATE</strong><span>budget</span><span>focus 1 of 18</span></div>
-        <div><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> move</span><span><kbd>Enter</kbd> activate</span></div>
+        <div><strong>NAVIGATE</strong><span>budget / housing</span></div>
+        <div><span><kbd>Enter</kbd> edit</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> move</span><span><kbd>:</kbd> command</span></div>
       </footer>
     </div>
   </body>
