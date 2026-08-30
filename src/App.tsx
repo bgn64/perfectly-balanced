@@ -25,11 +25,16 @@ interface AppProps {
 }
 
 type AppView = 'budgets' | 'transactions' | 'insights'
-type FocusDirection = 'left' | 'down' | 'up' | 'right'
+type SemanticRegion = 'sidebar' | 'workspace'
 
 interface StatusContext {
   action: string
   label: string
+}
+
+interface AmountEditRequest {
+  allocationId: string
+  sequence: number
 }
 
 const navigationItems: ReadonlyArray<{
@@ -41,16 +46,15 @@ const navigationItems: ReadonlyArray<{
   { view: 'insights', label: 'Reports' },
 ]
 
-const workspaceControlSelector = [
-  'button:not([disabled])',
-  'summary',
-  'input:not([disabled]):not([type="hidden"])',
-  'select:not([disabled])',
-  '[role="combobox"]',
-].join(', ')
-
-function getWorkspaceControls(root: HTMLElement): HTMLElement[] {
-  return Array.from(root.querySelectorAll<HTMLElement>(workspaceControlSelector))
+function getSemanticControls(
+  root: HTMLElement,
+  region: SemanticRegion,
+): HTMLElement[] {
+  return Array.from(
+    root.querySelectorAll<HTMLElement>(
+      `[data-semantic-region="${region}"]`,
+    ),
+  )
     .filter(
       (control) =>
         !control.matches(':disabled') &&
@@ -58,72 +62,6 @@ function getWorkspaceControls(root: HTMLElement): HTMLElement[] {
         control.closest('[aria-hidden="true"], [hidden]') === null &&
         control.getClientRects().length > 0,
     )
-}
-
-function isInDirection(
-  origin: DOMRect,
-  candidate: DOMRect,
-  direction: FocusDirection,
-): boolean {
-  const originX = origin.left + origin.width / 2
-  const originY = origin.top + origin.height / 2
-  const candidateX = candidate.left + candidate.width / 2
-  const candidateY = candidate.top + candidate.height / 2
-
-  switch (direction) {
-    case 'left':
-      return candidateX < originX
-    case 'down':
-      return candidateY > originY
-    case 'up':
-      return candidateY < originY
-    case 'right':
-      return candidateX > originX
-  }
-}
-
-function findDirectionalControl(
-  controls: HTMLElement[],
-  origin: HTMLElement,
-  direction: FocusDirection,
-): HTMLElement | null {
-  const originRect = origin.getBoundingClientRect()
-  const isVertical = direction === 'up' || direction === 'down'
-  const originAxis =
-    (isVertical ? originRect.top : originRect.left) +
-    (isVertical ? originRect.height : originRect.width) / 2
-  const originCrossAxis =
-    (isVertical ? originRect.left : originRect.top) +
-    (isVertical ? originRect.width : originRect.height) / 2
-
-  const directionalControls = controls
-    .filter((control) => control !== origin)
-    .map((control) => {
-      const rect = control.getBoundingClientRect()
-      const axis =
-        (isVertical ? rect.top : rect.left) +
-        (isVertical ? rect.height : rect.width) / 2
-      const crossAxis =
-        (isVertical ? rect.left : rect.top) +
-        (isVertical ? rect.width : rect.height) / 2
-      return {
-        control,
-        crossDistance: Math.abs(crossAxis - originCrossAxis),
-        primaryDistance: Math.abs(axis - originAxis),
-        rect,
-      }
-    })
-    .filter(({ rect }) => isInDirection(originRect, rect, direction))
-  const alignedControls = directionalControls.filter(
-    ({ crossDistance, primaryDistance }) => crossDistance <= primaryDistance,
-  )
-
-  return (alignedControls.length > 0 ? alignedControls : directionalControls)
-    .sort(
-      (left, right) =>
-        left.crossDistance - right.crossDistance ||
-        left.primaryDistance - right.primaryDistance,
-    )[0]?.control ?? null
 }
 
 function getStatusContext(control: HTMLElement | null): StatusContext {
@@ -270,6 +208,9 @@ function AuthenticatedShell({
   const [budgetActivityRevision, setBudgetActivityRevision] = useState(0)
   const [commandQuery, setCommandQuery] = useState('go')
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
+  const [isAmountEditorOpen, setIsAmountEditorOpen] = useState(false)
+  const [amountEditRequest, setAmountEditRequest] =
+    useState<AmountEditRequest | null>(null)
   const [focusedWorkspaceControl, setFocusedWorkspaceControl] = useState(1)
   const [workspaceControlCount, setWorkspaceControlCount] = useState(18)
   const [statusContext, setStatusContext] = useState<StatusContext>({
@@ -305,6 +246,14 @@ function AuthenticatedShell({
     control.focus({ preventScroll: true })
     control.scrollIntoView({ block: 'nearest', inline: 'nearest' })
   }, [])
+  const focusBudgetRow = useCallback(
+    (allocationId: string) => {
+      window.requestAnimationFrame(() => {
+        document.getElementById(`budget-row-${allocationId}`)?.focus()
+      })
+    },
+    [],
+  )
   const closeCommandPalette = useCallback(() => {
     setIsCommandPaletteOpen(false)
     const previousFocus = previousFocusRef.current
@@ -314,8 +263,8 @@ function AuthenticatedShell({
         return
       }
       const firstControl = workspaceShellRef.current
-        ? getWorkspaceControls(workspaceShellRef.current).find((control) =>
-            control.matches('.nav-item.is-active'),
+        ? getSemanticControls(workspaceShellRef.current, 'sidebar').find(
+            (control) => control.matches('.nav-item.is-active'),
           )
         : null
       if (firstControl) {
@@ -341,11 +290,14 @@ function AuthenticatedShell({
     }
     let animationFrame = 0
     const updateFocusStatus = () => {
-      const controls = getWorkspaceControls(root)
+      const controls = [
+        ...getSemanticControls(root, 'sidebar'),
+        ...getSemanticControls(root, 'workspace'),
+      ]
       const activeElement = document.activeElement
       const activeControl =
         activeElement instanceof HTMLElement
-          ? activeElement.closest<HTMLElement>(workspaceControlSelector)
+          ? activeElement.closest<HTMLElement>('[data-status-label]')
           : null
       setWorkspaceControlCount(controls.length)
       setFocusedWorkspaceControl(
@@ -387,41 +339,102 @@ function AuthenticatedShell({
       ) {
         return
       }
-      if (event.key === ':') {
+      if (event.key === ':' && !isAmountEditorOpen) {
         event.preventDefault()
         openCommandPalette()
         return
       }
-      if (event.shiftKey) {
+      if (event.shiftKey || isAmountEditorOpen) {
         return
       }
       const root = workspaceShellRef.current
       if (!root) {
         return
       }
-      const directionByKey: Record<string, FocusDirection> = {
-        h: 'left',
-        j: 'down',
-        k: 'up',
-        l: 'right',
-      }
-      const direction = directionByKey[event.key.toLocaleLowerCase()]
-      if (!direction) {
+      const key = event.key.toLocaleLowerCase()
+      const sidebarControls = getSemanticControls(root, 'sidebar')
+      const workspaceControls = getSemanticControls(root, 'workspace')
+      const activeElement = document.activeElement
+      const focusedControl =
+        activeElement instanceof HTMLElement
+          ? activeElement.closest<HTMLElement>('[data-semantic-region]')
+          : null
+
+      if (!focusedControl) {
+        const firstControl = sidebarControls.find((control) =>
+          control.matches('.nav-item.is-active'),
+        )
+        if (firstControl) {
+          event.preventDefault()
+          focusWorkspaceControl(firstControl)
+        }
         return
       }
-      const controls = getWorkspaceControls(root)
-      const activeElement = document.activeElement
-      const activeControl =
-        activeElement instanceof HTMLElement
-          ? activeElement.closest<HTMLElement>(workspaceControlSelector)
-          : null
-      const focusedControl =
-        activeControl && controls.includes(activeControl) ? activeControl : null
-      const nextControl = focusedControl
-        ? findDirectionalControl(controls, focusedControl, direction)
-        : controls.find((control) =>
+
+      if (
+        key === 'a' &&
+        focusedControl?.dataset.semanticKind === 'budget-row'
+      ) {
+        const allocationId = focusedControl.dataset.allocationId
+        if (!allocationId) {
+          return
+        }
+        event.preventDefault()
+        setAmountEditRequest((current) => ({
+          allocationId,
+          sequence: (current?.sequence ?? 0) + 1,
+        }))
+        setIsAmountEditorOpen(true)
+        return
+      }
+
+      const region = focusedControl?.dataset.semanticRegion
+      const controls =
+        region === 'sidebar'
+          ? sidebarControls
+          : region === 'workspace'
+            ? workspaceControls
+            : []
+      const index = focusedControl ? controls.indexOf(focusedControl) : -1
+      let nextControl: HTMLElement | null = null
+
+      if (key === 'j' || key === 'k') {
+        const nextIndex = index + (key === 'j' ? 1 : -1)
+        nextControl = controls[nextIndex] ?? null
+      } else if (key === 'h') {
+        if (region === 'workspace') {
+          nextControl =
+            focusedControl?.dataset.semanticId === 'month-next'
+              ? workspaceControls.find(
+                  (control) =>
+                    control.dataset.semanticId === 'month-previous',
+                ) ?? null
+              : sidebarControls.find((control) =>
+                  control.matches('.nav-item.is-active'),
+                ) ?? null
+        }
+      } else if (key === 'l') {
+        if (region === 'sidebar') {
+          nextControl =
+            workspaceControls.find(
+              (control) =>
+                control.dataset.semanticId === 'month-previous',
+            ) ?? null
+        } else if (focusedControl?.dataset.semanticId === 'month-previous') {
+          nextControl =
+            workspaceControls.find(
+              (control) => control.dataset.semanticId === 'month-next',
+            ) ?? null
+        }
+      } else if (index === -1) {
+        nextControl =
+          sidebarControls.find((control) =>
             control.matches('.nav-item.is-active'),
-          ) ?? controls[0]
+          ) ?? null
+      } else {
+        return
+      }
+
       if (nextControl) {
         event.preventDefault()
         focusWorkspaceControl(nextControl)
@@ -430,7 +443,12 @@ function AuthenticatedShell({
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [focusWorkspaceControl, openCommandPalette])
+  }, [
+    focusBudgetRow,
+    focusWorkspaceControl,
+    isAmountEditorOpen,
+    openCommandPalette,
+  ])
 
   async function handleSignOut() {
     setIsSigningOut(true)
@@ -492,6 +510,8 @@ function AuthenticatedShell({
                 className={`nav-item${
                   activeView === item.view ? ' is-active is-focused' : ''
                 }`}
+                data-semantic-id={`nav-${item.view}`}
+                data-semantic-region="sidebar"
                 data-status-action="select"
                 data-status-label={`budget / ${item.label.toLocaleLowerCase()}`}
                 key={item.view}
@@ -507,6 +527,8 @@ function AuthenticatedShell({
             {adjacentMonths.map((month) => (
               <button
                 className={month === selectedMonth ? 'is-current' : ''}
+                data-semantic-id={`sidebar-month-${month}`}
+                data-semantic-region="sidebar"
                 data-status-action="select month"
                 data-status-label={`budget / ${formatMonth(month)}`}
                 key={month}
@@ -527,9 +549,16 @@ function AuthenticatedShell({
           )}
           <BudgetPanel
             activityRevision={budgetActivityRevision}
+            amountEditRequest={amountEditRequest}
             categoriesRevision={categoriesRevision}
             selectedMonth={selectedMonth}
             onCategoriesChanged={handleCategoriesChanged}
+            onAmountEditorClosed={(allocationId) => {
+              setIsAmountEditorOpen(false)
+              setAmountEditRequest(null)
+              focusBudgetRow(allocationId)
+            }}
+            onAmountEditorOpenChange={setIsAmountEditorOpen}
             onMonthChange={setSelectedMonth}
           />
         </main>
@@ -602,6 +631,9 @@ function AuthenticatedShell({
           </div>
           <div>
             <span><kbd>Enter</kbd> {statusContext.action}</span>
+            {statusContext.action === 'edit' && (
+              <span><kbd>a</kbd> amount</span>
+            )}
             <span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> move</span>
             <span><kbd>:</kbd> command</span>
           </div>
