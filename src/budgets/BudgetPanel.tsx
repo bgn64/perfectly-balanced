@@ -32,6 +32,11 @@ interface BudgetData {
   uncategorizedCount: number
 }
 
+interface AmountEditRequest {
+  allocationId: string
+  sequence: number
+}
+
 async function queryBudget(month: string): Promise<BudgetData> {
   const client = getSupabaseClient()
   const [budgetsResult, categoriesResult, transactions, splits] = await Promise.all([
@@ -127,12 +132,18 @@ export function BudgetPanel({
   onCategoriesChanged,
   selectedMonth,
   onMonthChange,
+  amountEditRequest,
+  onAmountEditorClosed,
+  onAmountEditorOpenChange,
 }: {
   categoriesRevision: number
   activityRevision: number
   onCategoriesChanged: () => void
   selectedMonth: string
   onMonthChange: (month: string) => void
+  amountEditRequest: AmountEditRequest | null
+  onAmountEditorClosed: (allocationId: string) => void
+  onAmountEditorOpenChange: (isOpen: boolean) => void
 }) {
   const { user } = useAuth()
   const [budget, setBudget] = useState<Budget | null>(null)
@@ -195,6 +206,20 @@ export function BudgetPanel({
       requestGeneration.current += 1
     }
   }, [activityRevision, categoriesRevision, loadBudget])
+
+  useEffect(() => {
+    if (
+      amountEditRequest &&
+      allocations.some(
+        (allocation) => allocation.allocation_id === amountEditRequest.allocationId,
+      )
+    ) {
+      // oxlint-disable-next-line react/set-state-in-effect -- A semantic navigation request opens the matching row editor.
+      setSelectedAllocationId(amountEditRequest.allocationId)
+      setEditingAllocationId(amountEditRequest.allocationId)
+      onAmountEditorOpenChange(true)
+    }
+  }, [allocations, amountEditRequest, onAmountEditorOpenChange])
 
   async function runMutation(
     id: string,
@@ -303,6 +328,8 @@ export function BudgetPanel({
         </div>
         <div className="month-controls" aria-label="Month navigation">
           <button
+            data-semantic-id="month-previous"
+            data-semantic-region="workspace"
             data-status-action="previous month"
             data-status-label="budget / previous month"
             disabled={busyId !== null}
@@ -312,6 +339,8 @@ export function BudgetPanel({
             ← Previous
           </button>
           <button
+            data-semantic-id="month-next"
+            data-semantic-region="workspace"
             data-status-action="next month"
             data-status-label="budget / next month"
             disabled={busyId !== null}
@@ -380,6 +409,8 @@ export function BudgetPanel({
               <button
                 id="add-category"
                 className="new-category"
+                data-semantic-id="add-category"
+                data-semantic-region="workspace"
                 data-status-action="add category"
                 data-status-label="budget / categories"
                 disabled={busyId !== null}
@@ -422,6 +453,8 @@ export function BudgetPanel({
                 editingAllocationId={editingAllocationId}
                 name="Unsectioned"
                 onEdit={setEditingAllocationId}
+                onAmountEditorClosed={onAmountEditorClosed}
+                onAmountEditorOpenChange={onAmountEditorOpenChange}
                 onSelect={setSelectedAllocationId}
                 onUpdate={updateAllocation}
                 selectedAllocationId={selectedAllocationId}
@@ -437,6 +470,8 @@ export function BudgetPanel({
                 key={subsection.id}
                 name={subsection.name}
                 onEdit={setEditingAllocationId}
+                onAmountEditorClosed={onAmountEditorClosed}
+                onAmountEditorOpenChange={onAmountEditorOpenChange}
                 onSelect={setSelectedAllocationId}
                 onUpdate={updateAllocation}
                 selectedAllocationId={selectedAllocationId}
@@ -474,6 +509,8 @@ function BudgetGroup({
   editingAllocationId,
   name,
   onEdit,
+  onAmountEditorClosed,
+  onAmountEditorOpenChange,
   onSelect,
   onUpdate,
   selectedAllocationId,
@@ -483,6 +520,8 @@ function BudgetGroup({
   editingAllocationId: string | null
   name: string
   onEdit: (allocationId: string | null) => void
+  onAmountEditorClosed: (allocationId: string) => void
+  onAmountEditorOpenChange: (isOpen: boolean) => void
   onSelect: (allocationId: string) => void
   onUpdate: (
     allocation: BudgetAllocation,
@@ -515,13 +554,19 @@ function BudgetGroup({
             <button
               aria-pressed={isSelected}
               className={`budget-row${isSelected ? ' is-selected' : ''}`}
+              data-allocation-id={allocation.allocation_id}
+              data-semantic-id={`budget-row-${allocation.allocation_id}`}
+              data-semantic-kind="budget-row"
+              data-semantic-region="workspace"
               data-status-action="edit"
               data-status-label={`budget / ${allocation.category_name.toLocaleLowerCase()}`}
               disabled={busy}
+              id={`budget-row-${allocation.allocation_id}`}
               type="button"
               onClick={() => {
                 onSelect(allocation.allocation_id)
                 onEdit(allocation.allocation_id)
+                onAmountEditorOpenChange(true)
               }}
             >
               <span className="category-name">
@@ -538,7 +583,11 @@ function BudgetGroup({
               <BudgetAllocationEditor
                 allocation={allocation}
                 busy={busy}
-                onClose={() => onEdit(null)}
+                onClose={() => {
+                  onEdit(null)
+                  onAmountEditorOpenChange(false)
+                  onAmountEditorClosed(allocation.allocation_id)
+                }}
                 onUpdate={onUpdate}
               />
             )}
@@ -569,6 +618,12 @@ function BudgetAllocationEditor({
   )
   const [direction, setDirection] = useState<BudgetDirection>(allocation.direction)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const amountInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    amountInputRef.current?.focus()
+    amountInputRef.current?.select()
+  }, [])
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -584,7 +639,16 @@ function BudgetAllocationEditor({
   }
 
   return (
-    <form className="budget-row-editor" onSubmit={handleSubmit}>
+    <form
+      className="budget-row-editor"
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') {
+          event.preventDefault()
+          onClose()
+        }
+      }}
+      onSubmit={handleSubmit}
+    >
       <label>
         Planned amount
         <input
@@ -593,6 +657,7 @@ function BudgetAllocationEditor({
           data-status-label={`budget / ${allocation.category_name.toLocaleLowerCase()}`}
           disabled={busy}
           inputMode="decimal"
+          ref={amountInputRef}
           type="text"
           value={magnitude}
           onChange={(event) => {
@@ -608,7 +673,11 @@ function BudgetAllocationEditor({
           data-status-label={`budget / ${allocation.category_name.toLocaleLowerCase()}`}
           disabled={busy}
           value={direction}
-          onChange={(event) => setDirection(event.target.value as BudgetDirection)}
+          onChange={(event) =>
+            setDirection(
+              event.target.value === 'income' ? 'income' : 'spending',
+            )
+          }
         >
           <option value="spending">Spending</option>
           <option value="income">Income</option>
