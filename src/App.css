@@ -1400,7 +1400,8 @@ summary:focus-visible {
   --shadow: none;
   --soft: #24283b;
   --surface: #1f2335;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   background:
     linear-gradient(rgb(122 162 247 / 3%) 1px, transparent 1px),
     linear-gradient(90deg, rgb(122 162 247 / 3%) 1px, transparent 1px),
@@ -1424,7 +1425,7 @@ summary:focus-visible {
     "status status status" auto
     / 15.5rem minmax(31rem, 1fr) 22rem;
   width: min(100% - 3rem, 96rem);
-  min-height: min(100vh - 3rem, 58rem);
+  height: min(100vh - 3rem, 58rem);
   margin: 1.5rem auto;
   overflow: hidden;
   border: 1px solid var(--line);
@@ -1516,6 +1517,8 @@ summary:focus-visible {
 
 .workspace-sidebar,
 .workspace-command-panel {
+  min-height: 0;
+  overflow-y: auto;
   padding: 1rem 0.75rem;
   background: var(--surface);
 }
@@ -1532,7 +1535,7 @@ summary:focus-visible {
 
 .workspace-nav button {
   display: grid;
-  grid-template-columns: 2.5rem 1fr;
+  grid-template-columns: 1fr;
   align-items: center;
   gap: 0.35rem;
   border: 0;
@@ -1582,7 +1585,7 @@ summary:focus-visible {
 
 .workspace-keymap dl div {
   display: grid;
-  grid-template-columns: 3.2rem 1fr;
+  grid-template-columns: 6.7rem 1fr;
   align-items: center;
   gap: 0.3rem;
 }
@@ -1600,6 +1603,9 @@ summary:focus-visible {
 .workspace-content {
   grid-area: content;
   min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-color: #414868 #1a1b26;
 }
 
 .workspace-app .workspace-content .page {
@@ -1637,6 +1643,7 @@ summary:focus-visible {
   gap: 0.35rem;
   border-radius: 0.3rem;
   padding: 0.45rem 0.55rem;
+  white-space: nowrap;
 }
 
 .workspace-app .pill-select,
@@ -1870,7 +1877,7 @@ summary:focus-visible {
 
 .workspace-command-list button {
   display: grid;
-  grid-template-columns: 2.5rem 1fr auto;
+  grid-template-columns: 1fr;
   width: 100%;
   align-items: center;
   gap: 0.4rem;
@@ -1920,6 +1927,8 @@ summary:focus-visible {
 
 .workspace-statusline {
   grid-area: status;
+  position: relative;
+  z-index: 1;
   min-height: 2rem;
   padding: 0.3rem 0.8rem;
   background: var(--accent);
@@ -1967,12 +1976,13 @@ summary:focus-visible {
   .workspace-shell {
     grid-template:
       "title" auto
-      "content" auto
       "sidebar" auto
+      "content" minmax(0, 1fr)
       "status" auto
       / 1fr;
     width: 100%;
-    min-height: 100vh;
+    height: 100vh;
+    min-height: 0;
     margin: 0;
     border: 0;
     border-radius: 0;
