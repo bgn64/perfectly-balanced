@@ -1,7 +1,14 @@
-import { useCallback, useState, type FormEvent } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+} from 'react'
 import { useAuth } from './auth/useAuth.ts'
 import { BudgetPanel } from './budgets/BudgetPanel.tsx'
 import { getClientConfiguration } from './config.ts'
+import { isTextEntryTarget } from './finance/utils.ts'
 import { InsightsPanel } from './insights/InsightsPanel.tsx'
 import { getSupabaseClient } from './lib/supabase.ts'
 import { TransactionsPanel } from './transactions/TransactionsPanel.tsx'
@@ -10,6 +17,18 @@ import './App.css'
 interface AppProps {
   appName: string
 }
+
+type AppView = 'budgets' | 'transactions' | 'insights'
+
+const navigationItems: ReadonlyArray<{
+  view: AppView
+  label: string
+  shortcut: string
+}> = [
+  { view: 'budgets', label: 'Budget', shortcut: 'g b' },
+  { view: 'transactions', label: 'Transactions', shortcut: 'g t' },
+  { view: 'insights', label: 'Insights', shortcut: 'g r' },
+]
 
 function App({ appName }: AppProps) {
   const { isLoading, initializationError, session, user } = useAuth()
@@ -140,16 +159,121 @@ function AuthenticatedShell({
   email: string
 }) {
   const { signOut } = useAuth()
-  const [activeView, setActiveView] = useState<
-    'budgets' | 'transactions' | 'insights'
-  >('budgets')
+  const [activeView, setActiveView] = useState<AppView>('budgets')
   const [isSigningOut, setIsSigningOut] = useState(false)
   const [signOutError, setSignOutError] = useState<string | null>(null)
   const [categoriesRevision, setCategoriesRevision] = useState(0)
   const [budgetActivityRevision, setBudgetActivityRevision] = useState(0)
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
+  const [commandQuery, setCommandQuery] = useState('')
+  const [activeCommandIndex, setActiveCommandIndex] = useState(0)
+  const [isAwaitingGoTarget, setIsAwaitingGoTarget] = useState(false)
+  const commandInputRef = useRef<HTMLInputElement>(null)
+  const previousFocusRef = useRef<HTMLElement | null>(null)
+  const workspaceShellRef = useRef<HTMLDivElement>(null)
   const handleTransactionsChanged = useCallback(() => {
     setBudgetActivityRevision((revision) => revision + 1)
   }, [])
+
+  const commandItems = navigationItems.filter(
+    (item) => item.view !== activeView,
+  )
+  const matchingCommands = commandItems.filter((item) =>
+    `go to ${item.label} ${item.shortcut}`
+      .toLocaleLowerCase()
+      .includes(commandQuery.trim().toLocaleLowerCase()),
+  )
+
+  const focusSelectedBudgetRow = useCallback(() => {
+    window.requestAnimationFrame(() => {
+      const selectedRow = workspaceShellRef.current?.querySelector<HTMLElement>(
+        '[data-budget-row-selected="true"]',
+      )
+      if (selectedRow) {
+        selectedRow.focus()
+        return
+      }
+      workspaceShellRef.current?.focus()
+    })
+  }, [])
+
+  const closeCommandPalette = useCallback(() => {
+    setIsCommandPaletteOpen(false)
+    setCommandQuery('')
+    setActiveCommandIndex(0)
+    const previousFocus = previousFocusRef.current
+    if (previousFocus?.isConnected) {
+      window.requestAnimationFrame(() => previousFocus.focus())
+      return
+    }
+    focusSelectedBudgetRow()
+  }, [focusSelectedBudgetRow])
+
+  const openCommandPalette = useCallback(() => {
+    previousFocusRef.current =
+      document.activeElement instanceof HTMLElement &&
+      document.activeElement !== document.body
+        ? document.activeElement
+        : null
+    setCommandQuery('go')
+    setActiveCommandIndex(0)
+    setIsAwaitingGoTarget(false)
+    setIsCommandPaletteOpen(true)
+    window.requestAnimationFrame(() => commandInputRef.current?.focus())
+  }, [])
+
+  const navigateToView = useCallback((view: AppView) => {
+    setActiveView(view)
+    setIsCommandPaletteOpen(false)
+    setCommandQuery('')
+    setActiveCommandIndex(0)
+    setIsAwaitingGoTarget(false)
+  }, [])
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (
+        event.defaultPrevented ||
+        event.altKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        isTextEntryTarget(event.target)
+      ) {
+        return
+      }
+
+      if (event.key === ':' && activeView === 'budgets') {
+        event.preventDefault()
+        openCommandPalette()
+        return
+      }
+
+      if (event.shiftKey) {
+        return
+      }
+
+      const key = event.key.toLocaleLowerCase()
+      if (isAwaitingGoTarget) {
+        const navigationItem = navigationItems.find(
+          (item) => item.shortcut.endsWith(` ${key}`),
+        )
+        setIsAwaitingGoTarget(false)
+        if (navigationItem) {
+          event.preventDefault()
+          navigateToView(navigationItem.view)
+        }
+        return
+      }
+
+      if (key === 'g') {
+        event.preventDefault()
+        setIsAwaitingGoTarget(true)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [activeView, isAwaitingGoTarget, navigateToView, openCommandPalette])
 
   async function handleSignOut() {
     setIsSigningOut(true)
@@ -178,6 +302,180 @@ function AuthenticatedShell({
     .slice(0, 2)
     .toUpperCase()
 
+  function runActiveCommand() {
+    const command = matchingCommands[activeCommandIndex] ?? matchingCommands[0]
+    if (command) {
+      navigateToView(command.view)
+    }
+  }
+
+  function moveActiveCommand(direction: 1 | -1) {
+    if (matchingCommands.length === 0) {
+      return
+    }
+    setActiveCommandIndex(
+      (current) =>
+        (current + direction + matchingCommands.length) % matchingCommands.length,
+    )
+  }
+
+  if (activeView === 'budgets') {
+    return (
+      <div className="authenticated-app workspace-app">
+        <div className="workspace-shell" ref={workspaceShellRef} tabIndex={-1}>
+          <header className="workspace-titlebar">
+            <button
+              className="workspace-brand"
+              type="button"
+              onClick={() => navigateToView('budgets')}
+            >
+              <span className="workspace-brand-mark" aria-hidden="true">pb</span>
+              <span>{appName}</span>
+            </button>
+            <p>Monthly budget workspace</p>
+            <details className="workspace-account-menu">
+              <summary className="workspace-account-chip">
+                <span>{initials || 'PB'}</span>
+                <span>{email.split('@')[0]}</span>
+              </summary>
+              <div className="workspace-account-popover">
+                <strong>{email}</strong>
+                <button
+                  className="button button--secondary"
+                  type="button"
+                  onClick={() => void handleSignOut()}
+                  disabled={isSigningOut}
+                >
+                  {isSigningOut ? 'Signing out...' : 'Sign out'}
+                </button>
+              </div>
+            </details>
+          </header>
+
+          <aside className="workspace-sidebar" aria-label="Primary navigation">
+            <nav className="workspace-nav">
+              {navigationItems.map((item) => (
+                <button
+                  aria-current={activeView === item.view ? 'page' : undefined}
+                  className={activeView === item.view ? 'active' : ''}
+                  key={item.view}
+                  type="button"
+                  onClick={() => navigateToView(item.view)}
+                >
+                  <kbd>{item.shortcut}</kbd>
+                  <span>{item.label}</span>
+                </button>
+              ))}
+            </nav>
+            <section className="workspace-keymap" aria-labelledby="workspace-keymap-title">
+              <h2 id="workspace-keymap-title">Keymap</h2>
+              <dl>
+                <div><dt><kbd>j</kbd><kbd>k</kbd></dt><dd>move selection</dd></div>
+                <div><dt><kbd>e</kbd></dt><dd>edit amount</dd></div>
+                <div><dt><kbd>a</kbd></dt><dd>add category</dd></div>
+                <div><dt><kbd>:</kbd></dt><dd>command menu</dd></div>
+              </dl>
+            </section>
+          </aside>
+
+          <div className="workspace-content">
+            {signOutError && (
+              <div className="shell-message">
+                <p className="form-message form-message--error" role="alert">
+                  {signOutError}
+                </p>
+              </div>
+            )}
+            <BudgetPanel
+              categoriesRevision={categoriesRevision}
+              activityRevision={budgetActivityRevision}
+              onCategoriesChanged={handleCategoriesChanged}
+            />
+          </div>
+
+          <aside
+            aria-label="Command palette"
+            className={`workspace-command-panel${
+              isCommandPaletteOpen ? ' is-open' : ''
+            }`}
+          >
+            <div className="workspace-command-head">
+              <h2>Command</h2>
+              {isCommandPaletteOpen ? <span><kbd>Esc</kbd> close</span> : null}
+            </div>
+            {isCommandPaletteOpen ? (
+              <>
+                <label className="workspace-command-input">
+                  <span aria-hidden="true">:</span>
+                  <input
+                    ref={commandInputRef}
+                    aria-label="Command"
+                    value={commandQuery}
+                    onChange={(event) => {
+                      setCommandQuery(event.target.value)
+                      setActiveCommandIndex(0)
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === 'ArrowDown') {
+                        event.preventDefault()
+                        moveActiveCommand(1)
+                      } else if (event.key === 'ArrowUp') {
+                        event.preventDefault()
+                        moveActiveCommand(-1)
+                      } else if (event.key === 'Enter') {
+                        event.preventDefault()
+                        runActiveCommand()
+                      } else if (event.key === 'Escape') {
+                        event.preventDefault()
+                        closeCommandPalette()
+                      }
+                    }}
+                  />
+                </label>
+                <ul className="workspace-command-list">
+                  {matchingCommands.map((command, index) => (
+                    <li key={command.view}>
+                      <button
+                        className={index === activeCommandIndex ? 'active' : ''}
+                        type="button"
+                        onMouseEnter={() => setActiveCommandIndex(index)}
+                        onClick={() => navigateToView(command.view)}
+                      >
+                        <kbd>Enter</kbd>
+                        <strong>Go to {command.label.toLocaleLowerCase()}</strong>
+                        <span>{command.shortcut}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                <p className="workspace-command-hint">
+                  <kbd>↑</kbd><kbd>↓</kbd> navigate <kbd>Enter</kbd> run
+                </p>
+              </>
+            ) : (
+              <button
+                className="workspace-command-trigger"
+                type="button"
+                onClick={openCommandPalette}
+              >
+                <kbd>:</kbd> Open command menu
+              </button>
+            )}
+          </aside>
+
+          <footer className="workspace-statusline">
+            <div>
+              <strong>{isAwaitingGoTarget ? 'GO' : 'NORMAL'}</strong>
+              <span>budget</span>
+              <span>keyboard ready</span>
+            </div>
+            <div><kbd>:</kbd> commands <kbd>?</kbd> help</div>
+          </footer>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="authenticated-app">
       <header className="topbar">
@@ -190,13 +488,7 @@ function AuthenticatedShell({
           {appName}
         </button>
         <nav className="primary-nav" aria-label="Primary navigation">
-          {(
-            [
-              ['budgets', 'Budgets'],
-              ['transactions', 'Transactions'],
-              ['insights', 'Insights'],
-            ] as const
-          ).map(([view, label]) => (
+          {navigationItems.map(({ view, label }) => (
             <button
               aria-current={activeView === view ? 'page' : undefined}
               className={activeView === view ? 'active' : ''}
@@ -232,13 +524,6 @@ function AuthenticatedShell({
             {signOutError}
           </p>
         </div>
-      )}
-      {activeView === 'budgets' && (
-        <BudgetPanel
-          categoriesRevision={categoriesRevision}
-          activityRevision={budgetActivityRevision}
-          onCategoriesChanged={handleCategoriesChanged}
-        />
       )}
       {activeView === 'transactions' && (
         <TransactionsPanel
