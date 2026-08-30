@@ -50,10 +50,13 @@ Until the user approves the visual proposal:
    application functionality.
 4. When more than one HTML page is needed, provide obvious shared navigation
    so pages form one connected mockup rather than unrelated files.
-5. Run `npm run mockup`, confirm the server is reachable, give the user its
-   local URL, and request explicit mockup approval.
+5. Open the static HTML file directly in the browser with its `file:///` URL.
+   Do not run `npm run mockup`, Vite, or any other background server for a
+   static mockup. First use UI automation to find and reuse an existing
+   browser tab reserved for inspection; navigate that tab rather than opening
+   a new tab.
 6. Stop. If the user rejects or revises the visual proposal, update only
-   `mockup/`, relaunch it, and request approval again.
+   `mockup/`, reload the same direct-file tab, and request approval again.
 
 Never start the implementation plan or inspect application code before explicit
 mockup approval.
@@ -83,10 +86,15 @@ After plan approval:
    hierarchy, copy, controls, visible states, layout, spacing, colors,
    typography, hover/focus treatments, and responsive behavior. Do not
    silently reinterpret or improve the approved visual design.
-3. Commit the matching `mockup/` update in the same change set as every
+3. Before implementation, create an element-by-element parity checklist that
+   maps each approved mockup element and visible state to its production owner.
+   A familiar layout, comparable colors, or reused component is not enough:
+   any difference in hierarchy, copy, control inventory, spacing, color,
+   typography, focus treatment, state, or responsive behavior is incomplete.
+4. Commit the matching `mockup/` update in the same change set as every
    UI-changing feature. The static mockup must remain a faithful one-to-one
    reflection of the current working app.
-4. If implementation exposes a necessary visible change that differs from the
+5. If implementation exposes a necessary visible change that differs from the
    approved mockup, return to the mockup approval gate before proceeding.
 
 ## UI smoke testing
@@ -99,9 +107,12 @@ visible-state assertions:
    available. If unavailable, notify the user that the required UI smoke test
    is blocked. Do not substitute another automation service and do not claim
    complete UI validation.
-2. Compare the running application with the approved mockup. Cover the
-   affected screens, text, controls, empty/loading/error states, layout,
-   spacing, hover/focus treatment, and narrow viewport behavior.
+2. Reuse the same browser tab used for direct-file mockup inspection. Navigate
+   it to the running application URL; do not open additional application or
+   mockup tabs. Capture mockup and application screenshots at the same
+   viewport, then compare them against the element-by-element parity checklist.
+   Cover the affected screens, text, controls, empty/loading/error states,
+   layout, spacing, hover/focus treatment, and narrow viewport behavior.
 3. Treat all Plaid bank-connection controls in the running app as live
    production operations. Until a separate local or staging Plaid integration
    is explicitly added and approved, never click or invoke **Connect bank**,
@@ -117,7 +128,8 @@ visible-state assertions:
 
 Before reporting completion:
 
-- confirm the mockup and application match for all approved UI changes;
+- confirm the mockup and application match for every item in the approved
+  parity checklist;
 - confirm matching mockup files are included in the same change set;
 - report any blocked `ui-automation` smoke test plainly;
 - report database and backend changes specifically, including migrations and
@@ -129,7 +141,9 @@ Finish every change-making task by:
 2. creating a scoped commit that follows repository commit conventions;
 3. pushing the new branch and creating a pull request against the latest
    `main`;
-4. starting the relevant local application server, confirming it is reachable,
-   and leaving it running for the user to inspect. For UI work, leave the
-   working app open rather than only the static mockup. If the app cannot run
-   locally, state the exact blocker instead of claiming it was left available.
+4. starting at most one relevant local application server, confirming it is
+   reachable, and reusing the existing inspection tab to leave the working app
+   open for the user. Never launch duplicate servers or browser tabs. For UI
+   work, leave the working app open rather than only the static mockup. If the
+   app cannot run locally, state the exact blocker instead of claiming it was
+   left available.
