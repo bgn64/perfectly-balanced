@@ -19,16 +19,101 @@ interface AppProps {
 }
 
 type AppView = 'budgets' | 'transactions' | 'insights'
+type FocusDirection = 'left' | 'down' | 'up' | 'right'
 
 const navigationItems: ReadonlyArray<{
   view: AppView
   label: string
-  shortcut: string
 }> = [
-  { view: 'budgets', label: 'Budget', shortcut: 'g b' },
-  { view: 'transactions', label: 'Transactions', shortcut: 'g t' },
-  { view: 'insights', label: 'Insights', shortcut: 'g r' },
+  { view: 'budgets', label: 'Budget' },
+  { view: 'transactions', label: 'Transactions' },
+  { view: 'insights', label: 'Insights' },
 ]
+
+const workspaceControlSelector = [
+  'button:not([disabled])',
+  'summary',
+  'input:not([disabled]):not([type="hidden"])',
+  'select:not([disabled])',
+  '[role="combobox"]',
+].join(', ')
+
+function getWorkspaceControls(root: HTMLElement): HTMLElement[] {
+  return Array.from(root.querySelectorAll<HTMLElement>(workspaceControlSelector))
+    .filter(
+      (control) =>
+        !control.matches(':disabled') &&
+        control.getAttribute('aria-hidden') !== 'true' &&
+        control.closest('[aria-hidden="true"], [hidden]') === null &&
+        control.getClientRects().length > 0,
+    )
+}
+
+function isInDirection(
+  origin: DOMRect,
+  candidate: DOMRect,
+  direction: FocusDirection,
+): boolean {
+  const originX = origin.left + origin.width / 2
+  const originY = origin.top + origin.height / 2
+  const candidateX = candidate.left + candidate.width / 2
+  const candidateY = candidate.top + candidate.height / 2
+
+  switch (direction) {
+    case 'left':
+      return candidateX < originX
+    case 'down':
+      return candidateY > originY
+    case 'up':
+      return candidateY < originY
+    case 'right':
+      return candidateX > originX
+  }
+}
+
+function findDirectionalControl(
+  controls: HTMLElement[],
+  origin: HTMLElement,
+  direction: FocusDirection,
+): HTMLElement | null {
+  const originRect = origin.getBoundingClientRect()
+  const isVertical = direction === 'up' || direction === 'down'
+  const originAxis =
+    (isVertical ? originRect.top : originRect.left) +
+    (isVertical ? originRect.height : originRect.width) / 2
+  const originCrossAxis =
+    (isVertical ? originRect.left : originRect.top) +
+    (isVertical ? originRect.width : originRect.height) / 2
+
+  const directionalControls = controls
+    .filter((control) => control !== origin)
+    .map((control) => {
+      const rect = control.getBoundingClientRect()
+      const axis =
+        (isVertical ? rect.top : rect.left) +
+        (isVertical ? rect.height : rect.width) / 2
+      const crossAxis =
+        (isVertical ? rect.left : rect.top) +
+        (isVertical ? rect.width : rect.height) / 2
+      return {
+        control,
+        crossDistance: Math.abs(crossAxis - originCrossAxis),
+        primaryDistance: Math.abs(axis - originAxis),
+        rect,
+      }
+    })
+    .filter(({ rect }) => isInDirection(originRect, rect, direction))
+  const alignedControls = directionalControls.filter(
+    ({ crossDistance, primaryDistance }) => crossDistance <= primaryDistance,
+  )
+
+  return (alignedControls.length > 0 ? alignedControls : directionalControls)
+    .sort(
+      (left, right) =>
+        left.crossDistance - right.crossDistance ||
+        left.primaryDistance - right.primaryDistance,
+    )[0]?.control ?? null
+}
 
 function App({ appName }: AppProps) {
   const { isLoading, initializationError, session, user } = useAuth()
@@ -167,7 +252,8 @@ function AuthenticatedShell({
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
   const [commandQuery, setCommandQuery] = useState('')
   const [activeCommandIndex, setActiveCommandIndex] = useState(0)
-  const [isAwaitingGoTarget, setIsAwaitingGoTarget] = useState(false)
+  const [focusedWorkspaceControl, setFocusedWorkspaceControl] = useState(0)
+  const [workspaceControlCount, setWorkspaceControlCount] = useState(0)
   const commandInputRef = useRef<HTMLInputElement>(null)
   const previousFocusRef = useRef<HTMLElement | null>(null)
   const workspaceShellRef = useRef<HTMLDivElement>(null)
@@ -179,23 +265,30 @@ function AuthenticatedShell({
     (item) => item.view !== activeView,
   )
   const matchingCommands = commandItems.filter((item) =>
-    `go to ${item.label} ${item.shortcut}`
+    `go to ${item.label}`
       .toLocaleLowerCase()
       .includes(commandQuery.trim().toLocaleLowerCase()),
   )
 
-  const focusSelectedBudgetRow = useCallback(() => {
-    window.requestAnimationFrame(() => {
-      const selectedRow = workspaceShellRef.current?.querySelector<HTMLElement>(
-        '[data-budget-row-selected="true"]',
-      )
-      if (selectedRow) {
-        selectedRow.focus()
-        return
-      }
-      workspaceShellRef.current?.focus()
-    })
+  const focusWorkspaceControl = useCallback((control: HTMLElement) => {
+    control.focus({ preventScroll: true })
+    control.scrollIntoView({ block: 'nearest', inline: 'nearest' })
   }, [])
+
+  const focusFirstWorkspaceControl = useCallback(() => {
+    const root = workspaceShellRef.current
+    if (!root) {
+      return
+    }
+    const controls = getWorkspaceControls(root)
+    const control =
+      controls.find((candidate) =>
+        candidate.matches('.workspace-nav button.active'),
+      ) ?? controls[0]
+    if (control) {
+      focusWorkspaceControl(control)
+    }
+  }, [focusWorkspaceControl])
 
   const closeCommandPalette = useCallback(() => {
     setIsCommandPaletteOpen(false)
@@ -206,8 +299,8 @@ function AuthenticatedShell({
       window.requestAnimationFrame(() => previousFocus.focus())
       return
     }
-    focusSelectedBudgetRow()
-  }, [focusSelectedBudgetRow])
+    focusFirstWorkspaceControl()
+  }, [focusFirstWorkspaceControl])
 
   const openCommandPalette = useCallback(() => {
     previousFocusRef.current =
@@ -217,7 +310,6 @@ function AuthenticatedShell({
         : null
     setCommandQuery('go')
     setActiveCommandIndex(0)
-    setIsAwaitingGoTarget(false)
     setIsCommandPaletteOpen(true)
     window.requestAnimationFrame(() => commandInputRef.current?.focus())
   }, [])
@@ -227,8 +319,55 @@ function AuthenticatedShell({
     setIsCommandPaletteOpen(false)
     setCommandQuery('')
     setActiveCommandIndex(0)
-    setIsAwaitingGoTarget(false)
   }, [])
+
+  useEffect(() => {
+    if (activeView !== 'budgets') {
+      return
+    }
+    const root = workspaceShellRef.current
+    if (!root) {
+      return
+    }
+    const workspaceRoot: HTMLElement = root
+
+    let animationFrame = window.requestAnimationFrame(updateFocusStatus)
+    const observer = new MutationObserver(scheduleFocusStatusUpdate)
+
+    function updateFocusStatus() {
+      const controls = getWorkspaceControls(workspaceRoot)
+      const activeElement = document.activeElement
+      const activeControl =
+        activeElement instanceof HTMLElement
+          ? activeElement.closest<HTMLElement>(workspaceControlSelector)
+          : null
+      setWorkspaceControlCount(controls.length)
+      setFocusedWorkspaceControl(
+        activeControl && controls.includes(activeControl)
+          ? controls.indexOf(activeControl) + 1
+          : 0,
+      )
+    }
+
+    function scheduleFocusStatusUpdate() {
+      window.cancelAnimationFrame(animationFrame)
+      animationFrame = window.requestAnimationFrame(updateFocusStatus)
+    }
+
+    workspaceRoot.addEventListener('focusin', scheduleFocusStatusUpdate)
+    observer.observe(workspaceRoot, {
+      attributeFilter: ['aria-hidden', 'disabled', 'hidden'],
+      attributes: true,
+      childList: true,
+      subtree: true,
+    })
+
+    return () => {
+      window.cancelAnimationFrame(animationFrame)
+      workspaceRoot.removeEventListener('focusin', scheduleFocusStatusUpdate)
+      observer.disconnect()
+    }
+  }, [activeView])
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -237,43 +376,49 @@ function AuthenticatedShell({
         event.altKey ||
         event.ctrlKey ||
         event.metaKey ||
+        event.shiftKey ||
         isTextEntryTarget(event.target)
       ) {
         return
       }
 
-      if (event.key === ':' && activeView === 'budgets') {
+      const root = workspaceShellRef.current
+      if (!root) {
+        return
+      }
+      const controls = getWorkspaceControls(root)
+      const activeElement = document.activeElement
+      const activeControl =
+        activeElement instanceof HTMLElement
+          ? activeElement.closest<HTMLElement>(workspaceControlSelector)
+          : null
+      const focusedControl =
+        activeControl && controls.includes(activeControl) ? activeControl : null
+
+      const directionByKey: Record<string, FocusDirection> = {
+        h: 'left',
+        j: 'down',
+        k: 'up',
+        l: 'right',
+      }
+      const direction = directionByKey[event.key.toLocaleLowerCase()]
+      if (!direction) {
+        return
+      }
+      const nextControl = focusedControl
+        ? findDirectionalControl(controls, focusedControl, direction)
+        : controls.find((control) =>
+            control.matches('.workspace-nav button.active'),
+          ) ?? controls[0]
+      if (nextControl) {
         event.preventDefault()
-        openCommandPalette()
-        return
-      }
-
-      if (event.shiftKey) {
-        return
-      }
-
-      const key = event.key.toLocaleLowerCase()
-      if (isAwaitingGoTarget) {
-        const navigationItem = navigationItems.find(
-          (item) => item.shortcut.endsWith(` ${key}`),
-        )
-        setIsAwaitingGoTarget(false)
-        if (navigationItem) {
-          event.preventDefault()
-          navigateToView(navigationItem.view)
-        }
-        return
-      }
-
-      if (key === 'g') {
-        event.preventDefault()
-        setIsAwaitingGoTarget(true)
+        focusWorkspaceControl(nextControl)
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [activeView, isAwaitingGoTarget, navigateToView, openCommandPalette])
+  }, [focusWorkspaceControl])
 
   async function handleSignOut() {
     setIsSigningOut(true)
@@ -362,7 +507,6 @@ function AuthenticatedShell({
                   type="button"
                   onClick={() => navigateToView(item.view)}
                 >
-                  <kbd>{item.shortcut}</kbd>
                   <span>{item.label}</span>
                 </button>
               ))}
@@ -370,10 +514,8 @@ function AuthenticatedShell({
             <section className="workspace-keymap" aria-labelledby="workspace-keymap-title">
               <h2 id="workspace-keymap-title">Keymap</h2>
               <dl>
-                <div><dt><kbd>j</kbd><kbd>k</kbd></dt><dd>move selection</dd></div>
-                <div><dt><kbd>e</kbd></dt><dd>edit amount</dd></div>
-                <div><dt><kbd>a</kbd></dt><dd>add category</dd></div>
-                <div><dt><kbd>:</kbd></dt><dd>command menu</dd></div>
+                <div><dt><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd></dt><dd>move focus</dd></div>
+                <div><dt><kbd>Enter</kbd></dt><dd>activate control</dd></div>
               </dl>
             </section>
           </aside>
@@ -401,7 +543,6 @@ function AuthenticatedShell({
           >
             <div className="workspace-command-head">
               <h2>Command</h2>
-              {isCommandPaletteOpen ? <span><kbd>Esc</kbd> close</span> : null}
             </div>
             {isCommandPaletteOpen ? (
               <>
@@ -441,16 +582,11 @@ function AuthenticatedShell({
                         onMouseEnter={() => setActiveCommandIndex(index)}
                         onClick={() => navigateToView(command.view)}
                       >
-                        <kbd>Enter</kbd>
                         <strong>Go to {command.label.toLocaleLowerCase()}</strong>
-                        <span>{command.shortcut}</span>
                       </button>
                     </li>
                   ))}
                 </ul>
-                <p className="workspace-command-hint">
-                  <kbd>↑</kbd><kbd>↓</kbd> navigate <kbd>Enter</kbd> run
-                </p>
               </>
             ) : (
               <button
@@ -458,18 +594,20 @@ function AuthenticatedShell({
                 type="button"
                 onClick={openCommandPalette}
               >
-                <kbd>:</kbd> Open command menu
+                Open command menu
               </button>
             )}
           </aside>
 
           <footer className="workspace-statusline">
             <div>
-              <strong>{isAwaitingGoTarget ? 'GO' : 'NORMAL'}</strong>
+              <strong>NAVIGATE</strong>
               <span>budget</span>
-              <span>keyboard ready</span>
+              <span>
+                focus {focusedWorkspaceControl || '-'} of {workspaceControlCount}
+              </span>
             </div>
-            <div><kbd>:</kbd> commands <kbd>?</kbd> help</div>
+            <div><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> move <kbd>Enter</kbd> activate</div>
           </footer>
         </div>
       </div>
