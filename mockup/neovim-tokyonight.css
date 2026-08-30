@@ -154,10 +154,15 @@ kbd {
   grid-template-columns: 1fr auto;
   align-items: center;
   gap: 0.35rem;
+  width: 100%;
+  border: 0;
   padding: 0.7rem 0.55rem;
   border-left: 2px solid transparent;
+  background: transparent;
   color: #a9b1d6;
+  font: inherit;
   font-size: 0.8rem;
+  text-align: left;
 }
 
 .nav-item:hover,
@@ -208,23 +213,43 @@ kbd {
   text-transform: uppercase;
 }
 
-.sidebar-section > a {
+.sidebar-section > a,
+.sidebar-section > button {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  width: 100%;
+  border: 0;
   padding: 0.4rem 0.55rem;
+  background: transparent;
   color: #a9b1d6;
+  font: inherit;
   font-size: 0.72rem;
+  text-align: left;
 }
 
 .sidebar-section > a:hover,
-.sidebar-section > a:focus-visible {
+.sidebar-section > a:focus-visible,
+.sidebar-section > button:hover,
+.sidebar-section > button:focus-visible {
   background: #292e42;
   color: #c0caf5;
 }
 
 .sidebar-section .is-current {
   color: #7dcfff;
+}
+
+.profile > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  list-style: none;
+  cursor: pointer;
+}
+
+.profile > summary::-webkit-details-marker {
+  display: none;
 }
 
 .keyboard-guide {
@@ -531,6 +556,16 @@ h3 {
 .command-list li.is-highlighted {
   background: #292e42;
   color: #c0caf5;
+}
+
+.command-list button {
+  width: 100%;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
 }
 
 .command-list strong {
