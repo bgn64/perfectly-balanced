@@ -60,6 +60,13 @@ export function parseMagnitude(value: string): number | null {
   return Number.isFinite(amount) ? amount : null
 }
 
+export function isTextEntryTarget(target: EventTarget | null): boolean {
+  return (
+    target instanceof HTMLElement &&
+    target.closest('input, textarea, select, [contenteditable="true"]') !== null
+  )
+}
+
 export function transactionDescription(transaction: Transaction): string {
   return (
     transaction.merchant_name ??

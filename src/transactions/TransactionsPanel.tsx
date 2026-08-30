@@ -17,6 +17,7 @@ import { collectPages } from '../finance/query.ts'
 import {
   formatMoney,
   formatMonth,
+  isTextEntryTarget,
   monthKey,
   transactionDescription,
 } from '../finance/utils.ts'
@@ -144,13 +145,6 @@ function splitsMatchEvenDistribution(
     .sort((left, right) => left - right)
 
   return actual.every((amount, index) => amount === expected[index])
-}
-
-function isTextEntryTarget(target: EventTarget | null): boolean {
-  return (
-    target instanceof HTMLElement &&
-    target.closest('input, textarea, select, [contenteditable="true"]') !== null
-  )
 }
 
 export function TransactionsPanel({
