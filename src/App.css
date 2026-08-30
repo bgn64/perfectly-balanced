@@ -2039,3 +2039,44 @@ summary:focus-visible {
     display: none;
   }
 }
+
+.authenticated-app.terminal-app {
+  --accent: #7aa2f7;
+  --faint: #565f89;
+  --highlight: #292e42;
+  --ink: #c0caf5;
+  --line: #3b4261;
+  --muted: #787c99;
+  --negative: #f7768e;
+  --positive: #9ece6a;
+  --soft: #24283b;
+  --surface: #1f2335;
+  background: #1a1b26;
+  color: #c0caf5;
+  font-family: "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+}
+
+.authenticated-app.terminal-app h1,
+.authenticated-app.terminal-app h2,
+.authenticated-app.terminal-app h3 {
+  color: #c0caf5;
+}
+
+.authenticated-app.terminal-app .budget-group {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: #1f2335;
+}
+
+.authenticated-app.terminal-app .budget-row {
+  background: #1f2335;
+  color: #a9b1d6;
+}
+
+.authenticated-app.terminal-app .budget-row:hover,
+.authenticated-app.terminal-app .budget-row:focus-visible,
+.authenticated-app.terminal-app .budget-row.is-selected {
+  background: #292e42;
+  color: #c0caf5;
+}
