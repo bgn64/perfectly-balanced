@@ -2,7 +2,19 @@
 
 A Vite, React, and TypeScript application with Supabase Magic Link authentication. Users must already be invited or pre-created in Supabase; the browser client never creates accounts.
 
-## Local development
+## Local Docker development
+
+Use the local development stack for everyday UI, migration, and database
+testing. It runs Supabase entirely in Docker and never connects to the
+production Supabase project.
+
+### Prerequisites
+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) must be
+  installed and running.
+- Node.js and npm must be installed.
+
+### Start the app
 
 1. Install dependencies:
 
@@ -10,30 +22,61 @@ A Vite, React, and TypeScript application with Supabase Magic Link authenticatio
    npm install
    ```
 
-2. Copy the example environment file:
-
-   ```sh
-   cp .env.example .env
-   ```
-
-   In PowerShell, use `Copy-Item .env.example .env`.
-
-3. Set these values in `.env`:
-
-   | Variable | Purpose |
-   | --- | --- |
-   | `VITE_APP_NAME` | Product name displayed in the app. |
-   | `VITE_SUPABASE_URL` | Supabase project URL. |
-   | `VITE_SUPABASE_ANON_KEY` | Supabase browser-safe anonymous/publishable key. |
-   | `VITE_SITE_URL` | Exact URL to receive Magic Link redirects; use `http://localhost:5173` locally. |
-
-4. Start the development server:
+2. Start local Supabase and Vite:
 
    ```sh
    npm run dev
    ```
 
-`VITE_` variables are compiled into browser code. Do not put the Supabase service-role key, Vercel token, or any other secret in `.env` values exposed to the application.
+   The `predev` hook checks Docker, starts or reuses the Supabase CLI Docker
+   stack, and generates `.env.development.local` from `supabase status --output
+   env` before Vite starts. This file is loaded only by development-mode Vite
+   runs, never production builds. It contains only browser-safe local client
+   configuration: app name, site URL, API URL, anonymous key, local-demo flag,
+   and local fixture credentials. It never contains a service-role key or
+   production credential.
+
+3. Sign in with the development-only test account:
+
+   | Field | Value |
+   | --- | --- |
+   | Email | `dev@example.test` |
+   | Password | `local-dev-password` |
+
+   This account is recreated by the local seed fixture and signs in through
+   Supabase Auth, so the application continues to exercise normal JWT, RLS,
+   and RPC authorization.
+
+### Local database lifecycle
+
+| Command | Purpose |
+| --- | --- |
+| `npm run local:up` | Start or reuse local Supabase and generate `.env.development.local`. |
+| `npm run local:reset` | Rebuild the local database, apply every migration, and recreate deterministic seed data. |
+| `npm run local:down` | Stop the local Supabase Docker stack while preserving its volumes. |
+| `npm run dev` | Run `local:up`, then start Vite. |
+
+The local seed includes a confirmed development user, an August 2026 budget
+with root and sectioned allocations, categorized transactions, and one
+uncategorized transaction. It creates no Plaid Items, webhook events, Vault
+secrets, or bank data.
+
+`VITE_LOCAL_DEMO_MODE` is generated only for local development. The client
+rejects it in production builds or when its Supabase URL is not localhost.
+Do not put a Supabase service-role key, Vercel token, Plaid credential, or
+other secret in a `VITE_` value.
+
+### Hosted client configuration
+
+For Vercel or another hosted client deployment, provide the browser-safe values
+below. Do not set `VITE_LOCAL_DEMO_MODE=true` for a remote project.
+
+| Variable | Purpose |
+| --- | --- |
+| `VITE_APP_NAME` | Product name displayed in the app. |
+| `VITE_SUPABASE_URL` | Hosted Supabase project URL. |
+| `VITE_SUPABASE_ANON_KEY` | Supabase browser-safe anonymous/publishable key. |
+| `VITE_SITE_URL` | Exact URL to receive Magic Link redirects. |
 
 ## Supabase configuration
 
@@ -73,6 +116,14 @@ call the paid Transactions Refresh endpoint.
 Disconnecting a bank removes the Plaid Item and deletes its encrypted access
 token, stopping future updates while retaining already imported history. A user
 can permanently delete saved history only after disconnecting that Item.
+
+### Local Plaid boundary
+
+The local development bootstrap does not serve Edge Functions or configure
+Plaid credentials. The local fixture deliberately contains no Plaid Items or
+transaction-ingestion state. Do not add live Plaid credentials to
+`.env.development.local`, and do not use the local stack to authorize financial
+institutions or ingest bank data.
 
 ### Live Plaid setup
 
@@ -166,7 +217,10 @@ copied into GitHub Actions.
 
 | Command | Purpose |
 | --- | --- |
-| `npm run dev` | Start the local Vite server. |
+| `npm run dev` | Start the local Supabase Docker stack and Vite. |
+| `npm run local:up` | Start/reuse local Supabase and generate local browser configuration. |
+| `npm run local:reset` | Rebuild local Supabase from migrations and deterministic seed data. |
+| `npm run local:down` | Stop local Supabase Docker containers. |
 | `npm run lint` | Run Oxlint. |
 | `npm run build` | Type-check and create the production build in `dist`. |
 | `npm run mockup` | Serve the static UI mockup from `mockup/` for review. |
