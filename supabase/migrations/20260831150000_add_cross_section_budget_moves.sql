@@ -1,5 +1,3 @@
-lock table public.budgets in access exclusive mode;
-
 do $$
 declare
   v_budget record;
@@ -7,6 +5,8 @@ declare
   v_subsection_count integer;
   v_offset integer;
 begin
+  lock table public.budgets in access exclusive mode;
+
   for v_budget in
     select id, user_id
     from public.budgets
