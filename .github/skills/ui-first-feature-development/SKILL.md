@@ -139,11 +139,13 @@ Finish every change-making task by:
 
 1. confirming the task branch contains only the intended changes;
 2. creating a scoped commit that follows repository commit conventions;
-3. pushing the new branch and creating a pull request against the latest
-   `main`;
+3. pushing the new branch, but not creating a pull request yet;
 4. starting at most one relevant local application server, confirming it is
    reachable, and reusing the existing inspection tab to leave the working app
    open for the user. Never launch duplicate servers or browser tabs. For UI
    work, leave the working app open rather than only the static mockup. If the
    app cannot run locally, state the exact blocker instead of claiming it was
    left available.
+5. waiting for the user to explicitly confirm that they have verified the
+   final changes and are ready to publish. Only then create one pull request
+   against the latest `main`.
