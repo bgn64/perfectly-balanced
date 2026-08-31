@@ -26,6 +26,7 @@ interface AppProps {
 
 type AppView = 'budgets' | 'transactions' | 'insights'
 type SemanticRegion = 'sidebar' | 'workspace'
+type WorkspaceTheme = 'dark' | 'light'
 
 interface StatusContext {
   action: string
@@ -45,6 +46,18 @@ const navigationItems: ReadonlyArray<{
   { view: 'transactions', label: 'Transactions' },
   { view: 'insights', label: 'Reports' },
 ]
+
+const themePreferenceKey = 'perfectly-balanced.theme'
+
+function readInitialTheme(): WorkspaceTheme {
+  const savedTheme = window.localStorage.getItem(themePreferenceKey)
+  if (savedTheme === 'dark' || savedTheme === 'light') {
+    return savedTheme
+  }
+  return window.matchMedia('(prefers-color-scheme: light)').matches
+    ? 'light'
+    : 'dark'
+}
 
 function getSemanticControls(
   root: HTMLElement,
@@ -207,6 +220,7 @@ function AuthenticatedShell({
   const [categoriesRevision, setCategoriesRevision] = useState(0)
   const [budgetActivityRevision, setBudgetActivityRevision] = useState(0)
   const [commandQuery, setCommandQuery] = useState('go')
+  const [theme, setTheme] = useState<WorkspaceTheme>(readInitialTheme)
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
   const [isAmountEditorOpen, setIsAmountEditorOpen] = useState(false)
   const [amountEditRequest, setAmountEditRequest] =
@@ -279,6 +293,10 @@ function AuthenticatedShell({
     setIsCommandPaletteOpen(true)
     window.requestAnimationFrame(() => commandInputRef.current?.focus())
   }, [])
+
+  useEffect(() => {
+    window.localStorage.setItem(themePreferenceKey, theme)
+  }, [theme])
 
   useEffect(() => {
     if (activeView !== 'budgets') {
@@ -388,6 +406,25 @@ function AuthenticatedShell({
         return
       }
 
+      if (
+        key === 't' &&
+        focusedControl?.dataset.semanticKind === 'budget-row'
+      ) {
+        const allocationId = focusedControl.dataset.allocationId
+        const directionToggle = allocationId
+          ? document.getElementById(`direction-toggle-${allocationId}`)
+          : null
+        if (
+          !(directionToggle instanceof HTMLButtonElement) ||
+          directionToggle.disabled
+        ) {
+          return
+        }
+        event.preventDefault()
+        directionToggle.click()
+        return
+      }
+
       const region = focusedControl?.dataset.semanticRegion
       const controls =
         region === 'sidebar'
@@ -470,7 +507,7 @@ function AuthenticatedShell({
       <div
         className={`authenticated-app terminal-app${
           isCommandPaletteOpen ? '' : ' command-closed'
-        }`}
+        } theme-${theme}`}
         ref={workspaceShellRef}
       >
         <header className="titlebar">
@@ -483,6 +520,24 @@ function AuthenticatedShell({
             <span>{appName.toLocaleLowerCase().replace(/\s+/g, '-')}</span>
           </button>
           <p>{formatMonth(selectedMonth)} · Personal budget</p>
+          <div className="theme-switcher" role="group" aria-label="Theme">
+            <input
+              checked={theme === 'dark'}
+              id="theme-dark"
+              name="theme"
+              type="radio"
+              onChange={() => setTheme('dark')}
+            />
+            <label htmlFor="theme-dark">Dark</label>
+            <input
+              checked={theme === 'light'}
+              id="theme-light"
+              name="theme"
+              type="radio"
+              onChange={() => setTheme('light')}
+            />
+            <label htmlFor="theme-light">Light</label>
+          </div>
           <details className="profile">
             <summary>
               <span>{initials || 'PB'}</span>
@@ -634,7 +689,10 @@ function AuthenticatedShell({
               <span><kbd>Enter</kbd> {statusContext.action}</span>
             )}
             {statusContext.action === 'amount' && (
-              <span><kbd>a</kbd> amount</span>
+              <>
+                <span><kbd>a</kbd> amount</span>
+                <span><kbd>t</kbd> direction</span>
+              </>
             )}
             <span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> move</span>
             <span><kbd>:</kbd> command</span>

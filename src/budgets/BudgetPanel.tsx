@@ -572,6 +572,7 @@ function BudgetGroup({
                   data-status-action="toggle direction"
                   data-status-label={`budget / ${allocation.category_name.toLocaleLowerCase()}`}
                   disabled={busy}
+                  id={`direction-toggle-${allocation.allocation_id}`}
                   type="button"
                   onClick={() => {
                     onEdit(null)

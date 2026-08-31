@@ -105,6 +105,40 @@ kbd {
   color: #565f89;
 }
 
+.theme-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.18rem;
+  border: 1px solid #414868;
+  border-radius: 999px;
+  background: #1a1b26;
+}
+
+.theme-switcher input {
+  position: absolute;
+  opacity: 0;
+}
+
+.theme-switcher label {
+  border-radius: 999px;
+  padding: 0.25rem 0.45rem;
+  color: #787c99;
+  font-size: 0.65rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.theme-switcher input:checked + label {
+  background: #7aa2f7;
+  color: #1a1b26;
+}
+
+.theme-switcher input:focus-visible + label {
+  outline: 2px solid #7dcfff;
+  outline-offset: 2px;
+}
+
 .brand,
 .profile {
   display: inline-flex;
@@ -665,6 +699,147 @@ h3 {
   border-color: rgb(26 27 38 / 25%);
   background: rgb(26 27 38 / 15%);
   color: #1a1b26;
+}
+
+.terminal-app:has(#theme-light:checked) {
+  border-color: #a1a6b5;
+  background: #e9e9ed;
+  box-shadow: 0 1.5rem 4.5rem rgb(52 59 88 / 18%);
+  color: #343b58;
+}
+
+body:has(#theme-light:checked) {
+  background:
+    linear-gradient(rgb(52 84 138 / 5%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(52 84 138 / 5%) 1px, transparent 1px),
+    #d5d6db;
+  background-size: 1.5rem 1.5rem;
+}
+
+.terminal-app:has(#theme-light:checked) .titlebar,
+.terminal-app:has(#theme-light:checked) .sidebar {
+  border-color: #a1a6b5;
+  background: #d5d6db;
+}
+
+.terminal-app:has(#theme-light:checked) .titlebar > p,
+.terminal-app:has(#theme-light:checked) .subtitle,
+.terminal-app:has(#theme-light:checked) .summary span,
+.terminal-app:has(#theme-light:checked) .sidebar-section h2,
+.terminal-app:has(#theme-light:checked) .command-panel h2 {
+  color: #5a5f78;
+}
+
+.terminal-app:has(#theme-light:checked) .brand,
+.terminal-app:has(#theme-light:checked) h1,
+.terminal-app:has(#theme-light:checked) h2,
+.terminal-app:has(#theme-light:checked) h3,
+.terminal-app:has(#theme-light:checked) .budget-row {
+  color: #343b58;
+}
+
+.terminal-app:has(#theme-light:checked) .brand-mark {
+  background: #34548a;
+  color: #e9e9ed;
+}
+
+.terminal-app:has(#theme-light:checked) .profile {
+  color: #343b58;
+}
+
+.terminal-app:has(#theme-light:checked) .profile span {
+  background: #5a4a78;
+  color: #e9e9ed;
+}
+
+.terminal-app:has(#theme-light:checked) .theme-switcher,
+.terminal-app:has(#theme-light:checked) .amount-cell:hover,
+.terminal-app:has(#theme-light:checked) .amount-cell:focus-visible {
+  border-color: #a1a6b5;
+  background: #e9e9ed;
+}
+
+.terminal-app:has(#theme-light:checked) .theme-switcher input:checked + label {
+  background: #34548a;
+  color: #e9e9ed;
+}
+
+.terminal-app:has(#theme-light:checked) .nav-item,
+.terminal-app:has(#theme-light:checked) .sidebar-section > a,
+.terminal-app:has(#theme-light:checked) .sidebar-section > button,
+.terminal-app:has(#theme-light:checked) .direction-tag {
+  color: #34548a;
+}
+
+.terminal-app:has(#theme-light:checked) .nav-item.is-active,
+.terminal-app:has(#theme-light:checked) .nav-item:hover,
+.terminal-app:has(#theme-light:checked) .nav-item:focus-visible,
+.terminal-app:has(#theme-light:checked) .sidebar-section > a:hover,
+.terminal-app:has(#theme-light:checked) .sidebar-section > button:hover,
+.terminal-app:has(#theme-light:checked) .budget-row.is-selected,
+.terminal-app:has(#theme-light:checked) .budget-row:hover,
+.terminal-app:has(#theme-light:checked) .budget-row:focus-visible {
+  border-color: #34548a;
+  background: #dfe0e6;
+  color: #343b58;
+}
+
+.terminal-app:has(#theme-light:checked) .summary,
+.terminal-app:has(#theme-light:checked) .budget-table {
+  border-color: #a1a6b5;
+  background: #e9e9ed;
+}
+
+.terminal-app:has(#theme-light:checked) .summary div,
+.terminal-app:has(#theme-light:checked) .table-head {
+  border-color: #a1a6b5;
+}
+
+.terminal-app:has(#theme-light:checked) .column-head {
+  border-color: #c4c7d0;
+  color: #5a5f78;
+}
+
+.terminal-app:has(#theme-light:checked) .budget-group header,
+.terminal-app:has(#theme-light:checked) .direction-tag,
+.terminal-app:has(#theme-light:checked) .month-controls button,
+.terminal-app:has(#theme-light:checked) .new-category {
+  border-color: #a1a6b5;
+  background: #dfe0e6;
+  color: #343b58;
+}
+
+.terminal-app:has(#theme-light:checked) .budget-row {
+  border-color: #c4c7d0;
+  background: #e9e9ed;
+}
+
+.terminal-app:has(#theme-light:checked) .available {
+  color: #33635c;
+}
+
+.terminal-app:has(#theme-light:checked) .spent {
+  color: #8c4351;
+}
+
+.terminal-app:has(#theme-light:checked) .warning {
+  color: #8f5e15;
+}
+
+.terminal-app:has(#theme-light:checked) .statusline {
+  background: #34548a;
+  color: #e9e9ed;
+}
+
+.terminal-app:has(#theme-light:checked) .statusline strong {
+  background: #5a4a78;
+  color: #e9e9ed;
+}
+
+.terminal-app:has(#theme-light:checked) .statusline kbd {
+  border-color: rgb(233 233 237 / 45%);
+  background: rgb(233 233 237 / 18%);
+  color: #e9e9ed;
 }
 
 a:focus-visible,
