@@ -476,7 +476,7 @@ function AuthenticatedShell({
       }
 
       if (
-        (key === 'd' || key === 'n' || key === 'x') &&
+        (key === 'd' || key === 'n' || key === 'r' || key === 'x') &&
         (focusedControl?.dataset.semanticKind === 'budget-row' ||
           focusedControl?.dataset.semanticKind === 'budget-subsection')
       ) {
@@ -486,7 +486,9 @@ function AuthenticatedShell({
             ? 'start-delete'
             : key === 'n'
               ? 'start-create'
-              : 'start-move',
+              : key === 'r'
+                ? 'start-rename'
+                : 'start-move',
           focusedControl.dataset.semanticId ?? null,
         )
         return
@@ -764,7 +766,9 @@ function AuthenticatedShell({
                       ? 'CREATE'
                       : budgetKeyboardInteraction.mode === 'name-entry'
                         ? 'NAME'
-                        : 'MOVE'}
+                          : budgetKeyboardInteraction.mode === 'rename-entry'
+                            ? 'RENAME'
+                          : 'MOVE'}
                 </strong>
                 <span>{budgetKeyboardInteraction.label}</span>
               </div>
@@ -776,7 +780,8 @@ function AuthenticatedShell({
                     <span><kbd>Enter</kbd> confirm</span>
                   </>
                 )}
-                {budgetKeyboardInteraction.mode === 'name-entry' && (
+                {(budgetKeyboardInteraction.mode === 'name-entry' ||
+                  budgetKeyboardInteraction.mode === 'rename-entry') && (
                   <span><kbd>Enter</kbd> save</span>
                 )}
                 {budgetKeyboardInteraction.mode === 'moving' && (
@@ -810,6 +815,7 @@ function AuthenticatedShell({
                   statusContext.action === 'subsection') && (
                   <>
                     <span><kbd>n</kbd> new</span>
+                    <span><kbd>r</kbd> rename</span>
                     <span><kbd>d</kbd> delete</span>
                     <span><kbd>x</kbd> move</span>
                   </>

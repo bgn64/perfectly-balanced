@@ -98,24 +98,31 @@
             <span>Remaining</span>
           </div>
 
+          <div class="budget-row" tabindex="0">
+            <span class="category-name">Savings buffer <button class="direction-tag" type="button">Spending</button></span>
+            <input class="amount-cell" aria-label="Savings buffer planned amount" value="$300.00" />
+            <span class="spent">$0.00</span>
+            <span class="available">$300.00</span>
+          </div>
+
           <section class="budget-group" aria-labelledby="essentials-heading">
             <header>
               <h3 id="essentials-heading"><span>⌄</span> Essentials</h3>
               <strong>$2,650.00</strong>
             </header>
-            <div class="budget-row" tabindex="0">
+            <div class="budget-row budget-row--sectioned" tabindex="0">
               <span class="category-name">Housing <button class="direction-tag" type="button">Spending</button></span>
               <input class="amount-cell" aria-label="Housing planned amount" value="$1,800.00" />
               <span class="spent">$1,800.00</span>
               <span>$0.00</span>
             </div>
-            <div class="budget-row" tabindex="0">
+            <div class="budget-row budget-row--sectioned" tabindex="0">
               <span class="category-name">Groceries <button class="direction-tag" type="button">Spending</button></span>
               <input class="amount-cell" aria-label="Groceries planned amount" value="$600.00" />
               <span class="spent">$475.26</span>
               <span class="available">$124.74</span>
             </div>
-            <div class="budget-row" tabindex="0">
+            <div class="budget-row budget-row--sectioned" tabindex="0">
               <span class="category-name">Utilities <button class="direction-tag" type="button">Spending</button></span>
               <input class="amount-cell" aria-label="Utilities planned amount" value="$250.00" />
               <span class="spent">$178.67</span>
@@ -128,19 +135,19 @@
               <h3 id="flexible-heading"><i class="selection-caret">›</i>Flexible spending</h3>
               <strong>$600.00</strong>
             </header>
-            <div class="budget-row" tabindex="0">
+            <div class="budget-row budget-row--sectioned" tabindex="0">
               <span class="category-name">Restaurants <button class="direction-tag" type="button">Spending</button></span>
               <input class="amount-cell" aria-label="Restaurants planned amount" value="$250.00" />
               <span class="spent">$89.42</span>
               <span class="available">$160.58</span>
             </div>
-            <div class="budget-row" tabindex="0">
+            <div class="budget-row budget-row--sectioned" tabindex="0">
               <span class="category-name">Fun money <button class="direction-tag" type="button">Spending</button></span>
               <input class="amount-cell" aria-label="Fun money planned amount" value="$200.00" />
               <span class="spent">$121.97</span>
               <span class="available">$78.03</span>
             </div>
-            <div class="budget-row" tabindex="0">
+            <div class="budget-row budget-row--sectioned" tabindex="0">
               <span class="category-name">Transit <button class="direction-tag" type="button">Spending</button></span>
               <input class="amount-cell" aria-label="Transit planned amount" value="$150.00" />
               <span class="spent">$72.00</span>
@@ -152,7 +159,7 @@
 
       <footer class="statusline">
         <div><strong>NAVIGATE</strong><span>budget / flexible spending</span></div>
-        <div><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span><span><kbd>n</kbd> new</span><span><kbd>d</kbd> delete</span><span><kbd>x</kbd> move</span><span><kbd>:</kbd> command</span></div>
+        <div><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span><span><kbd>n</kbd> new</span><span><kbd>r</kbd> rename</span><span><kbd>d</kbd> delete</span><span><kbd>x</kbd> move</span><span><kbd>:</kbd> command</span></div>
       </footer>
     </div>
   </body>

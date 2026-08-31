@@ -562,6 +562,18 @@ h3 {
   gap: 0.55rem;
 }
 
+.budget-row--sectioned .category-name {
+  position: relative;
+  padding-left: 1.1rem;
+}
+
+.budget-row--sectioned .category-name::before {
+  position: absolute;
+  left: 0;
+  color: #565f89;
+  content: "└";
+}
+
 .direction-tag {
   flex: 0 0 auto;
   border: 1px solid #414868;
@@ -845,6 +857,18 @@ h3 {
   content: "";
 }
 
+.sample-row--sectioned > span:first-child {
+  position: relative;
+  padding-left: 1.1rem;
+}
+
+.sample-row--sectioned > span:first-child::before {
+  position: absolute;
+  left: 0;
+  color: #565f89;
+  content: "└";
+}
+
 .sample-focused-subsection {
   position: relative;
   z-index: 1;
@@ -952,6 +976,47 @@ h3 {
   flex: 1;
   align-items: center;
   gap: 0.35rem;
+}
+
+.rename-sample-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  padding: 1rem;
+}
+
+.rename-sample {
+  overflow: hidden;
+  border: 1px solid #3b4261;
+  border-radius: 0.32rem;
+  background: #1a1b26;
+}
+
+.rename-sample h3 {
+  padding: 0.62rem 0.75rem;
+  background: #24283b;
+}
+
+.rename-sample .sample-row,
+.rename-sample .sample-section {
+  border-top: 1px solid #292e42;
+}
+
+.rename-sample .sample-entry-name {
+  width: 100%;
+}
+
+.rename-sample input {
+  min-width: 0;
+  flex: 1;
+  border: 1px solid #7dcfff;
+  border-radius: 0.2rem;
+  padding: 0.3rem 0.4rem;
+  background: #1a1b26;
+  color: #c0caf5;
+  font: inherit;
+  font-size: inherit;
+  outline: 1px solid #7aa2f7;
 }
 
 .move-sample-grid {
@@ -1178,6 +1243,20 @@ input:focus-visible {
   color: #343b58;
 }
 
+.terminal-app:has(#theme-light:checked) .rename-sample {
+  border-color: #a1a6b5;
+  background: #e9e9ed;
+}
+
+.terminal-app:has(#theme-light:checked) .rename-sample h3 {
+  background: #dfe0e6;
+}
+
+.terminal-app:has(#theme-light:checked) .rename-sample input {
+  background: #e9e9ed;
+  color: #343b58;
+}
+
 .terminal-app:has(#theme-light:checked) .picked-up-entry {
   background: #dfe0e6;
   color: #343b58;
@@ -1301,7 +1380,8 @@ input:focus-visible {
   }
 
   .create-sample,
-  .move-sample-grid {
+  .move-sample-grid,
+  .rename-sample-grid {
     grid-template-columns: 1fr;
   }
 

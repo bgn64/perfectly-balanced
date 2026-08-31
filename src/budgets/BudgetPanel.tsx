@@ -44,6 +44,7 @@ export interface BudgetKeyboardAction {
     | 'start-delete'
     | 'start-create'
     | 'start-move'
+    | 'start-rename'
     | 'previous'
     | 'next'
     | 'confirm'
@@ -53,7 +54,12 @@ export interface BudgetKeyboardAction {
 }
 
 export interface BudgetKeyboardInteraction {
-  mode: 'confirm-delete' | 'choose-create' | 'name-entry' | 'moving'
+  mode:
+    | 'confirm-delete'
+    | 'choose-create'
+    | 'name-entry'
+    | 'rename-entry'
+    | 'moving'
   label: string
 }
 
@@ -241,6 +247,8 @@ export function BudgetPanel({
   const [pendingCreation, setPendingCreation] =
     useState<PendingCreation | null>(null)
   const [pendingName, setPendingName] = useState('')
+  const [renameTarget, setRenameTarget] = useState<BudgetEntry | null>(null)
+  const [renameName, setRenameName] = useState('')
   const [movingEntry, setMovingEntry] = useState<MovingEntry | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -253,6 +261,7 @@ export function BudgetPanel({
   const createAllocationButtonRef = useRef<HTMLButtonElement>(null)
   const createSubsectionButtonRef = useRef<HTMLButtonElement>(null)
   const pendingNameInputRef = useRef<HTMLInputElement>(null)
+  const renameNameInputRef = useRef<HTMLInputElement>(null)
 
   const loadBudget = useCallback(async () => {
     const generation = ++requestGeneration.current
@@ -507,6 +516,14 @@ export function BudgetPanel({
     }
   }
 
+  function closeRename() {
+    if (renameTarget) {
+      focusSemanticEntry(renameTarget.semanticId)
+    }
+    setRenameTarget(null)
+    setRenameName('')
+  }
+
   function closeMove() {
     if (movingEntry) {
       focusSemanticEntry(movingEntry.entry.semanticId)
@@ -615,6 +632,48 @@ export function BudgetPanel({
     setPendingCreation(null)
     setPendingName('')
     if (pendingCreation.kind === 'allocation') {
+      onCategoriesChanged()
+    }
+    focusSemanticEntry(semanticId)
+  }
+
+  async function saveRename() {
+    if (!renameTarget) {
+      return
+    }
+    const name = renameName.trim()
+    if (!name) {
+      setErrorMessage('Enter a name before saving.')
+      return
+    }
+
+    const { didSave } =
+      renameTarget.kind === 'allocation'
+        ? await runMutation(
+            `rename-category-${renameTarget.allocation.category_id}`,
+            () =>
+              getSupabaseClient()
+                .from('categories')
+                .update({ name, updated_at: new Date().toISOString() })
+                .eq('id', renameTarget.allocation.category_id),
+          )
+        : await runMutation(
+            `rename-budget-subsection-${renameTarget.subsection.id}`,
+            () =>
+              getSupabaseClient().rpc('rename_budget_subsection', {
+                p_name: name,
+                p_subsection_id: renameTarget.subsection.id,
+              }),
+          )
+
+    if (!didSave) {
+      return
+    }
+    const semanticId = renameTarget.semanticId
+    const renamedCategory = renameTarget.kind === 'allocation'
+    setRenameTarget(null)
+    setRenameName('')
+    if (renamedCategory) {
       onCategoriesChanged()
     }
     focusSemanticEntry(semanticId)
@@ -769,6 +828,13 @@ export function BudgetPanel({
       })
       return
     }
+    if (renameTarget) {
+      onKeyboardInteractionChange({
+        label: `rename ${getEntryName(renameTarget).toLocaleLowerCase()}`,
+        mode: 'rename-entry',
+      })
+      return
+    }
     if (movingEntry) {
       onKeyboardInteractionChange({
         label: `move ${getEntryName(movingEntry.entry).toLocaleLowerCase()}`,
@@ -783,10 +849,11 @@ export function BudgetPanel({
     movingEntry,
     onKeyboardInteractionChange,
     pendingCreation,
+    renameTarget,
   ])
 
   useEffect(() => {
-    if (!deleteTarget && !creationTarget && !pendingCreation) {
+    if (!deleteTarget && !creationTarget && !pendingCreation && !renameTarget) {
       return
     }
     window.requestAnimationFrame(() => {
@@ -804,9 +871,20 @@ export function BudgetPanel({
         selectedCreationButton?.focus()
         return
       }
-      pendingNameInputRef.current?.focus()
+      if (pendingCreation) {
+        pendingNameInputRef.current?.focus()
+        return
+      }
+      renameNameInputRef.current?.focus()
     })
-  }, [creationKind, creationTarget, deleteChoice, deleteTarget, pendingCreation])
+  }, [
+    creationKind,
+    creationTarget,
+    deleteChoice,
+    deleteTarget,
+    pendingCreation,
+    renameTarget,
+  ])
 
   useEffect(() => {
     if (
@@ -818,7 +896,13 @@ export function BudgetPanel({
     handledKeyboardActionSequence.current = keyboardActionRequest.sequence
 
     if (keyboardActionRequest.action === 'start-delete') {
-      if (deleteTarget || creationTarget || pendingCreation || movingEntry) {
+      if (
+        deleteTarget ||
+        creationTarget ||
+        pendingCreation ||
+        renameTarget ||
+        movingEntry
+      ) {
         return
       }
       const target = findBudgetEntry(keyboardActionRequest.semanticId)
@@ -831,7 +915,13 @@ export function BudgetPanel({
     }
 
     if (keyboardActionRequest.action === 'start-create') {
-      if (deleteTarget || creationTarget || pendingCreation || movingEntry) {
+      if (
+        deleteTarget ||
+        creationTarget ||
+        pendingCreation ||
+        renameTarget ||
+        movingEntry
+      ) {
         return
       }
       const target = findBudgetEntry(keyboardActionRequest.semanticId)
@@ -843,12 +933,36 @@ export function BudgetPanel({
     }
 
     if (keyboardActionRequest.action === 'start-move') {
-      if (deleteTarget || creationTarget || pendingCreation || movingEntry) {
+      if (
+        deleteTarget ||
+        creationTarget ||
+        pendingCreation ||
+        renameTarget ||
+        movingEntry
+      ) {
         return
       }
       const target = findBudgetEntry(keyboardActionRequest.semanticId)
       if (target) {
         startMove(target)
+      }
+      return
+    }
+
+    if (keyboardActionRequest.action === 'start-rename') {
+      if (
+        deleteTarget ||
+        creationTarget ||
+        pendingCreation ||
+        renameTarget ||
+        movingEntry
+      ) {
+        return
+      }
+      const target = findBudgetEntry(keyboardActionRequest.semanticId)
+      if (target) {
+        setRenameTarget(target)
+        setRenameName(getEntryName(target))
       }
       return
     }
@@ -895,6 +1009,8 @@ export function BudgetPanel({
         closeDeleteConfirmation()
       } else if (creationTarget || pendingCreation) {
         closeCreation()
+      } else if (renameTarget) {
+        closeRename()
       } else if (movingEntry) {
         closeMove()
       }
@@ -909,6 +1025,7 @@ export function BudgetPanel({
     keyboardActionRequest,
     movingEntry,
     pendingCreation,
+    renameTarget,
     subsections,
   ])
 
@@ -1113,10 +1230,17 @@ export function BudgetPanel({
                 }
                 pendingName={pendingName}
                 pendingNameInputRef={pendingNameInputRef}
+                renameName={renameName}
+                renameNameInputRef={renameNameInputRef}
+                renameTarget={renameTarget}
+                showHeader={false}
                 subsection={null}
                 onPendingCreationCancel={closeCreation}
                 onPendingNameChange={setPendingName}
                 onPendingNameSave={() => void savePendingCreation()}
+                onRenameCancel={closeRename}
+                onRenameNameChange={setRenameName}
+                onRenameSave={() => void saveRename()}
               />
             )}
             {displayedSubsections.map((subsection, index) => (
@@ -1143,10 +1267,17 @@ export function BudgetPanel({
                   }
                   pendingName={pendingName}
                   pendingNameInputRef={pendingNameInputRef}
+                  renameName={renameName}
+                  renameNameInputRef={renameNameInputRef}
+                  renameTarget={renameTarget}
+                  showHeader
                   subsection={subsection}
                   onPendingCreationCancel={closeCreation}
                   onPendingNameChange={setPendingName}
                   onPendingNameSave={() => void savePendingCreation()}
+                  onRenameCancel={closeRename}
+                  onRenameNameChange={setRenameName}
+                  onRenameSave={() => void saveRename()}
                 />
               </Fragment>
             ))}
@@ -1221,10 +1352,17 @@ function BudgetGroup({
   onPendingCreationCancel,
   onPendingNameChange,
   onPendingNameSave,
+  onRenameCancel,
+  onRenameNameChange,
+  onRenameSave,
   onUpdate,
   pendingCreation,
   pendingName,
   pendingNameInputRef,
+  renameName,
+  renameNameInputRef,
+  renameTarget,
+  showHeader,
   subsection,
 }: {
   allocations: BudgetAllocation[]
@@ -1239,6 +1377,9 @@ function BudgetGroup({
   onPendingCreationCancel: () => void
   onPendingNameChange: (name: string) => void
   onPendingNameSave: () => void
+  onRenameCancel: () => void
+  onRenameNameChange: (name: string) => void
+  onRenameSave: () => void
   onUpdate: (
     allocation: BudgetAllocation,
     magnitude: number,
@@ -1247,6 +1388,10 @@ function BudgetGroup({
   pendingCreation: PendingCreation | null
   pendingName: string
   pendingNameInputRef: RefObject<HTMLInputElement | null>
+  renameName: string
+  renameNameInputRef: RefObject<HTMLInputElement | null>
+  renameTarget: BudgetEntry | null
+  showHeader: boolean
   subsection: BudgetSubsection | null
 }) {
   const planned = allocations.reduce(
@@ -1258,6 +1403,9 @@ function BudgetGroup({
     : null
   const isSubsectionSelected =
     subsectionSemanticId !== null && focusedSemanticId === subsectionSemanticId
+  const isSubsectionRenaming =
+    renameTarget?.kind === 'subsection' &&
+    renameTarget.subsection.id === subsection?.id
   const isSubsectionPickedUp =
     movingEntry?.entry.kind === 'subsection' &&
     movingEntry.entry.subsection.id === subsection?.id
@@ -1268,35 +1416,68 @@ function BudgetGroup({
 
   return (
     <section
-      className={`budget-group${isSubsectionPickedUp ? ' is-picked-up' : ''}`}
+      className={`budget-group${showHeader ? '' : ' budget-group--root'}${
+        isSubsectionPickedUp ? ' is-picked-up' : ''
+      }`}
     >
-      <header
-        aria-current={isSubsectionSelected ? 'true' : undefined}
-        className={`budget-subsection-head${
-          isSubsectionSelected ? ' is-selected' : ''
-        }`}
-        data-semantic-id={subsectionSemanticId ?? undefined}
-        data-semantic-kind={subsection ? 'budget-subsection' : undefined}
-        data-semantic-region={subsection ? 'workspace' : undefined}
-        data-status-action={subsection ? 'subsection' : undefined}
-        data-status-label={
-          subsection
-            ? `budget / ${subsection.name.toLocaleLowerCase()}`
-            : undefined
-        }
-        id={subsectionSemanticId ?? undefined}
-        tabIndex={subsection ? 0 : undefined}
-      >
-        <h3>
-          {isSubsectionSelected ? (
-            <i className="selection-caret">›</i>
-          ) : (
-            <span>⌄</span>
-          )}
-          {name}
-        </h3>
-        <strong>{formatDisplayMoney(planned)}</strong>
-      </header>
+      {showHeader && (
+        <header
+          aria-current={
+            isSubsectionSelected || isSubsectionRenaming ? 'true' : undefined
+          }
+          className={`budget-subsection-head${
+            isSubsectionSelected || isSubsectionRenaming ? ' is-selected' : ''
+          }`}
+          data-semantic-id={subsectionSemanticId ?? undefined}
+          data-semantic-kind={subsection ? 'budget-subsection' : undefined}
+          data-semantic-region={subsection ? 'workspace' : undefined}
+          data-status-action={subsection ? 'subsection' : undefined}
+          data-status-label={
+            subsection
+              ? `budget / ${subsection.name.toLocaleLowerCase()}`
+              : undefined
+          }
+          id={subsectionSemanticId ?? undefined}
+          tabIndex={subsection ? 0 : undefined}
+        >
+          <h3>
+            {isSubsectionRenaming ? (
+              <>
+                <i className="selection-caret">›</i>
+                <input
+                  aria-label="Subsection name"
+                  className="pending-budget-name-input"
+                  disabled={busyId !== null}
+                  maxLength={100}
+                  ref={renameNameInputRef}
+                  type="text"
+                  value={renameName}
+                  onChange={(event) => onRenameNameChange(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault()
+                      onRenameSave()
+                    } else if (event.key === 'Escape') {
+                      event.preventDefault()
+                      onRenameCancel()
+                    }
+                  }}
+                />
+              </>
+            ) : (
+              <>
+                {isSubsectionSelected ? (
+                  <i className="selection-caret">›</i>
+                ) : (
+                  <span>⌄</span>
+                )}
+                {name}
+              </>
+            )}
+          </h3>
+          <strong>{formatDisplayMoney(planned)}</strong>
+        </header>
+      )}
       {displayedAllocations.map((allocation, index) =>
         allocation ? (
           <BudgetAllocationRow
@@ -1309,15 +1490,26 @@ function BudgetGroup({
               movingEntry.entry.allocation.allocation_id ===
                 allocation.allocation_id
             }
+            isRenaming={
+              renameTarget?.kind === 'allocation' &&
+              renameTarget.allocation.allocation_id === allocation.allocation_id
+            }
+            isSectioned={subsection !== null}
             key={allocation.allocation_id}
             onEdit={onEdit}
             onAmountEditorClosed={onAmountEditorClosed}
             onAmountEditorOpenChange={onAmountEditorOpenChange}
+            onRenameCancel={onRenameCancel}
+            onRenameNameChange={onRenameNameChange}
+            onRenameSave={onRenameSave}
             onUpdate={onUpdate}
+            renameName={renameName}
+            renameNameInputRef={renameNameInputRef}
           />
         ) : (
           <PendingBudgetAllocation
             busy={busyId !== null}
+            isSectioned={subsection !== null}
             key={`pending-allocation-${index}`}
             name={pendingName}
             nameInputRef={pendingNameInputRef}
@@ -1337,24 +1529,38 @@ function BudgetAllocationRow({
   editingAllocationId,
   focusedSemanticId,
   isPickedUp,
+  isRenaming,
+  isSectioned,
   onEdit,
   onAmountEditorClosed,
   onAmountEditorOpenChange,
+  onRenameCancel,
+  onRenameNameChange,
+  onRenameSave,
   onUpdate,
+  renameName,
+  renameNameInputRef,
 }: {
   allocation: BudgetAllocation
   busyId: string | null
   editingAllocationId: string | null
   focusedSemanticId: string | null
   isPickedUp: boolean
+  isRenaming: boolean
+  isSectioned: boolean
   onEdit: (allocationId: string | null) => void
   onAmountEditorClosed: (allocationId: string) => void
   onAmountEditorOpenChange: (isOpen: boolean) => void
+  onRenameCancel: () => void
+  onRenameNameChange: (name: string) => void
+  onRenameSave: () => void
   onUpdate: (
     allocation: BudgetAllocation,
     magnitude: number,
     direction: BudgetDirection,
   ) => Promise<boolean>
+  renameName: string
+  renameNameInputRef: RefObject<HTMLInputElement | null>
 }) {
   const plannedAmount = Math.abs(allocation.budgeted_amount)
   const isBusy = busyId === allocation.allocation_id
@@ -1364,12 +1570,15 @@ function BudgetAllocationRow({
       : Math.max(0, allocation.actual_amount)
   const remaining = plannedAmount - spentAmount
   const isSelected =
-    focusedSemanticId === `budget-row-${allocation.allocation_id}`
+    focusedSemanticId === `budget-row-${allocation.allocation_id}` ||
+    isRenaming
 
   return (
     <div
       aria-current={isSelected ? 'true' : undefined}
-      className={`budget-row${isSelected ? ' is-selected' : ''}${
+      className={`budget-row${isSectioned ? ' budget-row--sectioned' : ''}${
+        isSelected ? ' is-selected' : ''
+      }${
         isPickedUp ? ' is-picked-up' : ''
       }`}
       data-allocation-id={allocation.allocation_id}
@@ -1383,7 +1592,29 @@ function BudgetAllocationRow({
     >
       <span className="category-name">
         {isSelected ? <i className="selection-caret">›</i> : null}
-        {allocation.category_name}
+        {isRenaming ? (
+          <input
+            aria-label="Budget line item name"
+            className="pending-budget-name-input"
+            disabled={isBusy}
+            maxLength={100}
+            ref={renameNameInputRef}
+            type="text"
+            value={renameName}
+            onChange={(event) => onRenameNameChange(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault()
+                onRenameSave()
+              } else if (event.key === 'Escape') {
+                event.preventDefault()
+                onRenameCancel()
+              }
+            }}
+          />
+        ) : (
+          allocation.category_name
+        )}
         <button
           aria-label={`Toggle ${allocation.category_name} between spending and income`}
           className="direction-tag"
@@ -1441,6 +1672,7 @@ function BudgetAllocationRow({
 
 function PendingBudgetAllocation({
   busy,
+  isSectioned,
   name,
   nameInputRef,
   onCancel,
@@ -1448,6 +1680,7 @@ function PendingBudgetAllocation({
   onSave,
 }: {
   busy: boolean
+  isSectioned: boolean
   name: string
   nameInputRef: RefObject<HTMLInputElement | null>
   onCancel: () => void
@@ -1455,7 +1688,11 @@ function PendingBudgetAllocation({
   onSave: () => void
 }) {
   return (
-    <div className="budget-row is-selected pending-budget-entry">
+    <div
+      className={`budget-row is-selected pending-budget-entry${
+        isSectioned ? ' budget-row--sectioned' : ''
+      }`}
+    >
       <span className="category-name">
         <i className="selection-caret">›</i>
         <input

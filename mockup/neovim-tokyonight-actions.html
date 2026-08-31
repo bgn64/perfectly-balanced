@@ -39,6 +39,7 @@
           <a class="is-current" href="#focus">Focus subsection</a>
           <a href="#delete">Delete confirmation</a>
           <a href="#create">Create entry</a>
+          <a href="#rename">Rename entry</a>
           <a href="#move">Move entry</a>
         </section>
       </aside>
@@ -62,12 +63,13 @@
               <span class="sample-tag">Focused</span>
             </div>
             <div class="sample-budget">
+              <div class="sample-row"><span>Savings buffer</span><span>$300.00</span></div>
               <div class="sample-section">Essentials <strong>$2,650.00</strong></div>
-              <div class="sample-row"><span>Housing</span><span>$1,800.00</span></div>
+              <div class="sample-row sample-row--sectioned"><span>Housing</span><span>$1,800.00</span></div>
               <section class="sample-focused-subsection">
                 <div class="sample-section sample-section-selected"><span><i class="selection-caret">›</i>Flexible spending</span><strong>$600.00</strong></div>
-                <div class="sample-row"><span>Restaurants</span><span>$250.00</span></div>
-                <div class="sample-row"><span>Fun money</span><span>$200.00</span></div>
+                <div class="sample-row sample-row--sectioned"><span>Restaurants</span><span>$250.00</span></div>
+                <div class="sample-row sample-row--sectioned"><span>Fun money</span><span>$200.00</span></div>
               </section>
             </div>
           </article>
@@ -106,12 +108,38 @@
                 <button type="button">Subsection</button>
               </section>
               <div class="sample-budget create-result">
-                <div class="sample-row"><span>Groceries</span><span>$600.00</span></div>
-                <div class="sample-row sample-row-new">
+                <div class="sample-row sample-row--sectioned"><span>Groceries</span><span>$600.00</span></div>
+                <div class="sample-row sample-row-new sample-row--sectioned">
                   <span class="sample-entry-name"><i class="selection-caret">›</i><input id="new-budget-item-name" aria-label="New budget line item name" placeholder="Name this budget line item" autofocus /></span>
                   <span>$0.00</span>
                 </div>
               </div>
+            </div>
+          </article>
+
+          <article id="rename" class="action-sample">
+            <div class="action-sample-head">
+              <div>
+                <p class="eyebrow">Rename</p>
+                <h2>Replace the focused name in place</h2>
+              </div>
+              <span class="sample-tag">Renaming</span>
+            </div>
+            <div class="rename-sample-grid">
+              <section class="rename-sample" aria-label="Renaming a budget line item">
+                <h3>Budget line item</h3>
+                <div class="sample-row sample-row-new sample-row--sectioned">
+                  <span class="sample-entry-name"><i class="selection-caret">›</i><input aria-label="Budget line item name" value="Restaurants" /></span>
+                  <span>$250.00</span>
+                </div>
+              </section>
+              <section class="rename-sample" aria-label="Renaming a subsection">
+                <h3>Subsection</h3>
+                <div class="sample-section sample-section-selected">
+                  <span class="sample-entry-name"><i class="selection-caret">›</i><input aria-label="Subsection name" value="Flexible spending" /></span>
+                  <strong>$600.00</strong>
+                </div>
+              </section>
             </div>
           </article>
 
@@ -144,7 +172,7 @@
 
       <footer class="statusline">
         <div><strong>ACTION SAMPLES</strong><span>budget / keyboard workflow</span></div>
-        <div><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span><span><kbd>n</kbd> new</span><span><kbd>d</kbd> delete</span><span><kbd>x</kbd> move</span><span><kbd>Esc</kbd> cancel</span></div>
+        <div><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span><span><kbd>n</kbd> new</span><span><kbd>r</kbd> rename</span><span><kbd>d</kbd> delete</span><span><kbd>x</kbd> move</span><span><kbd>Esc</kbd> cancel</span></div>
       </footer>
     </div>
   </body>

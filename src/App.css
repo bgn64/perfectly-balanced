@@ -2084,6 +2084,18 @@ summary:focus-visible {
   color: #c0caf5;
 }
 
+.authenticated-app.terminal-app .budget-row--sectioned .category-name {
+  position: relative;
+  padding-left: 1.1rem;
+}
+
+.authenticated-app.terminal-app .budget-row--sectioned .category-name::before {
+  position: absolute;
+  left: 0;
+  color: #565f89;
+  content: "└";
+}
+
 .authenticated-app.terminal-app .budget-subsection-head {
   min-height: 2.65rem;
   padding: 0.65rem 1rem;
