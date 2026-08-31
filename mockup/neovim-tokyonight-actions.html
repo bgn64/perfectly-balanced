@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Perfectly Balanced - Budget action samples</title>
+    <link rel="stylesheet" href="neovim-tokyonight.css" />
+  </head>
+  <body>
+    <div class="terminal-app command-closed action-samples-app">
+      <header class="titlebar">
+        <a class="brand" href="neovim-tokyonight.html" aria-label="Perfectly Balanced budget mockup">
+          <span class="brand-mark">pb</span>
+          <span>perfectly-balanced</span>
+        </a>
+        <p>August 2026 · Personal budget</p>
+        <a class="mockup-sample-link" href="neovim-tokyonight.html">Budget mockup</a>
+        <div class="theme-switcher" role="group" aria-label="Theme">
+          <input checked id="theme-dark" name="theme" type="radio" />
+          <label for="theme-dark">Dark</label>
+          <input id="theme-light" name="theme" type="radio" />
+          <label for="theme-light">Light</label>
+        </div>
+        <button class="profile" type="button" aria-label="Open profile menu">
+          <span>BG</span>
+          ben@local
+        </button>
+      </header>
+
+      <aside class="sidebar" aria-label="Application navigation">
+        <nav class="main-nav">
+          <a class="nav-item is-active" href="neovim-tokyonight.html"><span>Budget</span></a>
+          <a class="nav-item" href="#transactions"><span>Transactions</span><strong>12</strong></a>
+          <a class="nav-item" href="#reports"><span>Reports</span></a>
+        </nav>
+
+        <section class="sidebar-section" aria-labelledby="samples-title">
+          <h2 id="samples-title">Action samples</h2>
+          <a class="is-current" href="#focus">Focus subsection</a>
+          <a href="#delete">Delete confirmation</a>
+          <a href="#create">Create entry</a>
+          <a href="#move">Move entry</a>
+        </section>
+      </aside>
+
+      <main class="workspace action-samples-workspace">
+        <header class="workspace-head">
+          <div>
+            <p class="eyebrow">Budget / interactions</p>
+            <h1>Keyboard action samples</h1>
+            <p class="subtitle">Static previews in the current workspace style.</p>
+          </div>
+        </header>
+
+        <section class="action-sample-grid" aria-label="Budget keyboard interaction samples">
+          <article id="focus" class="action-sample">
+            <div class="action-sample-head">
+              <div>
+                <p class="eyebrow">Focus</p>
+                <h2>Subsections join the focus order</h2>
+              </div>
+              <span class="sample-tag">Focused</span>
+            </div>
+            <div class="sample-budget">
+              <div class="sample-section">Essentials <strong>$2,650.00</strong></div>
+              <div class="sample-row"><span>Housing</span><span>$1,800.00</span></div>
+              <section class="sample-focused-subsection">
+                <div class="sample-section sample-section-selected"><span><i class="selection-caret">›</i>Flexible spending</span><strong>$600.00</strong></div>
+                <div class="sample-row"><span>Restaurants</span><span>$250.00</span></div>
+                <div class="sample-row"><span>Fun money</span><span>$200.00</span></div>
+              </section>
+            </div>
+          </article>
+
+          <article id="delete" class="action-sample">
+            <div class="action-sample-head">
+              <div>
+                <p class="eyebrow">Delete</p>
+                <h2>Confirm before removing content</h2>
+              </div>
+              <span class="sample-tag sample-tag-danger">Confirm</span>
+            </div>
+            <div class="action-dialog-stage">
+              <section class="action-dialog" role="dialog" aria-labelledby="delete-title" aria-describedby="delete-copy">
+                <p class="eyebrow">Delete subsection</p>
+                <h3 id="delete-title">Delete Flexible spending?</h3>
+                <p id="delete-copy">Its 3 line items will also be deleted.</p>
+                <button class="danger-choice" type="button">Yes, delete</button>
+                <button class="selected-choice" type="button" autofocus>No, keep it</button>
+              </section>
+            </div>
+          </article>
+
+          <article id="create" class="action-sample">
+            <div class="action-sample-head">
+              <div>
+                <p class="eyebrow">Create</p>
+                <h2>Choose an entry, then name it in place</h2>
+              </div>
+              <span class="sample-tag">Creating</span>
+            </div>
+            <div class="create-sample">
+              <section class="create-choice" aria-label="Create entry type">
+                <p>Create below <strong>Groceries</strong></p>
+                <button class="selected-choice" type="button">Budget line item</button>
+                <button type="button">Subsection</button>
+              </section>
+              <div class="sample-budget create-result">
+                <div class="sample-row"><span>Groceries</span><span>$600.00</span></div>
+                <div class="sample-row sample-row-new">
+                  <span class="sample-entry-name"><i class="selection-caret">›</i><input id="new-budget-item-name" aria-label="New budget line item name" placeholder="Name this budget line item" autofocus /></span>
+                  <span>$0.00</span>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article id="move" class="action-sample">
+            <div class="action-sample-head">
+              <div>
+                <p class="eyebrow">Move</p>
+                <h2>Pick up, place, or return</h2>
+              </div>
+              <span class="sample-tag">Moving</span>
+            </div>
+            <div class="move-sample-grid">
+              <section class="move-sample" aria-label="Moving a budget line item">
+                <h3>Budget line item: picked up</h3>
+                <div class="sample-row"><span>Fun money</span><span>$200.00</span></div>
+                <div class="sample-row picked-up-entry"><span>Restaurants</span><span>$250.00</span></div>
+                <div class="sample-row"><span>Transit</span><span>$150.00</span></div>
+                <p class="move-state-note">Restaurants moves with the cursor.</p>
+              </section>
+              <section class="move-sample" aria-label="Moving a subsection">
+                <h3>Subsection: placed</h3>
+                <div class="sample-section">Income <strong>$5,000.00</strong></div>
+                <div class="sample-section">Flexible spending <strong>$600.00</strong></div>
+                <p class="move-state-note">After <kbd>p</kbd>, it stays in place without the picked-up treatment.</p>
+              </section>
+            </div>
+          </article>
+        </section>
+      </main>
+
+      <footer class="statusline">
+        <div><strong>ACTION SAMPLES</strong><span>budget / keyboard workflow</span></div>
+        <div><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span><span><kbd>n</kbd> new</span><span><kbd>d</kbd> delete</span><span><kbd>x</kbd> move</span><span><kbd>Esc</kbd> cancel</span></div>
+      </footer>
+    </div>
+  </body>
+</html>

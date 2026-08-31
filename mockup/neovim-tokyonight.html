@@ -14,6 +14,7 @@
           <span>perfectly-balanced</span>
         </a>
         <p>August 2026 · Personal budget</p>
+        <a class="mockup-sample-link" href="neovim-tokyonight-actions.html">Action samples</a>
         <div class="theme-switcher" role="group" aria-label="Theme">
           <input checked id="theme-dark" name="theme" type="radio" />
           <label for="theme-dark">Dark</label>
@@ -102,8 +103,8 @@
               <h3 id="essentials-heading"><span>⌄</span> Essentials</h3>
               <strong>$2,650.00</strong>
             </header>
-            <div class="budget-row is-selected" tabindex="0">
-              <span class="category-name"><i class="selection-caret">›</i>Housing <button class="direction-tag" type="button">Spending</button></span>
+            <div class="budget-row" tabindex="0">
+              <span class="category-name">Housing <button class="direction-tag" type="button">Spending</button></span>
               <input class="amount-cell" aria-label="Housing planned amount" value="$1,800.00" />
               <span class="spent">$1,800.00</span>
               <span>$0.00</span>
@@ -123,8 +124,8 @@
           </section>
 
           <section class="budget-group" aria-labelledby="flexible-heading">
-            <header>
-              <h3 id="flexible-heading"><span>⌄</span> Flexible spending</h3>
+            <header class="is-selected" tabindex="0">
+              <h3 id="flexible-heading"><i class="selection-caret">›</i>Flexible spending</h3>
               <strong>$600.00</strong>
             </header>
             <div class="budget-row" tabindex="0">
@@ -150,8 +151,8 @@
       </main>
 
       <footer class="statusline">
-        <div><strong>NAVIGATE</strong><span>budget / housing</span></div>
-        <div><span><kbd>a</kbd> amount</span><span><kbd>t</kbd> direction</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> move</span><span><kbd>:</kbd> command</span></div>
+        <div><strong>NAVIGATE</strong><span>budget / flexible spending</span></div>
+        <div><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span><span><kbd>n</kbd> new</span><span><kbd>d</kbd> delete</span><span><kbd>x</kbd> move</span><span><kbd>:</kbd> command</span></div>
       </footer>
     </div>
   </body>
