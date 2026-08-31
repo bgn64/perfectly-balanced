@@ -389,7 +389,9 @@ function AuthenticatedShell({
       const key = event.key.toLocaleLowerCase()
       if (budgetKeyboardInteraction) {
         const action =
-          event.key === 'Escape'
+          budgetKeyboardInteraction.mode === 'saving-move'
+            ? null
+            : event.key === 'Escape'
             ? 'cancel'
             : (key === 'j' || key === 'k') &&
                 budgetKeyboardInteraction.mode !== 'name-entry'
@@ -768,6 +770,8 @@ function AuthenticatedShell({
                         ? 'NAME'
                           : budgetKeyboardInteraction.mode === 'rename-entry'
                             ? 'RENAME'
+                            : budgetKeyboardInteraction.mode === 'saving-move'
+                              ? 'SAVING'
                           : 'MOVE'}
                 </strong>
                 <span>{budgetKeyboardInteraction.label}</span>
@@ -790,7 +794,12 @@ function AuthenticatedShell({
                     <span><kbd>p</kbd> place</span>
                   </>
                 )}
-                <span><kbd>Esc</kbd> cancel</span>
+                {budgetKeyboardInteraction.mode === 'saving-move' && (
+                  <span>Saving placement...</span>
+                )}
+                {budgetKeyboardInteraction.mode !== 'saving-move' && (
+                  <span><kbd>Esc</kbd> cancel</span>
+                )}
               </div>
             </>
           ) : (

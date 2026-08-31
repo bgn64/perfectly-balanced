@@ -147,23 +147,26 @@
             <div class="action-sample-head">
               <div>
                 <p class="eyebrow">Move</p>
-                <h2>Pick up, place, or return</h2>
+                <h2>Move through sections and root positions</h2>
               </div>
               <span class="sample-tag">Moving</span>
             </div>
-            <div class="move-sample-grid">
-              <section class="move-sample" aria-label="Moving a budget line item">
-                <h3>Budget line item: picked up</h3>
-                <div class="sample-row"><span>Fun money</span><span>$200.00</span></div>
-                <div class="sample-row picked-up-entry"><span>Restaurants</span><span>$250.00</span></div>
-                <div class="sample-row"><span>Transit</span><span>$150.00</span></div>
-                <p class="move-state-note">Restaurants moves with the cursor.</p>
-              </section>
-              <section class="move-sample" aria-label="Moving a subsection">
-                <h3>Subsection: placed</h3>
-                <div class="sample-section">Income <strong>$5,000.00</strong></div>
-                <div class="sample-section">Flexible spending <strong>$600.00</strong></div>
-                <p class="move-state-note">After <kbd>p</kbd>, it stays in place without the picked-up treatment.</p>
+            <div class="cross-section-move">
+              <ol class="move-path" aria-label="Internet move path">
+                <li><kbd>x</kbd> Root: Internet</li>
+                <li><kbd>j</kbd> Income, first</li>
+                <li><kbd>j</kbd> After Katie Pay</li>
+                <li><kbd>j</kbd> After Ben Pay</li>
+                <li><kbd>j</kbd> Root after Income</li>
+                <li><kbd>p</kbd> Save placement</li>
+              </ol>
+              <section class="move-sample" aria-label="Internet picked up between Income and Food">
+                <div class="sample-section">Income <strong>$7,000.00</strong></div>
+                <div class="sample-row sample-row--sectioned"><span>Katie Pay</span><span>$0.00</span></div>
+                <div class="sample-row sample-row--sectioned"><span>Ben Pay</span><span>$7,000.00</span></div>
+                <div class="sample-row"><span>Internet</span><span>$0.00</span></div>
+                <div class="sample-section">Food <strong>$700.00</strong></div>
+                <div class="sample-row sample-row--sectioned"><span>Groceries</span><span>$300.00</span></div>
               </section>
             </div>
           </article>
@@ -171,8 +174,8 @@
       </main>
 
       <footer class="statusline">
-        <div><strong>ACTION SAMPLES</strong><span>budget / keyboard workflow</span></div>
-        <div><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span><span><kbd>n</kbd> new</span><span><kbd>r</kbd> rename</span><span><kbd>d</kbd> delete</span><span><kbd>x</kbd> move</span><span><kbd>Esc</kbd> cancel</span></div>
+        <div><strong>SAVING</strong><span>move internet</span></div>
+        <div><span>Saving placement...</span></div>
       </footer>
     </div>
   </body>

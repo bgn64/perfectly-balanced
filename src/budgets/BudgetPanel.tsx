@@ -60,6 +60,7 @@ export interface BudgetKeyboardInteraction {
     | 'name-entry'
     | 'rename-entry'
     | 'moving'
+    | 'saving-move'
   label: string
 }
 
@@ -82,17 +83,174 @@ interface PendingCreation {
   subsectionId: string | null
 }
 
+type MoveLocation =
+  | {
+      kind: 'allocation'
+      position: number
+      subsectionId: string | null
+    }
+  | {
+      kind: 'subsection'
+      position: number
+    }
+
 interface MovingEntry {
   entry: BudgetEntry
-  originalPosition: number
-  previewPosition: number
+  originalLocation: MoveLocation
+  previewLocation: MoveLocation
 }
 
-function moveWithin<T>(items: T[], from: number, to: number): T[] {
-  const reordered = [...items]
-  const [item] = reordered.splice(from, 1)
-  reordered.splice(to, 0, item)
-  return reordered
+type TopLevelBudgetEntry =
+  | {
+      allocation: BudgetAllocation
+      kind: 'allocation'
+    }
+  | {
+      kind: 'subsection'
+      subsection: BudgetSubsection
+    }
+
+interface BudgetMovePreview {
+  allocations: BudgetAllocation[]
+  subsections: BudgetSubsection[]
+}
+
+function comparePosition(
+  left: { position: number },
+  right: { position: number },
+): number {
+  return left.position - right.position
+}
+
+function getTopLevelBudgetEntries(
+  allocations: BudgetAllocation[],
+  subsections: BudgetSubsection[],
+): TopLevelBudgetEntry[] {
+  return [
+    ...allocations
+      .filter((allocation) => allocation.subsection_id === null)
+      .map((allocation) => ({ allocation, kind: 'allocation' as const })),
+    ...subsections.map((subsection) => ({
+      kind: 'subsection' as const,
+      subsection,
+    })),
+  ].sort((left, right) =>
+    comparePosition(
+      left.kind === 'allocation' ? left.allocation : left.subsection,
+      right.kind === 'allocation' ? right.allocation : right.subsection,
+    ),
+  )
+}
+
+function sameMoveLocation(left: MoveLocation, right: MoveLocation): boolean {
+  return (
+    left.kind === right.kind &&
+    left.position === right.position &&
+    (left.kind !== 'allocation' ||
+      right.kind !== 'allocation' ||
+      left.subsectionId === right.subsectionId)
+  )
+}
+
+function moveBudgetPreview(
+  allocations: BudgetAllocation[],
+  subsections: BudgetSubsection[],
+  movingEntry: MovingEntry,
+): BudgetMovePreview {
+  const allocationGroups = new Map<string | null, BudgetAllocation[]>()
+  for (const allocation of allocations) {
+    const group = allocationGroups.get(allocation.subsection_id) ?? []
+    group.push(allocation)
+    allocationGroups.set(allocation.subsection_id, group)
+  }
+  for (const group of allocationGroups.values()) {
+    group.sort(comparePosition)
+  }
+
+  const topLevelEntries = getTopLevelBudgetEntries(allocations, subsections)
+
+  if (movingEntry.entry.kind === 'allocation') {
+    const source = movingEntry.entry.allocation
+    if (source.subsection_id === null) {
+      const sourceIndex = topLevelEntries.findIndex(
+        (entry) =>
+          entry.kind === 'allocation' &&
+          entry.allocation.allocation_id === source.allocation_id,
+      )
+      topLevelEntries.splice(sourceIndex, 1)
+    } else {
+      allocationGroups.set(
+        source.subsection_id,
+        (allocationGroups.get(source.subsection_id) ?? []).filter(
+          (allocation) => allocation.allocation_id !== source.allocation_id,
+        ),
+      )
+    }
+
+    const target = movingEntry.previewLocation
+    if (target.kind !== 'allocation') {
+      return { allocations, subsections }
+    }
+    if (target.subsectionId === null) {
+      topLevelEntries.splice(target.position, 0, {
+        allocation: source,
+        kind: 'allocation',
+      })
+    } else {
+      const targetGroup = allocationGroups.get(target.subsectionId) ?? []
+      targetGroup.splice(target.position, 0, source)
+      allocationGroups.set(target.subsectionId, targetGroup)
+    }
+  } else {
+    const source = movingEntry.entry.subsection
+    const sourceIndex = topLevelEntries.findIndex(
+      (entry) =>
+        entry.kind === 'subsection' && entry.subsection.id === source.id,
+    )
+    topLevelEntries.splice(sourceIndex, 1)
+    const target = movingEntry.previewLocation
+    if (target.kind !== 'subsection') {
+      return { allocations, subsections }
+    }
+    topLevelEntries.splice(target.position, 0, {
+      kind: 'subsection',
+      subsection: source,
+    })
+  }
+
+  const previewSubsections: BudgetSubsection[] = []
+  const topLevelAllocations: BudgetAllocation[] = []
+
+  topLevelEntries.forEach((entry, position) => {
+    if (entry.kind === 'allocation') {
+      topLevelAllocations.push({
+        ...entry.allocation,
+        position,
+        subsection_id: null,
+      })
+      return
+    }
+    previewSubsections.push({
+      ...entry.subsection,
+      position,
+    })
+  })
+
+  const previewAllocations = [
+    ...topLevelAllocations,
+    ...previewSubsections.flatMap((subsection) =>
+      (allocationGroups.get(subsection.id) ?? []).map((allocation, position) => ({
+        ...allocation,
+        position,
+        subsection_id: subsection.id,
+      })),
+    ),
+  ]
+
+  return {
+    allocations: previewAllocations,
+    subsections: previewSubsections,
+  }
 }
 
 function trapDialogFocus(event: ReactKeyboardEvent<HTMLElement>) {
@@ -250,6 +408,9 @@ export function BudgetPanel({
   const [renameTarget, setRenameTarget] = useState<BudgetEntry | null>(null)
   const [renameName, setRenameName] = useState('')
   const [movingEntry, setMovingEntry] = useState<MovingEntry | null>(null)
+  const [savingMoveEntry, setSavingMoveEntry] = useState<BudgetEntry | null>(
+    null,
+  )
   const [busyId, setBusyId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -463,32 +624,34 @@ export function BudgetPanel({
   }
 
   function getNavigationEntries(): BudgetEntry[] {
-    const entries: BudgetEntry[] = allocations
-      .filter((allocation) => allocation.subsection_id === null)
-      .map((allocation) => ({
-        allocation,
-        kind: 'allocation',
-        semanticId: `budget-row-${allocation.allocation_id}`,
-      }))
-
-    for (const subsection of subsections) {
-      entries.push({
-        kind: 'subsection',
-        semanticId: `budget-subsection-${subsection.id}`,
-        subsection,
-      })
-      entries.push(
-        ...allocations
-          .filter((allocation) => allocation.subsection_id === subsection.id)
-          .map((allocation) => ({
-            allocation,
-            kind: 'allocation' as const,
-            semanticId: `budget-row-${allocation.allocation_id}`,
-          })),
-      )
-    }
-
-    return entries
+    return getTopLevelBudgetEntries(allocations, subsections).flatMap((entry) =>
+      entry.kind === 'allocation'
+        ? [
+            {
+              allocation: entry.allocation,
+              kind: 'allocation' as const,
+              semanticId: `budget-row-${entry.allocation.allocation_id}`,
+            },
+          ]
+        : [
+            {
+              kind: 'subsection' as const,
+              semanticId: `budget-subsection-${entry.subsection.id}`,
+              subsection: entry.subsection,
+            },
+            ...allocations
+              .filter(
+                (allocation) =>
+                  allocation.subsection_id === entry.subsection.id,
+              )
+              .sort(comparePosition)
+              .map((allocation) => ({
+                allocation,
+                kind: 'allocation' as const,
+                semanticId: `budget-row-${allocation.allocation_id}`,
+              })),
+          ],
+    )
   }
 
   function focusSemanticEntry(semanticId: string) {
@@ -569,7 +732,9 @@ export function BudgetPanel({
     return {
       kind,
       originSemanticId: target.semanticId,
-      position: containingSubsection ? containingSubsection.position + 1 : 0,
+      position: containingSubsection
+        ? containingSubsection.position + 1
+        : target.allocation.position + 1,
       subsectionId: null,
     }
   }
@@ -731,24 +896,86 @@ export function BudgetPanel({
     focusSemanticEntry(focusAfterDelete)
   }
 
-  function movableEntryLength(entry: BudgetEntry): number {
-    return entry.kind === 'allocation'
-      ? allocations.filter(
+  function getMoveLocations(entry: BudgetEntry): MoveLocation[] {
+    const topLevelEntries = getTopLevelBudgetEntries(allocations, subsections)
+
+    if (entry.kind === 'subsection') {
+      const entriesWithoutSource = topLevelEntries.filter(
+        (candidate) =>
+          candidate.kind !== 'subsection' ||
+          candidate.subsection.id !== entry.subsection.id,
+      )
+      return Array.from(
+        { length: entriesWithoutSource.length + 1 },
+        (_, position) => ({
+          kind: 'subsection' as const,
+          position,
+        }),
+      )
+    }
+
+    const entriesWithoutSource = topLevelEntries.filter(
+      (candidate) =>
+        candidate.kind !== 'allocation' ||
+        candidate.allocation.allocation_id !== entry.allocation.allocation_id,
+    )
+    const locations: MoveLocation[] = []
+
+    for (let topLevelPosition = 0;
+      topLevelPosition <= entriesWithoutSource.length;
+      topLevelPosition += 1) {
+      locations.push({
+        kind: 'allocation',
+        position: topLevelPosition,
+        subsectionId: null,
+      })
+      const nextEntry = entriesWithoutSource[topLevelPosition]
+      if (nextEntry?.kind !== 'subsection') {
+        continue
+      }
+      const subsectionAllocations = allocations
+        .filter(
           (allocation) =>
-            allocation.subsection_id === entry.allocation.subsection_id,
-        ).length
-      : subsections.length
+            allocation.subsection_id === nextEntry.subsection.id &&
+            allocation.allocation_id !== entry.allocation.allocation_id,
+        )
+        .sort(comparePosition)
+      for (
+        let subsectionPosition = 0;
+        subsectionPosition <= subsectionAllocations.length;
+        subsectionPosition += 1
+      ) {
+        locations.push({
+          kind: 'allocation',
+          position: subsectionPosition,
+          subsectionId: nextEntry.subsection.id,
+        })
+      }
+    }
+
+    return locations.filter(
+      (location, index) =>
+        index === 0 ||
+        !sameMoveLocation(location, locations[index - 1]),
+    )
   }
 
   function startMove(entry: BudgetEntry) {
-    const sourcePosition =
+    const originalLocation: MoveLocation =
       entry.kind === 'allocation'
-        ? entry.allocation.position
-        : entry.subsection.position
+        ? {
+            kind: 'allocation',
+            position: entry.allocation.position,
+            subsectionId: entry.allocation.subsection_id,
+          }
+        : {
+            kind: 'subsection',
+            position: entry.subsection.position,
+          }
     setMovingEntry({
       entry,
-      originalPosition: sourcePosition,
-      previewPosition: sourcePosition,
+      originalLocation,
+      previewLocation: originalLocation,
     })
   }
 
@@ -757,50 +984,83 @@ export function BudgetPanel({
       if (!current) {
         return current
       }
+      const locations = getMoveLocations(current.entry)
+      const currentIndex = locations.findIndex((location) =>
+        sameMoveLocation(location, current.previewLocation),
+      )
+      const nextLocation = locations[currentIndex + direction]
+      if (!nextLocation) {
+        return current
+      }
       return {
         ...current,
-        previewPosition: Math.max(
-          0,
-          Math.min(
-            movableEntryLength(current.entry) - 1,
-            current.previewPosition + direction,
-          ),
-        ),
+        previewLocation: nextLocation,
       }
     })
   }
 
-  async function confirmMove() {
+  function confirmMove() {
     if (!movingEntry) {
       return
     }
-    if (movingEntry.previewPosition === movingEntry.originalPosition) {
+    if (
+      sameMoveLocation(
+        movingEntry.previewLocation,
+        movingEntry.originalLocation,
+      )
+    ) {
       closeMove()
       return
     }
 
-    const { entry, previewPosition } = movingEntry
-    const { didSave } = await runMutation(
+    const previousAllocations = allocations
+    const previousSubsections = subsections
+    const preview = moveBudgetPreview(
+      allocations,
+      subsections,
+      movingEntry,
+    )
+    const { entry, previewLocation } = movingEntry
+    setAllocations(preview.allocations)
+    setSubsections(preview.subsections)
+    setMovingEntry(null)
+    setSavingMoveEntry(entry)
+    focusSemanticEntry(entry.semanticId)
+
+    void runMutation(
       entry.kind === 'allocation'
         ? `move-budget-row-${entry.allocation.allocation_id}`
         : `move-budget-subsection-${entry.subsection.id}`,
       () =>
-        entry.kind === 'allocation'
+        entry.kind === 'allocation' &&
+        previewLocation.kind === 'allocation'
           ? getSupabaseClient().rpc('place_budget_category_allocation', {
               p_allocation_id: entry.allocation.allocation_id,
-              p_position: previewPosition,
-              p_subsection_id: entry.allocation.subsection_id,
+              p_position: previewLocation.position,
+              p_subsection_id: previewLocation.subsectionId,
             })
-          : getSupabaseClient().rpc('place_budget_subsection', {
-              p_position: previewPosition,
-              p_subsection_id: entry.subsection.id,
-            }),
-    )
-    if (!didSave) {
-      return
-    }
-    setMovingEntry(null)
-    focusSemanticEntry(entry.semanticId)
+          : entry.kind === 'subsection' &&
+              previewLocation.kind === 'subsection'
+            ? getSupabaseClient().rpc('place_budget_subsection', {
+                p_position: previewLocation.position,
+                p_subsection_id: entry.subsection.id,
+              })
+            : Promise.resolve({
+                data: null,
+                error: { message: 'The budget entry could not be moved.' },
+              }),
+      false,
+    ).then(({ didSave }) => {
+      if (!didSave) {
+        setAllocations(previousAllocations)
+        setSubsections(previousSubsections)
+        setSavingMoveEntry(null)
+        focusSemanticEntry(entry.semanticId)
+        return
+      }
+      setSavingMoveEntry(null)
+      void loadBudget()
+    })
   }
 
   useEffect(() => {
@@ -842,6 +1102,13 @@ export function BudgetPanel({
       })
       return
     }
+    if (savingMoveEntry) {
+      onKeyboardInteractionChange({
+        label: `move ${getEntryName(savingMoveEntry).toLocaleLowerCase()}`,
+        mode: 'saving-move',
+      })
+      return
+    }
     onKeyboardInteractionChange(null)
   }, [
     creationTarget,
@@ -850,6 +1117,7 @@ export function BudgetPanel({
     onKeyboardInteractionChange,
     pendingCreation,
     renameTarget,
+    savingMoveEntry,
   ])
 
   useEffect(() => {
@@ -901,7 +1169,9 @@ export function BudgetPanel({
         creationTarget ||
         pendingCreation ||
         renameTarget ||
-        movingEntry
+        movingEntry ||
+        savingMoveEntry ||
+        mutationBusy.current
       ) {
         return
       }
@@ -920,7 +1190,9 @@ export function BudgetPanel({
         creationTarget ||
         pendingCreation ||
         renameTarget ||
-        movingEntry
+        movingEntry ||
+        savingMoveEntry ||
+        mutationBusy.current
       ) {
         return
       }
@@ -938,7 +1210,9 @@ export function BudgetPanel({
         creationTarget ||
         pendingCreation ||
         renameTarget ||
-        movingEntry
+        movingEntry ||
+        savingMoveEntry ||
+        mutationBusy.current
       ) {
         return
       }
@@ -955,7 +1229,9 @@ export function BudgetPanel({
         creationTarget ||
         pendingCreation ||
         renameTarget ||
-        movingEntry
+        movingEntry ||
+        savingMoveEntry ||
+        mutationBusy.current
       ) {
         return
       }
@@ -1026,6 +1302,7 @@ export function BudgetPanel({
     movingEntry,
     pendingCreation,
     renameTarget,
+    savingMoveEntry,
     subsections,
   ])
 
@@ -1043,30 +1320,18 @@ export function BudgetPanel({
   const allocatedCategoryIds = allocations.map(
     (allocation) => allocation.category_id,
   )
-  const rootAllocations = allocations.filter(
-    (allocation) => allocation.subsection_id === null,
+  const displayedBudget = movingEntry
+    ? moveBudgetPreview(allocations, subsections, movingEntry)
+    : { allocations, subsections }
+  const displayedTopLevelEntries = getTopLevelBudgetEntries(
+    displayedBudget.allocations,
+    displayedBudget.subsections,
   )
-  const displayedSubsections =
-    movingEntry?.entry.kind === 'subsection'
-      ? moveWithin(
-          subsections,
-          movingEntry.originalPosition,
-          movingEntry.previewPosition,
-        )
-      : subsections
 
   function allocationsForSubsection(subsectionId: string | null) {
-    const groupAllocations = allocations.filter(
+    return displayedBudget.allocations.filter(
       (allocation) => allocation.subsection_id === subsectionId,
     )
-    return movingEntry?.entry.kind === 'allocation' &&
-      movingEntry.entry.allocation.subsection_id === subsectionId
-      ? moveWithin(
-          groupAllocations,
-          movingEntry.originalPosition,
-          movingEntry.previewPosition,
-        )
-      : groupAllocations
   }
 
   function renderPendingSubsection() {
@@ -1078,6 +1343,103 @@ export function BudgetPanel({
         onCancel={closeCreation}
         onNameChange={setPendingName}
         onSave={() => void savePendingCreation()}
+      />
+    )
+  }
+
+  function renderPendingTopLevelEntry() {
+    if (pendingCreation?.kind === 'subsection') {
+      return renderPendingSubsection()
+    }
+    if (
+      pendingCreation?.kind === 'allocation' &&
+      pendingCreation.subsectionId === null
+    ) {
+      return (
+        <PendingBudgetAllocation
+          busy={busyId !== null}
+          isSectioned={false}
+          name={pendingName}
+          nameInputRef={pendingNameInputRef}
+          onCancel={closeCreation}
+          onNameChange={setPendingName}
+          onSave={() => void savePendingCreation()}
+        />
+      )
+    }
+    return null
+  }
+
+  function isPendingTopLevelEntryAt(position: number) {
+    return (
+      pendingCreation !== null &&
+      (pendingCreation.kind === 'subsection' ||
+        pendingCreation.subsectionId === null) &&
+      pendingCreation.position === position
+    )
+  }
+
+  function renderSubsection(subsection: BudgetSubsection) {
+    return (
+      <BudgetGroup
+        allocations={allocationsForSubsection(subsection.id)}
+        busyId={busyId}
+        editingAllocationId={editingAllocationId}
+        focusedSemanticId={focusedSemanticId}
+        movingEntry={movingEntry}
+        name={subsection.name}
+        onEdit={setEditingAllocationId}
+        onAmountEditorClosed={onAmountEditorClosed}
+        onAmountEditorOpenChange={onAmountEditorOpenChange}
+        onUpdate={updateAllocation}
+        pendingCreation={
+          pendingCreation?.kind === 'allocation' &&
+          pendingCreation.subsectionId === subsection.id
+            ? pendingCreation
+            : null
+        }
+        pendingName={pendingName}
+        pendingNameInputRef={pendingNameInputRef}
+        renameName={renameName}
+        renameNameInputRef={renameNameInputRef}
+        renameTarget={renameTarget}
+        showHeader
+        subsection={subsection}
+        onPendingCreationCancel={closeCreation}
+        onPendingNameChange={setPendingName}
+        onPendingNameSave={() => void savePendingCreation()}
+        onRenameCancel={closeRename}
+        onRenameNameChange={setRenameName}
+        onRenameSave={() => void saveRename()}
+      />
+    )
+  }
+
+  function renderRootAllocation(allocation: BudgetAllocation) {
+    return (
+      <BudgetAllocationRow
+        allocation={allocation}
+        busyId={busyId}
+        editingAllocationId={editingAllocationId}
+        focusedSemanticId={focusedSemanticId}
+        isPickedUp={
+          movingEntry?.entry.kind === 'allocation' &&
+          movingEntry.entry.allocation.allocation_id === allocation.allocation_id
+        }
+        isRenaming={
+          renameTarget?.kind === 'allocation' &&
+          renameTarget.allocation.allocation_id === allocation.allocation_id
+        }
+        isSectioned={false}
+        onEdit={setEditingAllocationId}
+        onAmountEditorClosed={onAmountEditorClosed}
+        onAmountEditorOpenChange={onAmountEditorOpenChange}
+        onRenameCancel={closeRename}
+        onRenameNameChange={setRenameName}
+        onRenameSave={() => void saveRename()}
+        onUpdate={updateAllocation}
+        renameName={renameName}
+        renameNameInputRef={renameNameInputRef}
       />
     )
   }
@@ -1208,82 +1570,23 @@ export function BudgetPanel({
               <span>Spent</span>
               <span>Remaining</span>
             </div>
-            {(rootAllocations.length > 0 ||
-              (pendingCreation?.kind === 'allocation' &&
-                pendingCreation.subsectionId === null)) && (
-              <BudgetGroup
-                allocations={allocationsForSubsection(null)}
-                busyId={busyId}
-                editingAllocationId={editingAllocationId}
-                focusedSemanticId={focusedSemanticId}
-                movingEntry={movingEntry}
-                name="Unsectioned"
-                onEdit={setEditingAllocationId}
-                onAmountEditorClosed={onAmountEditorClosed}
-                onAmountEditorOpenChange={onAmountEditorOpenChange}
-                onUpdate={updateAllocation}
-                pendingCreation={
-                  pendingCreation?.kind === 'allocation' &&
-                  pendingCreation.subsectionId === null
-                    ? pendingCreation
-                    : null
+            {displayedTopLevelEntries.map((entry, index) => (
+              <Fragment
+                key={
+                  entry.kind === 'allocation'
+                    ? entry.allocation.allocation_id
+                    : entry.subsection.id
                 }
-                pendingName={pendingName}
-                pendingNameInputRef={pendingNameInputRef}
-                renameName={renameName}
-                renameNameInputRef={renameNameInputRef}
-                renameTarget={renameTarget}
-                showHeader={false}
-                subsection={null}
-                onPendingCreationCancel={closeCreation}
-                onPendingNameChange={setPendingName}
-                onPendingNameSave={() => void savePendingCreation()}
-                onRenameCancel={closeRename}
-                onRenameNameChange={setRenameName}
-                onRenameSave={() => void saveRename()}
-              />
-            )}
-            {displayedSubsections.map((subsection, index) => (
-              <Fragment key={subsection.id}>
-                {pendingCreation?.kind === 'subsection' &&
-                  pendingCreation.position === index &&
-                  renderPendingSubsection()}
-                <BudgetGroup
-                  allocations={allocationsForSubsection(subsection.id)}
-                  busyId={busyId}
-                  editingAllocationId={editingAllocationId}
-                  focusedSemanticId={focusedSemanticId}
-                  movingEntry={movingEntry}
-                  name={subsection.name}
-                  onEdit={setEditingAllocationId}
-                  onAmountEditorClosed={onAmountEditorClosed}
-                  onAmountEditorOpenChange={onAmountEditorOpenChange}
-                  onUpdate={updateAllocation}
-                  pendingCreation={
-                    pendingCreation?.kind === 'allocation' &&
-                    pendingCreation.subsectionId === subsection.id
-                      ? pendingCreation
-                      : null
-                  }
-                  pendingName={pendingName}
-                  pendingNameInputRef={pendingNameInputRef}
-                  renameName={renameName}
-                  renameNameInputRef={renameNameInputRef}
-                  renameTarget={renameTarget}
-                  showHeader
-                  subsection={subsection}
-                  onPendingCreationCancel={closeCreation}
-                  onPendingNameChange={setPendingName}
-                  onPendingNameSave={() => void savePendingCreation()}
-                  onRenameCancel={closeRename}
-                  onRenameNameChange={setRenameName}
-                  onRenameSave={() => void saveRename()}
-                />
+              >
+                {isPendingTopLevelEntryAt(index) &&
+                  renderPendingTopLevelEntry()}
+                {entry.kind === 'allocation'
+                  ? renderRootAllocation(entry.allocation)
+                  : renderSubsection(entry.subsection)}
               </Fragment>
             ))}
-            {pendingCreation?.kind === 'subsection' &&
-              pendingCreation.position === displayedSubsections.length &&
-              renderPendingSubsection()}
+            {isPendingTopLevelEntryAt(displayedTopLevelEntries.length) &&
+              renderPendingTopLevelEntry()}
           </section>
         </>
       )}
@@ -1563,7 +1866,7 @@ function BudgetAllocationRow({
   renameNameInputRef: RefObject<HTMLInputElement | null>
 }) {
   const plannedAmount = Math.abs(allocation.budgeted_amount)
-  const isBusy = busyId === allocation.allocation_id
+  const isBusy = busyId !== null
   const spentAmount =
     allocation.direction === 'spending'
       ? Math.max(0, -allocation.actual_amount)
