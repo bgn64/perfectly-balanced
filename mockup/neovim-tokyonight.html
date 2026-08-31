@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Perfectly Balanced — Tokyo Night workspace mockup</title>
+    <link rel="stylesheet" href="neovim-tokyonight.css" />
+  </head>
+  <body>
+    <div class="terminal-app command-closed">
+      <header class="titlebar">
+        <a class="brand" href="#budget" aria-label="Perfectly Balanced home">
+          <span class="brand-mark">pb</span>
+          <span>perfectly-balanced</span>
+        </a>
+        <p>August 2026 · Personal budget</p>
+        <div class="theme-switcher" role="group" aria-label="Theme">
+          <input checked id="theme-dark" name="theme" type="radio" />
+          <label for="theme-dark">Dark</label>
+          <input id="theme-light" name="theme" type="radio" />
+          <label for="theme-light">Light</label>
+        </div>
+        <button class="profile" type="button" aria-label="Open profile menu">
+          <span>BG</span>
+          ben@local
+        </button>
+      </header>
+
+      <aside class="sidebar" aria-label="Application navigation">
+        <nav class="main-nav">
+          <a class="nav-item is-active" href="#budget">
+            <span>Budget</span>
+          </a>
+          <a class="nav-item" href="#transactions">
+            <span>Transactions</span>
+            <strong>12</strong>
+          </a>
+          <a class="nav-item" href="#reports">
+            <span>Reports</span>
+          </a>
+        </nav>
+
+        <section class="sidebar-section" aria-labelledby="months-title">
+          <h2 id="months-title">Months</h2>
+          <a href="#july">July 2026</a>
+          <a class="is-current" href="#august">August 2026</a>
+          <a href="#september">September 2026</a>
+        </section>
+
+      </aside>
+
+      <main id="budget" class="workspace">
+        <header class="workspace-head">
+          <div>
+            <p class="eyebrow">Budget / 2026 / 08</p>
+            <h1>August 2026</h1>
+            <p class="subtitle">Plan with the keyboard. Review with a glance.</p>
+          </div>
+          <div class="month-controls" aria-label="Month navigation">
+            <button type="button" aria-label="Previous month">← Previous</button>
+            <button type="button" aria-label="Next month">Next →</button>
+          </div>
+        </header>
+
+        <section class="summary" aria-label="August budget summary">
+          <div>
+            <span>Available</span>
+            <strong class="available">$1,386.00</strong>
+          </div>
+          <div>
+            <span>Planned</span>
+            <strong>$3,250.00</strong>
+          </div>
+          <div>
+            <span>Spent</span>
+            <strong class="spent">$1,864.32</strong>
+          </div>
+          <div>
+            <span>Uncategorized</span>
+            <strong class="warning">12 transactions</strong>
+          </div>
+        </section>
+
+        <section class="budget-table" aria-labelledby="budget-heading">
+          <div class="table-head">
+            <div>
+              <p class="eyebrow">Monthly plan</p>
+              <h2 id="budget-heading">Categories</h2>
+            </div>
+            <button class="new-category" type="button"><span>+</span> Add category</button>
+          </div>
+
+          <div class="column-head" aria-hidden="true">
+            <span>Category</span>
+            <span>Planned</span>
+            <span>Spent</span>
+            <span>Remaining</span>
+          </div>
+
+          <section class="budget-group" aria-labelledby="essentials-heading">
+            <header>
+              <h3 id="essentials-heading"><span>⌄</span> Essentials</h3>
+              <strong>$2,650.00</strong>
+            </header>
+            <div class="budget-row is-selected" tabindex="0">
+              <span class="category-name"><i class="selection-caret">›</i>Housing <button class="direction-tag" type="button">Spending</button></span>
+              <input class="amount-cell" aria-label="Housing planned amount" value="$1,800.00" />
+              <span class="spent">$1,800.00</span>
+              <span>$0.00</span>
+            </div>
+            <div class="budget-row" tabindex="0">
+              <span class="category-name">Groceries <button class="direction-tag" type="button">Spending</button></span>
+              <input class="amount-cell" aria-label="Groceries planned amount" value="$600.00" />
+              <span class="spent">$475.26</span>
+              <span class="available">$124.74</span>
+            </div>
+            <div class="budget-row" tabindex="0">
+              <span class="category-name">Utilities <button class="direction-tag" type="button">Spending</button></span>
+              <input class="amount-cell" aria-label="Utilities planned amount" value="$250.00" />
+              <span class="spent">$178.67</span>
+              <span class="available">$71.33</span>
+            </div>
+          </section>
+
+          <section class="budget-group" aria-labelledby="flexible-heading">
+            <header>
+              <h3 id="flexible-heading"><span>⌄</span> Flexible spending</h3>
+              <strong>$600.00</strong>
+            </header>
+            <div class="budget-row" tabindex="0">
+              <span class="category-name">Restaurants <button class="direction-tag" type="button">Spending</button></span>
+              <input class="amount-cell" aria-label="Restaurants planned amount" value="$250.00" />
+              <span class="spent">$89.42</span>
+              <span class="available">$160.58</span>
+            </div>
+            <div class="budget-row" tabindex="0">
+              <span class="category-name">Fun money <button class="direction-tag" type="button">Spending</button></span>
+              <input class="amount-cell" aria-label="Fun money planned amount" value="$200.00" />
+              <span class="spent">$121.97</span>
+              <span class="available">$78.03</span>
+            </div>
+            <div class="budget-row" tabindex="0">
+              <span class="category-name">Transit <button class="direction-tag" type="button">Spending</button></span>
+              <input class="amount-cell" aria-label="Transit planned amount" value="$150.00" />
+              <span class="spent">$72.00</span>
+              <span class="available">$78.00</span>
+            </div>
+          </section>
+        </section>
+      </main>
+
+      <footer class="statusline">
+        <div><strong>NAVIGATE</strong><span>budget / housing</span></div>
+        <div><span><kbd>a</kbd> amount</span><span><kbd>t</kbd> direction</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> move</span><span><kbd>:</kbd> command</span></div>
+      </footer>
+    </div>
+  </body>
+</html>

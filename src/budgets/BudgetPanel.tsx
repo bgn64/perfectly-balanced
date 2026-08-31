@@ -3,11 +3,9 @@ import {
   useEffect,
   useRef,
   useState,
-  type DragEvent,
-  type FormEvent,
 } from 'react'
-import { useAuth } from '../auth/useAuth.ts'
 import { CategoryCombobox } from '../finance/CategoryCombobox.tsx'
+import { collectPages } from '../finance/query.ts'
 import type {
   Budget,
   BudgetAllocation,
@@ -16,13 +14,13 @@ import type {
   Category,
 } from '../finance/types.ts'
 import {
-  currentMonth,
   formatDisplayMoney,
   formatMonth,
   parseMagnitude,
   shiftMonth,
 } from '../finance/utils.ts'
 import { getSupabaseClient } from '../lib/supabase.ts'
+import { useAuth } from '../auth/useAuth.ts'
 
 interface BudgetData {
   budgets: Budget[]
@@ -30,20 +28,37 @@ interface BudgetData {
   subsections: BudgetSubsection[]
   allocations: BudgetAllocation[]
   categories: Category[]
+  uncategorizedCount: number
 }
 
-interface DraggedBudgetItem {
-  id: string
-  type: 'subsection' | 'allocation'
+interface AmountEditRequest {
+  allocationId: string
+  sequence: number
 }
-
-const budgetDragType = 'application/x-perfectly-balanced-budget-item'
 
 async function queryBudget(month: string): Promise<BudgetData> {
   const client = getSupabaseClient()
-  const [budgetsResult, categoriesResult] = await Promise.all([
+  const [budgetsResult, categoriesResult, transactions, splits] = await Promise.all([
     client.from('budgets').select('id, month').order('month', { ascending: false }),
     client.from('categories').select('id, name').order('name'),
+    collectPages((afterId, limit) => {
+      let query = client.from('transactions').select('id').order('id').limit(limit)
+      if (afterId) {
+        query = query.gt('id', afterId)
+      }
+      return query
+    }),
+    collectPages((afterId, limit) => {
+      let query = client
+        .from('transaction_category_splits')
+        .select('id, transaction_id')
+        .order('id')
+        .limit(limit)
+      if (afterId) {
+        query = query.gt('id', afterId)
+      }
+      return query
+    }),
   ])
 
   if (budgetsResult.error) {
@@ -54,6 +69,12 @@ async function queryBudget(month: string): Promise<BudgetData> {
   }
 
   const budgets = budgetsResult.data ?? []
+  const categorizedTransactionIds = new Set(
+    splits.map((split) => split.transaction_id),
+  )
+  const uncategorizedCount = transactions.filter(
+    (transaction) => !categorizedTransactionIds.has(transaction.id),
+  ).length
   const budget =
     budgets.find((candidate) => candidate.month.slice(0, 7) === month) ?? null
 
@@ -64,6 +85,7 @@ async function queryBudget(month: string): Promise<BudgetData> {
       subsections: [],
       allocations: [],
       categories: categoriesResult.data ?? [],
+      uncategorizedCount,
     }
   }
 
@@ -99,6 +121,7 @@ async function queryBudget(month: string): Promise<BudgetData> {
       actual_amount: Number(allocation.actual_amount),
     })),
     categories: categoriesResult.data ?? [],
+    uncategorizedCount,
   }
 }
 
@@ -106,21 +129,33 @@ export function BudgetPanel({
   categoriesRevision,
   activityRevision,
   onCategoriesChanged,
+  selectedMonth,
+  onMonthChange,
+  focusedSemanticId,
+  amountEditRequest,
+  onAmountEditorClosed,
+  onAmountEditorOpenChange,
 }: {
   categoriesRevision: number
   activityRevision: number
   onCategoriesChanged: () => void
+  selectedMonth: string
+  onMonthChange: (month: string) => void
+  focusedSemanticId: string | null
+  amountEditRequest: AmountEditRequest | null
+  onAmountEditorClosed: (allocationId: string) => void
+  onAmountEditorOpenChange: (isOpen: boolean) => void
 }) {
   const { user } = useAuth()
-  const [selectedMonth, setSelectedMonth] = useState(currentMonth)
-  const [budgets, setBudgets] = useState<Budget[]>([])
   const [budget, setBudget] = useState<Budget | null>(null)
   const [subsections, setSubsections] = useState<BudgetSubsection[]>([])
   const [allocations, setAllocations] = useState<BudgetAllocation[]>([])
   const [categories, setCategories] = useState<Category[]>([])
-  const [subsectionName, setSubsectionName] = useState('')
-  const [isAddingSubsection, setIsAddingSubsection] = useState(false)
-  const [draggedItem, setDraggedItem] = useState<DraggedBudgetItem | null>(null)
+  const [uncategorizedCount, setUncategorizedCount] = useState(0)
+  const [editingAllocationId, setEditingAllocationId] = useState<string | null>(
+    null,
+  )
+  const [isAddingCategory, setIsAddingCategory] = useState(false)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -134,11 +169,12 @@ export function BudgetPanel({
       if (generation !== requestGeneration.current) {
         return
       }
-      setBudgets(data.budgets)
       setBudget(data.budget)
       setSubsections(data.subsections)
       setAllocations(data.allocations)
       setCategories(data.categories)
+      setUncategorizedCount(data.uncategorizedCount)
+      setEditingAllocationId(null)
       setErrorMessage(null)
     } catch (error) {
       if (generation === requestGeneration.current) {
@@ -161,9 +197,23 @@ export function BudgetPanel({
     }
   }, [activityRevision, categoriesRevision, loadBudget])
 
+  useEffect(() => {
+    if (
+      amountEditRequest &&
+      allocations.some(
+        (allocation) => allocation.allocation_id === amountEditRequest.allocationId,
+      )
+    ) {
+      // oxlint-disable-next-line react/set-state-in-effect -- A semantic navigation request opens the matching row editor.
+      setEditingAllocationId(amountEditRequest.allocationId)
+      onAmountEditorOpenChange(true)
+    }
+  }, [allocations, amountEditRequest, onAmountEditorOpenChange])
+
   async function runMutation(
     id: string,
     mutation: () => PromiseLike<{ error: { message: string } | null }>,
+    refreshOnSuccess = true,
   ): Promise<boolean> {
     if (mutationBusy.current) {
       return false
@@ -177,7 +227,9 @@ export function BudgetPanel({
         setErrorMessage(error.message)
         return false
       }
-      await loadBudget()
+      if (refreshOnSuccess) {
+        await loadBudget()
+      }
       return true
     } catch (error) {
       setErrorMessage(
@@ -199,7 +251,6 @@ export function BudgetPanel({
       .insert({ name: name.trim(), user_id: user.id })
       .select('id, name')
       .single()
-
     if (error) {
       throw new Error(
         error.code === '23505' ? 'Category names must be unique.' : error.message,
@@ -212,18 +263,15 @@ export function BudgetPanel({
     return data
   }
 
-  async function addAllocation(
-    category: Category,
-    subsectionId: string | null,
-  ): Promise<void> {
+  async function addRootAllocation(category: Category): Promise<void> {
     if (!budget) {
       throw new Error('Create this month before adding categories.')
     }
-    const didSave = await runMutation(`add-${subsectionId ?? 'root'}`, () =>
+    const didSave = await runMutation('add-root', () =>
       getSupabaseClient().rpc('create_budget_category_allocation', {
         p_budget_id: budget.id,
         p_category_id: category.id,
-        p_subsection_id: subsectionId,
+        p_subsection_id: null,
         p_magnitude: 0,
         p_direction: 'spending',
       }),
@@ -236,109 +284,45 @@ export function BudgetPanel({
   async function updateAllocation(
     allocation: BudgetAllocation,
     magnitude: number,
-    direction = allocation.direction,
+    direction: BudgetDirection,
   ): Promise<boolean> {
-    return runMutation(allocation.allocation_id, () =>
-      getSupabaseClient().rpc('update_budget_category_allocation', {
-        p_allocation_id: allocation.allocation_id,
-        p_magnitude: magnitude,
-        p_direction: direction,
-      }),
+    setAllocations((current) =>
+      current.map((candidate) =>
+        candidate.allocation_id === allocation.allocation_id
+          ? {
+              ...candidate,
+              budgeted_amount: magnitude,
+              direction,
+            }
+          : candidate,
+      ),
     )
-  }
-
-  async function addSubsection(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const name = subsectionName.trim()
-    if (!budget || !name) {
-      setErrorMessage('Enter a subsection name.')
-      return
-    }
-    if (
-      await runMutation('add-subsection', () =>
-        getSupabaseClient().rpc('add_budget_subsection', {
-          p_budget_id: budget.id,
-          p_name: name,
+    const didSave = await runMutation(
+      allocation.allocation_id,
+      () =>
+        getSupabaseClient().rpc('update_budget_category_allocation', {
+          p_allocation_id: allocation.allocation_id,
+          p_magnitude: magnitude,
+          p_direction: direction,
         }),
+      false,
+    )
+    if (!didSave) {
+      setAllocations((current) =>
+        current.map((candidate) =>
+          candidate.allocation_id === allocation.allocation_id
+            ? allocation
+            : candidate,
+        ),
       )
-    ) {
-      setSubsectionName('')
-      setIsAddingSubsection(false)
+      return false
     }
+    void loadBudget()
+    return true
   }
 
-  function readDraggedItem(event: DragEvent): DraggedBudgetItem | null {
-    try {
-      return JSON.parse(
-        event.dataTransfer.getData(budgetDragType),
-      ) as DraggedBudgetItem
-    } catch {
-      return null
-    }
-  }
-
-  async function dropSubsection(event: DragEvent, targetGap: number) {
-    event.preventDefault()
-    const dragged = readDraggedItem(event)
-    if (!dragged || dragged.type !== 'subsection') {
-      return
-    }
-    if (!subsections.some((item) => item.id === dragged.id)) {
-      return
-    }
-    const sourcePosition = subsections.findIndex(
-      (subsection) => subsection.id === dragged.id,
-    )
-    const targetPosition =
-      sourcePosition < targetGap ? targetGap - 1 : targetGap
-    setDraggedItem(null)
-    await runMutation(dragged.id, () =>
-      getSupabaseClient().rpc('place_budget_subsection', {
-        p_subsection_id: dragged.id,
-        p_position: targetPosition,
-      }),
-    )
-  }
-
-  async function dropAllocation(
-    event: DragEvent,
-    subsectionId: string | null,
-    targetPosition: number,
-  ) {
-    event.preventDefault()
-    const dragged = readDraggedItem(event)
-    if (!dragged || dragged.type !== 'allocation') {
-      return
-    }
-    const source = allocations.find(
-      (item) => item.allocation_id === dragged.id,
-    )
-    if (!source) {
-      return
-    }
-    const normalizedPosition =
-      source.subsection_id === subsectionId &&
-      source.position < targetPosition
-        ? targetPosition - 1
-        : targetPosition
-    setDraggedItem(null)
-    await runMutation(dragged.id, () =>
-      getSupabaseClient().rpc('place_budget_category_allocation', {
-        p_allocation_id: dragged.id,
-        p_subsection_id: subsectionId,
-        p_position: normalizedPosition,
-      }),
-    )
-  }
-
-  const allocatedCategoryIds = allocations.map(
-    (allocation) => allocation.category_id,
-  )
   const spendingAllocations = allocations.filter(
     (allocation) => allocation.direction === 'spending',
-  )
-  const incomeAllocations = allocations.filter(
-    (allocation) => allocation.direction === 'income',
   )
   const plannedSpending = spendingAllocations.reduce(
     (sum, allocation) => sum + Math.abs(allocation.budgeted_amount),
@@ -348,76 +332,43 @@ export function BudgetPanel({
     (sum, allocation) => sum + Math.max(0, -allocation.actual_amount),
     0,
   )
-  const plannedIncome = incomeAllocations.reduce(
-    (sum, allocation) => sum + allocation.budgeted_amount,
-    0,
+  const allocatedCategoryIds = allocations.map(
+    (allocation) => allocation.category_id,
   )
-  const received = incomeAllocations.reduce(
-    (sum, allocation) => sum + Math.max(0, allocation.actual_amount),
-    0,
-  )
-  const monthLabel = formatMonth(selectedMonth)
-  const selectorMonths = Array.from(
-    new Set([selectedMonth, ...budgets.map((item) => item.month.slice(0, 7))]),
-  ).sort((left, right) => right.localeCompare(left))
-  function changeMonth(month: string) {
-    setSubsectionName('')
-    setIsAddingSubsection(false)
-    setDraggedItem(null)
-    setIsLoading(true)
-    setSelectedMonth(month)
-  }
 
   return (
-    <main className="page budget-page" aria-busy={isLoading}>
-      <div className="page-head">
+    <>
+      <header className="workspace-head">
         <div>
-          <p className="eyebrow">Monthly budget</p>
-          <h1>{monthLabel}</h1>
-          <p className="subtle">
-            Plan your month and follow actual activity as transactions are categorized.
-          </p>
+          <p className="eyebrow">Budget / {selectedMonth.replace('-', ' / ')}</p>
+          <h1>{formatMonth(selectedMonth)}</h1>
+          <p className="subtitle">Plan with the keyboard. Review with a glance.</p>
         </div>
-        <div className="toolbar-group month-toolbar">
+        <div className="month-controls" aria-label="Month navigation">
           <button
-            aria-label="Previous month"
-            className="icon-button"
+            data-semantic-id="month-previous"
+            data-semantic-region="workspace"
+            data-status-action="previous month"
+            data-status-label="budget / previous month"
             disabled={busyId !== null}
             type="button"
-            onClick={() => changeMonth(shiftMonth(selectedMonth, -1))}
+            onClick={() => onMonthChange(shiftMonth(selectedMonth, -1))}
           >
-            &larr;
+            ← Previous
           </button>
-          <label className="sr-only" htmlFor="budget-month-selector">
-            Budget month
-          </label>
-          <select
-            className="pill-select"
-            disabled={busyId !== null}
-            id="budget-month-selector"
-            value={selectedMonth}
-            onChange={(event) => changeMonth(event.target.value)}
-          >
-            {selectorMonths.map((month) => (
-              <option key={month} value={month}>
-                {formatMonth(month)}
-                {budgets.some((item) => item.month.slice(0, 7) === month)
-                  ? ''
-                  : ' (not created)'}
-              </option>
-            ))}
-          </select>
           <button
-            aria-label="Next month"
-            className="icon-button"
+            data-semantic-id="month-next"
+            data-semantic-region="workspace"
+            data-status-action="next month"
+            data-status-label="budget / next month"
             disabled={busyId !== null}
             type="button"
-            onClick={() => changeMonth(shiftMonth(selectedMonth, 1))}
+            onClick={() => onMonthChange(shiftMonth(selectedMonth, 1))}
           >
-            &rarr;
+            Next →
           </button>
         </div>
-      </div>
+      </header>
 
       {errorMessage && (
         <p className="form-message form-message--error" role="alert">
@@ -426,19 +377,18 @@ export function BudgetPanel({
       )}
 
       {isLoading ? (
-        <section className="panel empty-state" aria-live="polite">
+        <section className="budget-table empty-state" aria-live="polite">
           Loading budget...
         </section>
       ) : !budget ? (
-        <section className="panel empty-state">
-          <h2>Create the {monthLabel} budget</h2>
-          <p className="subtle">
-            Start with an empty monthly budget, then add subsections and categories.
-          </p>
+        <section className="budget-table empty-state">
+          <h2>Create the {formatMonth(selectedMonth)} budget</h2>
+          <p>Start with an empty monthly budget, then add categories.</p>
           <button
-            className="button"
-            disabled={busyId === 'create-budget'}
+            data-status-action="create budget"
+            data-status-label="budget / empty month"
             type="button"
+            disabled={busyId === 'create-budget'}
             onClick={() =>
               void runMutation('create-budget', () =>
                 getSupabaseClient().rpc('create_monthly_budget', {
@@ -452,522 +402,309 @@ export function BudgetPanel({
         </section>
       ) : (
         <>
-          <section className="panel summary-strip" aria-label="Budget overview">
-            <BudgetMetric label="Planned spending" value={plannedSpending} />
-            <BudgetMetric label="Spent so far" value={spent} />
-            <BudgetMetric label="Planned income" value={plannedIncome} />
-            <BudgetMetric label="Received so far" value={received} />
+          <section className="summary" aria-label="Budget overview">
+            <BudgetMetric
+              label="Available"
+              value={plannedSpending - spent}
+              variant="available"
+            />
+            <BudgetMetric label="Planned" value={plannedSpending} />
+            <BudgetMetric label="Spent" value={spent} variant="spent" />
+            <div>
+              <span>Uncategorized</span>
+              <strong className="warning">
+                {uncategorizedCount} transaction{uncategorizedCount === 1 ? '' : 's'}
+              </strong>
+            </div>
           </section>
-          <p className="interactive-hint">
-            Amounts and Spending/Income controls are editable. Press Enter to
-            save an amount; hover a row to reveal its drag handle.
-          </p>
-          <section className="panel budget-sheet">
-            {allocations.some(
-              (allocation) => allocation.subsection_id === null,
-            ) && (
+
+          <section className="budget-table" aria-labelledby="budget-heading">
+            <div className="table-head">
+              <div>
+                <p className="eyebrow">Monthly plan</p>
+                <h2 id="budget-heading">Categories</h2>
+              </div>
+              <button
+                id="add-category"
+                className="new-category"
+                data-semantic-id="add-category"
+                data-semantic-region="workspace"
+                data-status-action="add category"
+                data-status-label="budget / categories"
+                disabled={busyId !== null}
+                type="button"
+                onClick={() => setIsAddingCategory(true)}
+              >
+                <span>+</span> Add category
+              </button>
+            </div>
+            {isAddingCategory && (
+              <div className="category-create">
+                <CategoryCombobox
+                  autoFocus
+                  cancelOnBlur
+                  categories={categories}
+                  disabled={busyId !== null}
+                  excludedCategoryIds={allocatedCategoryIds}
+                  label="Add or create a category"
+                  onCancel={() => setIsAddingCategory(false)}
+                  onCreate={createCategory}
+                  onSelect={async (category) => {
+                    await addRootAllocation(category)
+                    setIsAddingCategory(false)
+                  }}
+                />
+              </div>
+            )}
+            <div className="column-head" aria-hidden="true">
+              <span>Category</span>
+              <span>Planned</span>
+              <span>Spent</span>
+              <span>Remaining</span>
+            </div>
+            {allocations.some((allocation) => allocation.subsection_id === null) && (
               <BudgetGroup
-                key={`${budget.id}:root`}
-                name="Unsectioned"
-                subsectionId={null}
                 allocations={allocations.filter(
                   (allocation) => allocation.subsection_id === null,
                 )}
-                categories={categories}
-                allocatedCategoryIds={allocatedCategoryIds}
                 busyId={busyId}
-                draggedItem={draggedItem}
-                onAddAllocation={addAllocation}
-                onCreateCategory={createCategory}
-                onDropAllocation={dropAllocation}
-                onDragEnd={() => setDraggedItem(null)}
-                onDragStart={setDraggedItem}
-                onUpdateAllocation={updateAllocation}
+                editingAllocationId={editingAllocationId}
+                focusedSemanticId={focusedSemanticId}
+                name="Unsectioned"
+                onEdit={setEditingAllocationId}
+                onAmountEditorClosed={onAmountEditorClosed}
+                onAmountEditorOpenChange={onAmountEditorOpenChange}
+                onUpdate={updateAllocation}
               />
             )}
-            {subsections.map((subsection, index) => {
-              const groupAllocations = allocations.filter(
-                (allocation) => allocation.subsection_id === subsection.id,
-              )
-              return (
-                <div className="budget-group-slot" key={subsection.id}>
-                  {draggedItem?.type === 'subsection' && (
-                    <BudgetDropTarget
-                      onDrop={(event) => void dropSubsection(event, index)}
-                    />
-                  )}
-                  <section
-                    className="budget-group"
-                    draggable={busyId === null}
-                    onDragEnd={() => setDraggedItem(null)}
-                    onDragStart={(event) => {
-                      const item: DraggedBudgetItem = {
-                        id: subsection.id,
-                        type: 'subsection',
-                      }
-                      event.dataTransfer.effectAllowed = 'move'
-                      event.dataTransfer.setData(
-                        budgetDragType,
-                        JSON.stringify(item),
-                      )
-                      setDraggedItem(item)
-                    }}
-                  >
-                    <BudgetGroup
-                      name={subsection.name}
-                      subsectionId={subsection.id}
-                      allocations={groupAllocations}
-                      categories={categories}
-                      allocatedCategoryIds={allocatedCategoryIds}
-                      busyId={busyId}
-                      draggedItem={draggedItem}
-                      onAddAllocation={addAllocation}
-                      onCreateCategory={createCategory}
-                      onDropAllocation={dropAllocation}
-                      onDragEnd={() => setDraggedItem(null)}
-                      onDragStart={setDraggedItem}
-                      onUpdateAllocation={updateAllocation}
-                      isNested
-                    />
-                  </section>
-                </div>
-              )
-            })}
-            {draggedItem?.type === 'subsection' && (
-              <BudgetDropTarget
-                onDrop={(event) =>
-                  void dropSubsection(event, subsections.length)
-                }
+            {subsections.map((subsection) => (
+              <BudgetGroup
+                allocations={allocations.filter(
+                  (allocation) => allocation.subsection_id === subsection.id,
+                )}
+                busyId={busyId}
+                editingAllocationId={editingAllocationId}
+                focusedSemanticId={focusedSemanticId}
+                key={subsection.id}
+                name={subsection.name}
+                onEdit={setEditingAllocationId}
+                onAmountEditorClosed={onAmountEditorClosed}
+                onAmountEditorOpenChange={onAmountEditorOpenChange}
+                onUpdate={updateAllocation}
               />
-            )}
-            <div className="subsection-create-flow">
-              <button
-                className="inline-create-trigger"
-                disabled={busyId !== null}
-                type="button"
-                onClick={() => setIsAddingSubsection(true)}
-              >
-                ＋ Add subsection at the end
-              </button>
-              {isAddingSubsection && (
-                <section className="budget-group provisional-subsection">
-                  <form
-                    className="group-head provisional-subsection__head"
-                    onBlur={(event) => {
-                      if (
-                        !event.currentTarget.contains(event.relatedTarget) &&
-                        !subsectionName.trim()
-                      ) {
-                        setIsAddingSubsection(false)
-                      }
-                    }}
-                    onSubmit={addSubsection}
-                  >
-                    <span className="drag" aria-hidden="true">⠿</span>
-                    <label className="sr-only" htmlFor="subsection-name">
-                      New subsection name
-                    </label>
-                    <input
-                      autoFocus
-                      disabled={busyId !== null}
-                      id="subsection-name"
-                      maxLength={100}
-                      placeholder="Subsection name..."
-                      type="text"
-                      value={subsectionName}
-                      onChange={(event) => setSubsectionName(event.target.value)}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Escape') {
-                          event.preventDefault()
-                          setSubsectionName('')
-                          setIsAddingSubsection(false)
-                        }
-                      }}
-                    />
-                    <span className="subtle">$0 planned · $0 spent</span>
-                  </form>
-                  <button
-                    className="inline-create-trigger"
-                    disabled
-                    type="button"
-                  >
-                    ＋ Add or create category
-                  </button>
-                </section>
-              )}
-            </div>
+            ))}
           </section>
         </>
       )}
-    </main>
+    </>
   )
 }
 
-function BudgetMetric({ label, value }: { label: string; value: number }) {
+function BudgetMetric({
+  label,
+  value,
+  variant,
+}: {
+  label: string
+  value: number
+  variant?: 'available' | 'spent'
+}) {
   return (
-    <div className="metric">
+    <div>
       <span>{label}</span>
-      <strong>{formatDisplayMoney(value)}</strong>
+      <strong className={variant}>
+        {formatDisplayMoney(value)}
+      </strong>
     </div>
   )
 }
 
 function BudgetGroup({
-  name,
-  subsectionId,
   allocations,
-  categories,
-  allocatedCategoryIds,
   busyId,
-  draggedItem,
-  isNested = false,
-  onAddAllocation,
-  onCreateCategory,
-  onDropAllocation,
-  onDragEnd,
-  onDragStart,
-  onUpdateAllocation,
+  editingAllocationId,
+  focusedSemanticId,
+  name,
+  onEdit,
+  onAmountEditorClosed,
+  onAmountEditorOpenChange,
+  onUpdate,
 }: {
-  name: string
-  subsectionId: string | null
   allocations: BudgetAllocation[]
-  categories: Category[]
-  allocatedCategoryIds: string[]
   busyId: string | null
-  draggedItem: DraggedBudgetItem | null
-  isNested?: boolean
-  onAddAllocation: (
-    category: Category,
-    subsectionId: string | null,
-  ) => Promise<void>
-  onCreateCategory: (name: string) => Promise<Category>
-  onDropAllocation: (
-    event: DragEvent,
-    subsectionId: string | null,
-    targetPosition: number,
-  ) => Promise<void>
-  onDragEnd: () => void
-  onDragStart: (item: DraggedBudgetItem) => void
-  onUpdateAllocation: (
+  editingAllocationId: string | null
+  focusedSemanticId: string | null
+  name: string
+  onEdit: (allocationId: string | null) => void
+  onAmountEditorClosed: (allocationId: string) => void
+  onAmountEditorOpenChange: (isOpen: boolean) => void
+  onUpdate: (
     allocation: BudgetAllocation,
     magnitude: number,
-    direction?: BudgetDirection,
+    direction: BudgetDirection,
   ) => Promise<boolean>
 }) {
-  const [isAddingCategory, setIsAddingCategory] = useState(false)
   const planned = allocations.reduce(
     (sum, allocation) => sum + Math.abs(allocation.budgeted_amount),
     0,
   )
-  const activity = allocations.reduce(
-    (sum, allocation) => sum + Math.abs(allocation.actual_amount),
-    0,
-  )
-  const activityLabel = allocations.every(
-    (allocation) => allocation.direction === 'income',
-  )
-    ? 'received'
-    : allocations.every((allocation) => allocation.direction === 'spending')
-      ? 'spent'
-      : 'activity'
-  const content = (
-    <>
-      <div className="group-head">
-        <div className="row-main">
-          {isNested && <span className="drag hover-reveal" aria-hidden="true">⠿</span>}
-          <div>
-            <h2>{name}</h2>
-            <p className="subtle">
-              {formatDisplayMoney(planned)} planned ·{' '}
-              {formatDisplayMoney(activity)} {activityLabel}
-            </p>
-          </div>
-        </div>
-      </div>
-      {allocations.map((allocation, index) => (
-        <div className="budget-allocation-slot" key={allocation.allocation_id}>
-          {draggedItem?.type === 'allocation' && (
-            <BudgetDropTarget
-              onDrop={(event) =>
-                void onDropAllocation(event, subsectionId, index)
-              }
-            />
-          )}
-          <BudgetAllocationRow
-            allocation={allocation}
-            busy={busyId !== null}
-            key={`${allocation.allocation_id}-${allocation.budgeted_amount}-${allocation.direction}`}
-            onDragEnd={onDragEnd}
-            onDragStart={onDragStart}
-            onUpdate={onUpdateAllocation}
-          />
-        </div>
-      ))}
-      {draggedItem?.type === 'allocation' && (
-        <BudgetDropTarget
-          onDrop={(event) =>
-            void onDropAllocation(event, subsectionId, allocations.length)
-          }
-        />
-      )}
-      <div className="inline-create-flow">
-        <button
-          className="inline-create-trigger"
-          disabled={busyId !== null}
-          type="button"
-          onClick={() => setIsAddingCategory(true)}
-        >
-          ＋ Add or create category
-        </button>
-        {isAddingCategory && (
-          <div className="budget-item provisional-budget-item">
-            <div className="row-main">
-              <span className="drag" aria-hidden="true">⠿</span>
-              <CategoryCombobox
-                autoFocus
-                cancelOnBlur
-                categories={categories}
-                disabled={busyId !== null}
-                excludedCategoryIds={allocatedCategoryIds}
-                label={`Add or create a category in ${name}`}
-                onCancel={() => setIsAddingCategory(false)}
-                onCreate={onCreateCategory}
-                onSelect={async (category) => {
-                  await onAddAllocation(category, subsectionId)
-                  setIsAddingCategory(false)
-                }}
-              />
-            </div>
-            <div className="mini-segmented" aria-label="New category direction">
-              <button className="selected" disabled type="button">
-                Spending
-              </button>
-              <button disabled type="button">Income</button>
-            </div>
-            <div
-              aria-label="0% of planned spending"
-              className="progress"
-              role="progressbar"
-              aria-valuemax={100}
-              aria-valuemin={0}
-              aria-valuenow={0}
-            >
-              <i style={{ width: '0%' }} />
-            </div>
-            <input
-              aria-label="New category planned magnitude"
-              className="amount-input"
-              disabled
-              value="0.00"
-            />
-          </div>
-        )}
-      </div>
-    </>
-  )
 
-  if (isNested) {
-    return content
-  }
-  return <section className="budget-group">{content}</section>
+  return (
+    <section className="budget-group">
+      <header>
+        <h3><span>⌄</span> {name}</h3>
+        <strong>{formatDisplayMoney(planned)}</strong>
+      </header>
+      {allocations.map((allocation) => {
+        const plannedAmount = Math.abs(allocation.budgeted_amount)
+        const isBusy = busyId === allocation.allocation_id
+        const spentAmount =
+          allocation.direction === 'spending'
+            ? Math.max(0, -allocation.actual_amount)
+            : Math.max(0, allocation.actual_amount)
+        const remaining = plannedAmount - spentAmount
+        const isSelected =
+          focusedSemanticId === `budget-row-${allocation.allocation_id}`
+        return (
+          <div key={allocation.allocation_id}>
+            <div
+              aria-current={isSelected ? 'true' : undefined}
+              className={`budget-row${isSelected ? ' is-selected' : ''}`}
+              data-allocation-id={allocation.allocation_id}
+              data-semantic-id={`budget-row-${allocation.allocation_id}`}
+              data-semantic-kind="budget-row"
+              data-semantic-region="workspace"
+              data-status-action="amount"
+              data-status-label={`budget / ${allocation.category_name.toLocaleLowerCase()}`}
+              id={`budget-row-${allocation.allocation_id}`}
+              tabIndex={0}
+            >
+              <span className="category-name">
+                {isSelected ? <i className="selection-caret">›</i> : null}
+                {allocation.category_name}
+                <button
+                  aria-label={`Toggle ${allocation.category_name} between spending and income`}
+                  className="direction-tag"
+                  data-status-action="toggle direction"
+                  data-status-label={`budget / ${allocation.category_name.toLocaleLowerCase()}`}
+                  disabled={isBusy}
+                  id={`direction-toggle-${allocation.allocation_id}`}
+                  type="button"
+                  onClick={() => {
+                    onEdit(null)
+                    onAmountEditorOpenChange(false)
+                    void onUpdate(
+                      allocation,
+                      plannedAmount,
+                      allocation.direction === 'spending' ? 'income' : 'spending',
+                    )
+                  }}
+                >
+                  {allocation.direction === 'spending' ? 'Spending' : 'Income'}
+                </button>
+              </span>
+              {editingAllocationId === allocation.allocation_id ? (
+                <InlineBudgetAmount
+                  allocation={allocation}
+                  busy={isBusy}
+                  onCancel={() => {
+                    onEdit(null)
+                    onAmountEditorOpenChange(false)
+                    onAmountEditorClosed(allocation.allocation_id)
+                  }}
+                  onUpdate={onUpdate}
+                />
+              ) : (
+                <button
+                  className="amount-cell"
+                  data-status-action="edit amount"
+                  data-status-label={`budget / ${allocation.category_name.toLocaleLowerCase()}`}
+                  disabled={isBusy}
+                  type="button"
+                  onClick={() => {
+                    onEdit(allocation.allocation_id)
+                    onAmountEditorOpenChange(true)
+                  }}
+                >
+                  {formatDisplayMoney(plannedAmount)}
+                </button>
+              )}
+              <span className="spent">{formatDisplayMoney(spentAmount)}</span>
+              <span className={remaining < 0 ? 'spent' : 'available'}>
+                {formatDisplayMoney(remaining)}
+              </span>
+            </div>
+          </div>
+        )
+      })}
+    </section>
+  )
 }
 
-function BudgetAllocationRow({
+function InlineBudgetAmount({
   allocation,
   busy,
-  onDragEnd,
-  onDragStart,
+  onCancel,
   onUpdate,
 }: {
   allocation: BudgetAllocation
   busy: boolean
-  onDragEnd: () => void
-  onDragStart: (item: DraggedBudgetItem) => void
+  onCancel: () => void
   onUpdate: (
     allocation: BudgetAllocation,
     magnitude: number,
-    direction?: BudgetDirection,
+    direction: BudgetDirection,
   ) => Promise<boolean>
 }) {
-  const plannedMagnitude = Math.abs(allocation.budgeted_amount)
-  const [magnitudeValue, setMagnitudeValue] = useState(plannedMagnitude.toFixed(2))
-  const isSaving = useRef(false)
-  const actualMagnitude =
-    allocation.direction === 'spending'
-      ? Math.max(0, -allocation.actual_amount)
-      : Math.max(0, allocation.actual_amount)
-  const progress =
-    plannedMagnitude === 0
-      ? 0
-      : Math.min(100, Math.round((actualMagnitude / plannedMagnitude) * 100))
+  const [magnitude, setMagnitude] = useState(
+    Math.abs(allocation.budgeted_amount).toFixed(2),
+  )
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const amountInputRef = useRef<HTMLInputElement>(null)
 
-  async function saveMagnitude(
-    direction: BudgetDirection = allocation.direction,
-  ): Promise<boolean> {
-    if (isSaving.current) {
-      return false
-    }
-    const parsed = parseMagnitude(magnitudeValue)
+  useEffect(() => {
+    amountInputRef.current?.focus()
+    amountInputRef.current?.select()
+  }, [])
+
+  function saveAmount() {
+    const parsed = parseMagnitude(magnitude)
     if (parsed === null) {
-      setMagnitudeValue(plannedMagnitude.toFixed(2))
-      return false
+      setErrorMessage('Enter an amount with no more than two decimal places.')
+      return
     }
-    if (
-      direction === allocation.direction &&
-      Math.round(parsed * 100) === Math.round(plannedMagnitude * 100)
-    ) {
-      setMagnitudeValue(parsed.toFixed(2))
-      return true
-    }
-    isSaving.current = true
-    const didSave = await onUpdate(allocation, parsed, direction)
-    isSaving.current = false
-    if (!didSave) {
-      setMagnitudeValue(plannedMagnitude.toFixed(2))
-    }
-    return didSave
+    onCancel()
+    void onUpdate(allocation, parsed, allocation.direction)
   }
 
   return (
-    <div
-      className={`row budget-item budget-item--${allocation.direction}`}
-      draggable={!busy}
-      onDragEnd={onDragEnd}
-      onDragStart={(event) => {
-        const item: DraggedBudgetItem = {
-          id: allocation.allocation_id,
-          type: 'allocation',
-        }
-        event.stopPropagation()
-        event.dataTransfer.effectAllowed = 'move'
-        event.dataTransfer.setData(
-          budgetDragType,
-          JSON.stringify(item),
-        )
-        onDragStart(item)
-      }}
-    >
-      <div className="row-main">
-        <span className="drag hover-reveal" aria-hidden="true">⠿</span>
-        <div>
-          <strong>{allocation.category_name}</strong>
-          <p>
-            {formatDisplayMoney(actualMagnitude)} of{' '}
-            {formatDisplayMoney(plannedMagnitude)}{' '}
-            {allocation.direction === 'spending' ? 'spent' : 'received'}
-          </p>
-        </div>
-      </div>
-      <div className="mini-segmented" aria-label={`${allocation.category_name} direction`}>
-        {(['spending', 'income'] as const).map((direction) => (
-          <button
-            aria-pressed={allocation.direction === direction}
-            className={allocation.direction === direction ? 'selected' : ''}
-            disabled={busy}
-            key={direction}
-            type="button"
-            onMouseDown={(event) => event.preventDefault()}
-            onClick={() => {
-              if (direction !== allocation.direction) {
-                void saveMagnitude(direction)
-              }
-            }}
-          >
-            {direction === 'spending' ? 'Spending' : 'Income'}
-          </button>
-        ))}
-      </div>
-      <div
-        aria-label={`${progress}% of planned ${allocation.direction}`}
-        className="progress"
-        role="progressbar"
-        aria-valuemax={100}
-        aria-valuemin={0}
-        aria-valuenow={progress}
-      >
-        <i style={{ width: `${progress}%` }} />
-      </div>
-      <MagnitudeInput
-        allocation={allocation}
-        busy={busy}
-        value={magnitudeValue}
-        onBlur={() => void saveMagnitude()}
-        onChange={setMagnitudeValue}
-        onReset={() => setMagnitudeValue(plannedMagnitude.toFixed(2))}
+    <div className="inline-amount-editor">
+      <input
+        autoFocus
+        aria-invalid={errorMessage ? 'true' : undefined}
+        className="amount-cell amount-cell--editing"
+        data-status-action="save amount"
+        data-status-label={`budget / ${allocation.category_name.toLocaleLowerCase()}`}
+        disabled={busy}
+        inputMode="decimal"
+        ref={amountInputRef}
+        type="text"
+        value={magnitude}
+        onChange={(event) => {
+          setMagnitude(event.target.value)
+          setErrorMessage(null)
+        }}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') {
+            event.preventDefault()
+            void saveAmount()
+          } else if (event.key === 'Escape') {
+            event.preventDefault()
+            onCancel()
+          }
+        }}
       />
+      {errorMessage && <span className="inline-error" role="alert">{errorMessage}</span>}
     </div>
-  )
-}
-
-function BudgetDropTarget({
-  onDrop,
-}: {
-  onDrop: (event: DragEvent) => void
-}) {
-  const [isActive, setIsActive] = useState(false)
-  return (
-    <div
-      className={`budget-drop-target${isActive ? ' active' : ''}`}
-      onDragEnter={(event) => {
-        event.preventDefault()
-        setIsActive(true)
-      }}
-      onDragLeave={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-          setIsActive(false)
-        }
-      }}
-      onDragOver={(event) => {
-        event.preventDefault()
-        event.dataTransfer.dropEffect = 'move'
-      }}
-      onDrop={(event) => {
-        event.preventDefault()
-        event.stopPropagation()
-        setIsActive(false)
-        onDrop(event)
-      }}
-    >
-      <span>Drop here</span>
-    </div>
-  )
-}
-
-function MagnitudeInput({
-  allocation,
-  busy,
-  value,
-  onBlur,
-  onChange,
-  onReset,
-}: {
-  allocation: BudgetAllocation
-  busy: boolean
-  value: string
-  onBlur: () => void
-  onChange: (value: string) => void
-  onReset: () => void
-}) {
-  return (
-    <input
-      aria-label={`${allocation.category_name} planned magnitude`}
-      className="amount-input"
-      disabled={busy}
-      inputMode="decimal"
-      type="text"
-      value={value}
-      onBlur={onBlur}
-      onChange={(event) => onChange(event.target.value)}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter') {
-          event.preventDefault()
-          event.currentTarget.blur()
-        }
-        if (event.key === 'Escape') {
-          onReset()
-          event.currentTarget.blur()
-        }
-      }}
-    />
   )
 }
