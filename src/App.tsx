@@ -225,6 +225,9 @@ function AuthenticatedShell({
   const [isAmountEditorOpen, setIsAmountEditorOpen] = useState(false)
   const [amountEditRequest, setAmountEditRequest] =
     useState<AmountEditRequest | null>(null)
+  const [focusedSemanticId, setFocusedSemanticId] = useState<string | null>(
+    'nav-budgets',
+  )
   const [focusedWorkspaceControl, setFocusedWorkspaceControl] = useState(1)
   const [workspaceControlCount, setWorkspaceControlCount] = useState(18)
   const [statusContext, setStatusContext] = useState<StatusContext>({
@@ -317,12 +320,17 @@ function AuthenticatedShell({
         activeElement instanceof HTMLElement
           ? activeElement.closest<HTMLElement>('[data-status-label]')
           : null
+      const activeSemanticNode =
+        activeElement instanceof HTMLElement
+          ? activeElement.closest<HTMLElement>('[data-semantic-id]')
+          : null
       setWorkspaceControlCount(controls.length)
       setFocusedWorkspaceControl(
         activeControl && controls.includes(activeControl)
           ? controls.indexOf(activeControl) + 1
           : 1,
       )
+      setFocusedSemanticId(activeSemanticNode?.dataset.semanticId ?? null)
       setStatusContext(getStatusContext(activeControl))
     }
     const scheduleFocusStatusUpdate = () => {
@@ -563,7 +571,9 @@ function AuthenticatedShell({
               <button
                 aria-current={activeView === item.view ? 'page' : undefined}
                 className={`nav-item${
-                  activeView === item.view ? ' is-active is-focused' : ''
+                  activeView === item.view ? ' is-active' : ''
+                }${
+                  focusedSemanticId === `nav-${item.view}` ? ' is-focused' : ''
                 }`}
                 data-semantic-id={`nav-${item.view}`}
                 data-semantic-region="sidebar"
@@ -606,6 +616,7 @@ function AuthenticatedShell({
             activityRevision={budgetActivityRevision}
             amountEditRequest={amountEditRequest}
             categoriesRevision={categoriesRevision}
+            focusedSemanticId={focusedSemanticId}
             selectedMonth={selectedMonth}
             onCategoriesChanged={handleCategoriesChanged}
             onAmountEditorClosed={(allocationId) => {

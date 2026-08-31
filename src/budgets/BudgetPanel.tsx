@@ -131,6 +131,7 @@ export function BudgetPanel({
   onCategoriesChanged,
   selectedMonth,
   onMonthChange,
+  focusedSemanticId,
   amountEditRequest,
   onAmountEditorClosed,
   onAmountEditorOpenChange,
@@ -140,6 +141,7 @@ export function BudgetPanel({
   onCategoriesChanged: () => void
   selectedMonth: string
   onMonthChange: (month: string) => void
+  focusedSemanticId: string | null
   amountEditRequest: AmountEditRequest | null
   onAmountEditorClosed: (allocationId: string) => void
   onAmountEditorOpenChange: (isOpen: boolean) => void
@@ -150,9 +152,6 @@ export function BudgetPanel({
   const [allocations, setAllocations] = useState<BudgetAllocation[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [uncategorizedCount, setUncategorizedCount] = useState(0)
-  const [selectedAllocationId, setSelectedAllocationId] = useState<string | null>(
-    null,
-  )
   const [editingAllocationId, setEditingAllocationId] = useState<string | null>(
     null,
   )
@@ -175,14 +174,6 @@ export function BudgetPanel({
       setAllocations(data.allocations)
       setCategories(data.categories)
       setUncategorizedCount(data.uncategorizedCount)
-      setSelectedAllocationId((current) =>
-        current &&
-        data.allocations.some(
-          (allocation) => allocation.allocation_id === current,
-        )
-          ? current
-          : (data.allocations[0]?.allocation_id ?? null),
-      )
       setEditingAllocationId(null)
       setErrorMessage(null)
     } catch (error) {
@@ -214,7 +205,6 @@ export function BudgetPanel({
       )
     ) {
       // oxlint-disable-next-line react/set-state-in-effect -- A semantic navigation request opens the matching row editor.
-      setSelectedAllocationId(amountEditRequest.allocationId)
       setEditingAllocationId(amountEditRequest.allocationId)
       onAmountEditorOpenChange(true)
     }
@@ -223,6 +213,7 @@ export function BudgetPanel({
   async function runMutation(
     id: string,
     mutation: () => PromiseLike<{ error: { message: string } | null }>,
+    refreshOnSuccess = true,
   ): Promise<boolean> {
     if (mutationBusy.current) {
       return false
@@ -236,7 +227,9 @@ export function BudgetPanel({
         setErrorMessage(error.message)
         return false
       }
-      await loadBudget()
+      if (refreshOnSuccess) {
+        await loadBudget()
+      }
       return true
     } catch (error) {
       setErrorMessage(
@@ -293,13 +286,39 @@ export function BudgetPanel({
     magnitude: number,
     direction: BudgetDirection,
   ): Promise<boolean> {
-    return runMutation(allocation.allocation_id, () =>
-      getSupabaseClient().rpc('update_budget_category_allocation', {
-        p_allocation_id: allocation.allocation_id,
-        p_magnitude: magnitude,
-        p_direction: direction,
-      }),
+    setAllocations((current) =>
+      current.map((candidate) =>
+        candidate.allocation_id === allocation.allocation_id
+          ? {
+              ...candidate,
+              budgeted_amount: magnitude,
+              direction,
+            }
+          : candidate,
+      ),
     )
+    const didSave = await runMutation(
+      allocation.allocation_id,
+      () =>
+        getSupabaseClient().rpc('update_budget_category_allocation', {
+          p_allocation_id: allocation.allocation_id,
+          p_magnitude: magnitude,
+          p_direction: direction,
+        }),
+      false,
+    )
+    if (!didSave) {
+      setAllocations((current) =>
+        current.map((candidate) =>
+          candidate.allocation_id === allocation.allocation_id
+            ? allocation
+            : candidate,
+        ),
+      )
+      return false
+    }
+    void loadBudget()
+    return true
   }
 
   const spendingAllocations = allocations.filter(
@@ -448,15 +467,14 @@ export function BudgetPanel({
                 allocations={allocations.filter(
                   (allocation) => allocation.subsection_id === null,
                 )}
-                busy={busyId !== null}
+                busyId={busyId}
                 editingAllocationId={editingAllocationId}
+                focusedSemanticId={focusedSemanticId}
                 name="Unsectioned"
                 onEdit={setEditingAllocationId}
                 onAmountEditorClosed={onAmountEditorClosed}
                 onAmountEditorOpenChange={onAmountEditorOpenChange}
-                onSelect={setSelectedAllocationId}
                 onUpdate={updateAllocation}
-                selectedAllocationId={selectedAllocationId}
               />
             )}
             {subsections.map((subsection) => (
@@ -464,16 +482,15 @@ export function BudgetPanel({
                 allocations={allocations.filter(
                   (allocation) => allocation.subsection_id === subsection.id,
                 )}
-                busy={busyId !== null}
+                busyId={busyId}
                 editingAllocationId={editingAllocationId}
+                focusedSemanticId={focusedSemanticId}
                 key={subsection.id}
                 name={subsection.name}
                 onEdit={setEditingAllocationId}
                 onAmountEditorClosed={onAmountEditorClosed}
                 onAmountEditorOpenChange={onAmountEditorOpenChange}
-                onSelect={setSelectedAllocationId}
                 onUpdate={updateAllocation}
-                selectedAllocationId={selectedAllocationId}
               />
             ))}
           </section>
@@ -504,30 +521,28 @@ function BudgetMetric({
 
 function BudgetGroup({
   allocations,
-  busy,
+  busyId,
   editingAllocationId,
+  focusedSemanticId,
   name,
   onEdit,
   onAmountEditorClosed,
   onAmountEditorOpenChange,
-  onSelect,
   onUpdate,
-  selectedAllocationId,
 }: {
   allocations: BudgetAllocation[]
-  busy: boolean
+  busyId: string | null
   editingAllocationId: string | null
+  focusedSemanticId: string | null
   name: string
   onEdit: (allocationId: string | null) => void
   onAmountEditorClosed: (allocationId: string) => void
   onAmountEditorOpenChange: (isOpen: boolean) => void
-  onSelect: (allocationId: string) => void
   onUpdate: (
     allocation: BudgetAllocation,
     magnitude: number,
     direction: BudgetDirection,
   ) => Promise<boolean>
-  selectedAllocationId: string | null
 }) {
   const planned = allocations.reduce(
     (sum, allocation) => sum + Math.abs(allocation.budgeted_amount),
@@ -542,12 +557,14 @@ function BudgetGroup({
       </header>
       {allocations.map((allocation) => {
         const plannedAmount = Math.abs(allocation.budgeted_amount)
+        const isBusy = busyId === allocation.allocation_id
         const spentAmount =
           allocation.direction === 'spending'
             ? Math.max(0, -allocation.actual_amount)
             : Math.max(0, allocation.actual_amount)
         const remaining = plannedAmount - spentAmount
-        const isSelected = allocation.allocation_id === selectedAllocationId
+        const isSelected =
+          focusedSemanticId === `budget-row-${allocation.allocation_id}`
         return (
           <div key={allocation.allocation_id}>
             <div
@@ -561,7 +578,6 @@ function BudgetGroup({
               data-status-label={`budget / ${allocation.category_name.toLocaleLowerCase()}`}
               id={`budget-row-${allocation.allocation_id}`}
               tabIndex={0}
-              onFocus={() => onSelect(allocation.allocation_id)}
             >
               <span className="category-name">
                 {isSelected ? <i className="selection-caret">›</i> : null}
@@ -571,7 +587,7 @@ function BudgetGroup({
                   className="direction-tag"
                   data-status-action="toggle direction"
                   data-status-label={`budget / ${allocation.category_name.toLocaleLowerCase()}`}
-                  disabled={busy}
+                  disabled={isBusy}
                   id={`direction-toggle-${allocation.allocation_id}`}
                   type="button"
                   onClick={() => {
@@ -590,7 +606,7 @@ function BudgetGroup({
               {editingAllocationId === allocation.allocation_id ? (
                 <InlineBudgetAmount
                   allocation={allocation}
-                  busy={busy}
+                  busy={isBusy}
                   onCancel={() => {
                     onEdit(null)
                     onAmountEditorOpenChange(false)
@@ -603,10 +619,9 @@ function BudgetGroup({
                   className="amount-cell"
                   data-status-action="edit amount"
                   data-status-label={`budget / ${allocation.category_name.toLocaleLowerCase()}`}
-                  disabled={busy}
+                  disabled={isBusy}
                   type="button"
                   onClick={() => {
-                    onSelect(allocation.allocation_id)
                     onEdit(allocation.allocation_id)
                     onAmountEditorOpenChange(true)
                   }}
@@ -652,16 +667,14 @@ function InlineBudgetAmount({
     amountInputRef.current?.select()
   }, [])
 
-  async function saveAmount() {
+  function saveAmount() {
     const parsed = parseMagnitude(magnitude)
     if (parsed === null) {
       setErrorMessage('Enter an amount with no more than two decimal places.')
       return
     }
-    const didSave = await onUpdate(allocation, parsed, allocation.direction)
-    if (didSave) {
-      onCancel()
-    }
+    onCancel()
+    void onUpdate(allocation, parsed, allocation.direction)
   }
 
   return (

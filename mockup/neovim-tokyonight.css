@@ -219,13 +219,14 @@ kbd {
 }
 
 .nav-item.is-active {
-  border-left-color: #7aa2f7;
-  background: #292e42;
-  color: #c0caf5;
+  color: #7dcfff;
 }
 
 .nav-item.is-focused {
   position: relative;
+  border-left-color: #7aa2f7;
+  background: #292e42;
+  color: #c0caf5;
   outline: 2px solid #7dcfff;
   outline-offset: -2px;
 }
@@ -771,9 +772,9 @@ body:has(#theme-light:checked) {
   color: #34548a;
 }
 
-.terminal-app:has(#theme-light:checked) .nav-item.is-active,
 .terminal-app:has(#theme-light:checked) .nav-item:hover,
 .terminal-app:has(#theme-light:checked) .nav-item:focus-visible,
+.terminal-app:has(#theme-light:checked) .nav-item.is-focused,
 .terminal-app:has(#theme-light:checked) .sidebar-section > a:hover,
 .terminal-app:has(#theme-light:checked) .sidebar-section > button:hover,
 .terminal-app:has(#theme-light:checked) .budget-row.is-selected,
