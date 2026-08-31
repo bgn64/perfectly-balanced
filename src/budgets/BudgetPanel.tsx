@@ -1,8 +1,11 @@
 import {
+  Fragment,
   useCallback,
   useEffect,
   useRef,
   useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type RefObject,
 } from 'react'
 import { CategoryCombobox } from '../finance/CategoryCombobox.tsx'
 import { collectPages } from '../finance/query.ts'
@@ -34,6 +37,79 @@ interface BudgetData {
 interface AmountEditRequest {
   allocationId: string
   sequence: number
+}
+
+export interface BudgetKeyboardAction {
+  action:
+    | 'start-delete'
+    | 'start-create'
+    | 'start-move'
+    | 'start-rename'
+    | 'previous'
+    | 'next'
+    | 'confirm'
+    | 'cancel'
+  semanticId: string | null
+  sequence: number
+}
+
+export interface BudgetKeyboardInteraction {
+  mode:
+    | 'confirm-delete'
+    | 'choose-create'
+    | 'name-entry'
+    | 'rename-entry'
+    | 'moving'
+  label: string
+}
+
+type BudgetEntry =
+  | {
+      allocation: BudgetAllocation
+      kind: 'allocation'
+      semanticId: string
+    }
+  | {
+      kind: 'subsection'
+      semanticId: string
+      subsection: BudgetSubsection
+    }
+
+interface PendingCreation {
+  kind: 'allocation' | 'subsection'
+  originSemanticId: string
+  position: number
+  subsectionId: string | null
+}
+
+interface MovingEntry {
+  entry: BudgetEntry
+  originalPosition: number
+  previewPosition: number
+}
+
+function moveWithin<T>(items: T[], from: number, to: number): T[] {
+  const reordered = [...items]
+  const [item] = reordered.splice(from, 1)
+  reordered.splice(to, 0, item)
+  return reordered
+}
+
+function trapDialogFocus(event: ReactKeyboardEvent<HTMLElement>) {
+  if (event.key !== 'Tab') {
+    return
+  }
+  const buttons = Array.from(
+    event.currentTarget.querySelectorAll<HTMLButtonElement>('button:not(:disabled)'),
+  )
+  const currentIndex = buttons.indexOf(document.activeElement as HTMLButtonElement)
+  const nextIndex =
+    currentIndex < 0
+      ? 0
+      : (currentIndex + (event.shiftKey ? -1 : 1) + buttons.length) %
+        buttons.length
+  event.preventDefault()
+  buttons[nextIndex]?.focus()
 }
 
 async function queryBudget(month: string): Promise<BudgetData> {
@@ -132,9 +208,11 @@ export function BudgetPanel({
   selectedMonth,
   onMonthChange,
   focusedSemanticId,
+  keyboardActionRequest,
   amountEditRequest,
   onAmountEditorClosed,
   onAmountEditorOpenChange,
+  onKeyboardInteractionChange,
 }: {
   categoriesRevision: number
   activityRevision: number
@@ -142,9 +220,13 @@ export function BudgetPanel({
   selectedMonth: string
   onMonthChange: (month: string) => void
   focusedSemanticId: string | null
+  keyboardActionRequest: BudgetKeyboardAction | null
   amountEditRequest: AmountEditRequest | null
   onAmountEditorClosed: (allocationId: string) => void
   onAmountEditorOpenChange: (isOpen: boolean) => void
+  onKeyboardInteractionChange: (
+    interaction: BudgetKeyboardInteraction | null,
+  ) => void
 }) {
   const { user } = useAuth()
   const [budget, setBudget] = useState<Budget | null>(null)
@@ -156,11 +238,30 @@ export function BudgetPanel({
     null,
   )
   const [isAddingCategory, setIsAddingCategory] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<BudgetEntry | null>(null)
+  const [deleteChoice, setDeleteChoice] = useState<'yes' | 'no'>('no')
+  const [creationTarget, setCreationTarget] = useState<BudgetEntry | null>(null)
+  const [creationKind, setCreationKind] = useState<'allocation' | 'subsection'>(
+    'allocation',
+  )
+  const [pendingCreation, setPendingCreation] =
+    useState<PendingCreation | null>(null)
+  const [pendingName, setPendingName] = useState('')
+  const [renameTarget, setRenameTarget] = useState<BudgetEntry | null>(null)
+  const [renameName, setRenameName] = useState('')
+  const [movingEntry, setMovingEntry] = useState<MovingEntry | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const requestGeneration = useRef(0)
   const mutationBusy = useRef(false)
+  const handledKeyboardActionSequence = useRef(0)
+  const deleteYesButtonRef = useRef<HTMLButtonElement>(null)
+  const deleteNoButtonRef = useRef<HTMLButtonElement>(null)
+  const createAllocationButtonRef = useRef<HTMLButtonElement>(null)
+  const createSubsectionButtonRef = useRef<HTMLButtonElement>(null)
+  const pendingNameInputRef = useRef<HTMLInputElement>(null)
+  const renameNameInputRef = useRef<HTMLInputElement>(null)
 
   const loadBudget = useCallback(async () => {
     const generation = ++requestGeneration.current
@@ -210,32 +311,40 @@ export function BudgetPanel({
     }
   }, [allocations, amountEditRequest, onAmountEditorOpenChange])
 
-  async function runMutation(
+  useEffect(
+    () => () => onKeyboardInteractionChange(null),
+    [onKeyboardInteractionChange],
+  )
+
+  async function runMutation<T = null>(
     id: string,
-    mutation: () => PromiseLike<{ error: { message: string } | null }>,
+    mutation: () => PromiseLike<{
+      data: T | null
+      error: { message: string } | null
+    }>,
     refreshOnSuccess = true,
-  ): Promise<boolean> {
+  ): Promise<{ data: T | null; didSave: boolean }> {
     if (mutationBusy.current) {
-      return false
+      return { data: null, didSave: false }
     }
     mutationBusy.current = true
     setBusyId(id)
     setErrorMessage(null)
     try {
-      const { error } = await mutation()
+      const { data, error } = await mutation()
       if (error) {
         setErrorMessage(error.message)
-        return false
+        return { data: null, didSave: false }
       }
       if (refreshOnSuccess) {
         await loadBudget()
       }
-      return true
+      return { data, didSave: true }
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : 'The budget change could not be saved.',
       )
-      return false
+      return { data: null, didSave: false }
     } finally {
       mutationBusy.current = false
       setBusyId(null)
@@ -267,7 +376,7 @@ export function BudgetPanel({
     if (!budget) {
       throw new Error('Create this month before adding categories.')
     }
-    const didSave = await runMutation('add-root', () =>
+    const { didSave } = await runMutation('add-root', () =>
       getSupabaseClient().rpc('create_budget_category_allocation', {
         p_budget_id: budget.id,
         p_category_id: category.id,
@@ -297,7 +406,7 @@ export function BudgetPanel({
           : candidate,
       ),
     )
-    const didSave = await runMutation(
+    const { didSave } = await runMutation(
       allocation.allocation_id,
       () =>
         getSupabaseClient().rpc('update_budget_category_allocation', {
@@ -321,6 +430,605 @@ export function BudgetPanel({
     return true
   }
 
+  function getEntryName(entry: BudgetEntry): string {
+    return entry.kind === 'allocation'
+      ? entry.allocation.category_name
+      : entry.subsection.name
+  }
+
+  function findBudgetEntry(semanticId: string | null): BudgetEntry | null {
+    if (!semanticId) {
+      return null
+    }
+    const allocation = allocations.find(
+      (candidate) => `budget-row-${candidate.allocation_id}` === semanticId,
+    )
+    if (allocation) {
+      return {
+        allocation,
+        kind: 'allocation',
+        semanticId,
+      }
+    }
+    const subsection = subsections.find(
+      (candidate) => `budget-subsection-${candidate.id}` === semanticId,
+    )
+    return subsection
+      ? {
+          kind: 'subsection',
+          semanticId,
+          subsection,
+        }
+      : null
+  }
+
+  function getNavigationEntries(): BudgetEntry[] {
+    const entries: BudgetEntry[] = allocations
+      .filter((allocation) => allocation.subsection_id === null)
+      .map((allocation) => ({
+        allocation,
+        kind: 'allocation',
+        semanticId: `budget-row-${allocation.allocation_id}`,
+      }))
+
+    for (const subsection of subsections) {
+      entries.push({
+        kind: 'subsection',
+        semanticId: `budget-subsection-${subsection.id}`,
+        subsection,
+      })
+      entries.push(
+        ...allocations
+          .filter((allocation) => allocation.subsection_id === subsection.id)
+          .map((allocation) => ({
+            allocation,
+            kind: 'allocation' as const,
+            semanticId: `budget-row-${allocation.allocation_id}`,
+          })),
+      )
+    }
+
+    return entries
+  }
+
+  function focusSemanticEntry(semanticId: string) {
+    window.requestAnimationFrame(() => {
+      document.getElementById(semanticId)?.focus()
+    })
+  }
+
+  function closeDeleteConfirmation() {
+    if (deleteTarget) {
+      focusSemanticEntry(deleteTarget.semanticId)
+    }
+    setDeleteTarget(null)
+    setDeleteChoice('no')
+  }
+
+  function closeCreation() {
+    const originSemanticId =
+      pendingCreation?.originSemanticId ?? creationTarget?.semanticId
+    setCreationTarget(null)
+    setPendingCreation(null)
+    setPendingName('')
+    if (originSemanticId) {
+      focusSemanticEntry(originSemanticId)
+    }
+  }
+
+  function closeRename() {
+    if (renameTarget) {
+      focusSemanticEntry(renameTarget.semanticId)
+    }
+    setRenameTarget(null)
+    setRenameName('')
+  }
+
+  function closeMove() {
+    if (movingEntry) {
+      focusSemanticEntry(movingEntry.entry.semanticId)
+    }
+    setMovingEntry(null)
+  }
+
+  function creationPosition(
+    target: BudgetEntry,
+    kind: 'allocation' | 'subsection',
+  ): PendingCreation {
+    if (kind === 'allocation') {
+      if (target.kind === 'subsection') {
+        return {
+          kind,
+          originSemanticId: target.semanticId,
+          position: 0,
+          subsectionId: target.subsection.id,
+        }
+      }
+      return {
+        kind,
+        originSemanticId: target.semanticId,
+        position: target.allocation.position + 1,
+        subsectionId: target.allocation.subsection_id,
+      }
+    }
+
+    if (target.kind === 'subsection') {
+      return {
+        kind,
+        originSemanticId: target.semanticId,
+        position: target.subsection.position + 1,
+        subsectionId: null,
+      }
+    }
+
+    const containingSubsection = target.allocation.subsection_id
+      ? subsections.find(
+          (subsection) => subsection.id === target.allocation.subsection_id,
+        )
+      : null
+    return {
+      kind,
+      originSemanticId: target.semanticId,
+      position: containingSubsection ? containingSubsection.position + 1 : 0,
+      subsectionId: null,
+    }
+  }
+
+  function beginPendingCreation(kind = creationKind) {
+    if (!creationTarget) {
+      return
+    }
+    setPendingName('')
+    setPendingCreation(creationPosition(creationTarget, kind))
+    setCreationTarget(null)
+  }
+
+  async function savePendingCreation() {
+    if (!pendingCreation || !budget) {
+      return
+    }
+    const name = pendingName.trim()
+    if (!name) {
+      setErrorMessage('Enter a name before saving.')
+      return
+    }
+
+    const result =
+      pendingCreation.kind === 'allocation'
+        ? await runMutation<string>(
+            'create-budget-line-item',
+            () =>
+              getSupabaseClient().rpc(
+                'create_budget_category_allocation_at_position',
+                {
+                  p_budget_id: budget.id,
+                  p_name: name,
+                  p_position: pendingCreation.position,
+                  p_subsection_id: pendingCreation.subsectionId,
+                },
+              ),
+          )
+        : await runMutation<string>(
+            'create-budget-subsection',
+            () =>
+              getSupabaseClient().rpc(
+                'create_budget_subsection_at_position',
+                {
+                  p_budget_id: budget.id,
+                  p_name: name,
+                  p_position: pendingCreation.position,
+                },
+              ),
+          )
+
+    if (!result.didSave || !result.data) {
+      return
+    }
+
+    const semanticId =
+      pendingCreation.kind === 'allocation'
+        ? `budget-row-${result.data}`
+        : `budget-subsection-${result.data}`
+    setPendingCreation(null)
+    setPendingName('')
+    if (pendingCreation.kind === 'allocation') {
+      onCategoriesChanged()
+    }
+    focusSemanticEntry(semanticId)
+  }
+
+  async function saveRename() {
+    if (!renameTarget) {
+      return
+    }
+    const name = renameName.trim()
+    if (!name) {
+      setErrorMessage('Enter a name before saving.')
+      return
+    }
+
+    const { didSave } =
+      renameTarget.kind === 'allocation'
+        ? await runMutation(
+            `rename-category-${renameTarget.allocation.category_id}`,
+            () =>
+              getSupabaseClient()
+                .from('categories')
+                .update({ name, updated_at: new Date().toISOString() })
+                .eq('id', renameTarget.allocation.category_id),
+          )
+        : await runMutation(
+            `rename-budget-subsection-${renameTarget.subsection.id}`,
+            () =>
+              getSupabaseClient().rpc('rename_budget_subsection', {
+                p_name: name,
+                p_subsection_id: renameTarget.subsection.id,
+              }),
+          )
+
+    if (!didSave) {
+      return
+    }
+    const semanticId = renameTarget.semanticId
+    const renamedCategory = renameTarget.kind === 'allocation'
+    setRenameTarget(null)
+    setRenameName('')
+    if (renamedCategory) {
+      onCategoriesChanged()
+    }
+    focusSemanticEntry(semanticId)
+  }
+
+  function nearestFocusAfterDelete(target: BudgetEntry): string {
+    const entries = getNavigationEntries()
+    const targetIndex = entries.findIndex(
+      (entry) => entry.semanticId === target.semanticId,
+    )
+    const isRemoved = (entry: BudgetEntry) =>
+      entry.semanticId === target.semanticId ||
+      (target.kind === 'subsection' &&
+        entry.kind === 'allocation' &&
+        entry.allocation.subsection_id === target.subsection.id)
+    const following = entries.slice(targetIndex + 1).find(
+      (entry) => !isRemoved(entry),
+    )
+    const previous = entries
+      .slice(0, targetIndex)
+      .toReversed()
+      .find((entry) => !isRemoved(entry))
+    return following?.semanticId ?? previous?.semanticId ?? 'add-category'
+  }
+
+  async function confirmDelete(choice = deleteChoice) {
+    if (!deleteTarget) {
+      return
+    }
+    if (choice === 'no') {
+      closeDeleteConfirmation()
+      return
+    }
+
+    const focusAfterDelete = nearestFocusAfterDelete(deleteTarget)
+    const { didSave } = await runMutation(
+      deleteTarget.kind === 'allocation'
+        ? `delete-budget-row-${deleteTarget.allocation.allocation_id}`
+        : `delete-budget-subsection-${deleteTarget.subsection.id}`,
+      () =>
+        getSupabaseClient().rpc(
+          deleteTarget.kind === 'allocation'
+            ? 'remove_budget_allocation'
+            : 'delete_budget_subsection',
+          deleteTarget.kind === 'allocation'
+            ? { p_allocation_id: deleteTarget.allocation.allocation_id }
+            : { p_subsection_id: deleteTarget.subsection.id },
+        ),
+    )
+    if (!didSave) {
+      return
+    }
+    setDeleteTarget(null)
+    setDeleteChoice('no')
+    focusSemanticEntry(focusAfterDelete)
+  }
+
+  function movableEntryLength(entry: BudgetEntry): number {
+    return entry.kind === 'allocation'
+      ? allocations.filter(
+          (allocation) =>
+            allocation.subsection_id === entry.allocation.subsection_id,
+        ).length
+      : subsections.length
+  }
+
+  function startMove(entry: BudgetEntry) {
+    const sourcePosition =
+      entry.kind === 'allocation'
+        ? entry.allocation.position
+        : entry.subsection.position
+    setMovingEntry({
+      entry,
+      originalPosition: sourcePosition,
+      previewPosition: sourcePosition,
+    })
+  }
+
+  function movePreview(direction: 1 | -1) {
+    setMovingEntry((current) => {
+      if (!current) {
+        return current
+      }
+      return {
+        ...current,
+        previewPosition: Math.max(
+          0,
+          Math.min(
+            movableEntryLength(current.entry) - 1,
+            current.previewPosition + direction,
+          ),
+        ),
+      }
+    })
+  }
+
+  async function confirmMove() {
+    if (!movingEntry) {
+      return
+    }
+    if (movingEntry.previewPosition === movingEntry.originalPosition) {
+      closeMove()
+      return
+    }
+
+    const { entry, previewPosition } = movingEntry
+    const { didSave } = await runMutation(
+      entry.kind === 'allocation'
+        ? `move-budget-row-${entry.allocation.allocation_id}`
+        : `move-budget-subsection-${entry.subsection.id}`,
+      () =>
+        entry.kind === 'allocation'
+          ? getSupabaseClient().rpc('place_budget_category_allocation', {
+              p_allocation_id: entry.allocation.allocation_id,
+              p_position: previewPosition,
+              p_subsection_id: entry.allocation.subsection_id,
+            })
+          : getSupabaseClient().rpc('place_budget_subsection', {
+              p_position: previewPosition,
+              p_subsection_id: entry.subsection.id,
+            }),
+    )
+    if (!didSave) {
+      return
+    }
+    setMovingEntry(null)
+    focusSemanticEntry(entry.semanticId)
+  }
+
+  useEffect(() => {
+    if (deleteTarget) {
+      onKeyboardInteractionChange({
+        label: `delete ${getEntryName(deleteTarget).toLocaleLowerCase()}`,
+        mode: 'confirm-delete',
+      })
+      return
+    }
+    if (creationTarget) {
+      onKeyboardInteractionChange({
+        label: `create below ${getEntryName(creationTarget).toLocaleLowerCase()}`,
+        mode: 'choose-create',
+      })
+      return
+    }
+    if (pendingCreation) {
+      onKeyboardInteractionChange({
+        label:
+          pendingCreation.kind === 'allocation'
+            ? 'name budget line item'
+            : 'name subsection',
+        mode: 'name-entry',
+      })
+      return
+    }
+    if (renameTarget) {
+      onKeyboardInteractionChange({
+        label: `rename ${getEntryName(renameTarget).toLocaleLowerCase()}`,
+        mode: 'rename-entry',
+      })
+      return
+    }
+    if (movingEntry) {
+      onKeyboardInteractionChange({
+        label: `move ${getEntryName(movingEntry.entry).toLocaleLowerCase()}`,
+        mode: 'moving',
+      })
+      return
+    }
+    onKeyboardInteractionChange(null)
+  }, [
+    creationTarget,
+    deleteTarget,
+    movingEntry,
+    onKeyboardInteractionChange,
+    pendingCreation,
+    renameTarget,
+  ])
+
+  useEffect(() => {
+    if (!deleteTarget && !creationTarget && !pendingCreation && !renameTarget) {
+      return
+    }
+    window.requestAnimationFrame(() => {
+      if (deleteTarget) {
+        const selectedDeleteButton = deleteChoice === 'yes'
+          ? deleteYesButtonRef.current
+          : deleteNoButtonRef.current
+        selectedDeleteButton?.focus()
+        return
+      }
+      if (creationTarget) {
+        const selectedCreationButton = creationKind === 'allocation'
+          ? createAllocationButtonRef.current
+          : createSubsectionButtonRef.current
+        selectedCreationButton?.focus()
+        return
+      }
+      if (pendingCreation) {
+        pendingNameInputRef.current?.focus()
+        return
+      }
+      renameNameInputRef.current?.focus()
+    })
+  }, [
+    creationKind,
+    creationTarget,
+    deleteChoice,
+    deleteTarget,
+    pendingCreation,
+    renameTarget,
+  ])
+
+  useEffect(() => {
+    if (
+      !keyboardActionRequest ||
+      keyboardActionRequest.sequence === handledKeyboardActionSequence.current
+    ) {
+      return
+    }
+    handledKeyboardActionSequence.current = keyboardActionRequest.sequence
+
+    if (keyboardActionRequest.action === 'start-delete') {
+      if (
+        deleteTarget ||
+        creationTarget ||
+        pendingCreation ||
+        renameTarget ||
+        movingEntry
+      ) {
+        return
+      }
+      const target = findBudgetEntry(keyboardActionRequest.semanticId)
+      if (target) {
+        // oxlint-disable-next-line react/set-state-in-effect -- This effect applies a parent keyboard action request to local interaction state.
+        setDeleteTarget(target)
+        setDeleteChoice('no')
+      }
+      return
+    }
+
+    if (keyboardActionRequest.action === 'start-create') {
+      if (
+        deleteTarget ||
+        creationTarget ||
+        pendingCreation ||
+        renameTarget ||
+        movingEntry
+      ) {
+        return
+      }
+      const target = findBudgetEntry(keyboardActionRequest.semanticId)
+      if (target) {
+        setCreationTarget(target)
+        setCreationKind('allocation')
+      }
+      return
+    }
+
+    if (keyboardActionRequest.action === 'start-move') {
+      if (
+        deleteTarget ||
+        creationTarget ||
+        pendingCreation ||
+        renameTarget ||
+        movingEntry
+      ) {
+        return
+      }
+      const target = findBudgetEntry(keyboardActionRequest.semanticId)
+      if (target) {
+        startMove(target)
+      }
+      return
+    }
+
+    if (keyboardActionRequest.action === 'start-rename') {
+      if (
+        deleteTarget ||
+        creationTarget ||
+        pendingCreation ||
+        renameTarget ||
+        movingEntry
+      ) {
+        return
+      }
+      const target = findBudgetEntry(keyboardActionRequest.semanticId)
+      if (target) {
+        setRenameTarget(target)
+        setRenameName(getEntryName(target))
+      }
+      return
+    }
+
+    if (keyboardActionRequest.action === 'previous') {
+      if (deleteTarget) {
+        setDeleteChoice((choice) => (choice === 'yes' ? 'no' : 'yes'))
+      } else if (creationTarget) {
+        setCreationKind((kind) =>
+          kind === 'allocation' ? 'subsection' : 'allocation',
+        )
+      } else if (movingEntry) {
+        movePreview(-1)
+      }
+      return
+    }
+
+    if (keyboardActionRequest.action === 'next') {
+      if (deleteTarget) {
+        setDeleteChoice((choice) => (choice === 'yes' ? 'no' : 'yes'))
+      } else if (creationTarget) {
+        setCreationKind((kind) =>
+          kind === 'allocation' ? 'subsection' : 'allocation',
+        )
+      } else if (movingEntry) {
+        movePreview(1)
+      }
+      return
+    }
+
+    if (keyboardActionRequest.action === 'confirm') {
+      if (deleteTarget) {
+        void confirmDelete()
+      } else if (creationTarget) {
+        beginPendingCreation()
+      } else if (movingEntry) {
+        void confirmMove()
+      }
+      return
+    }
+
+    if (keyboardActionRequest.action === 'cancel') {
+      if (deleteTarget) {
+        closeDeleteConfirmation()
+      } else if (creationTarget || pendingCreation) {
+        closeCreation()
+      } else if (renameTarget) {
+        closeRename()
+      } else if (movingEntry) {
+        closeMove()
+      }
+    }
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- The request sequence is the effect trigger; render-local helpers use the listed state.
+  }, [
+    allocations,
+    creationKind,
+    creationTarget,
+    deleteChoice,
+    deleteTarget,
+    keyboardActionRequest,
+    movingEntry,
+    pendingCreation,
+    renameTarget,
+    subsections,
+  ])
+
   const spendingAllocations = allocations.filter(
     (allocation) => allocation.direction === 'spending',
   )
@@ -335,6 +1043,44 @@ export function BudgetPanel({
   const allocatedCategoryIds = allocations.map(
     (allocation) => allocation.category_id,
   )
+  const rootAllocations = allocations.filter(
+    (allocation) => allocation.subsection_id === null,
+  )
+  const displayedSubsections =
+    movingEntry?.entry.kind === 'subsection'
+      ? moveWithin(
+          subsections,
+          movingEntry.originalPosition,
+          movingEntry.previewPosition,
+        )
+      : subsections
+
+  function allocationsForSubsection(subsectionId: string | null) {
+    const groupAllocations = allocations.filter(
+      (allocation) => allocation.subsection_id === subsectionId,
+    )
+    return movingEntry?.entry.kind === 'allocation' &&
+      movingEntry.entry.allocation.subsection_id === subsectionId
+      ? moveWithin(
+          groupAllocations,
+          movingEntry.originalPosition,
+          movingEntry.previewPosition,
+        )
+      : groupAllocations
+  }
+
+  function renderPendingSubsection() {
+    return (
+      <PendingSubsection
+        busy={busyId !== null}
+        name={pendingName}
+        nameInputRef={pendingNameInputRef}
+        onCancel={closeCreation}
+        onNameChange={setPendingName}
+        onSave={() => void savePendingCreation()}
+      />
+    )
+  }
 
   return (
     <>
@@ -462,39 +1208,113 @@ export function BudgetPanel({
               <span>Spent</span>
               <span>Remaining</span>
             </div>
-            {allocations.some((allocation) => allocation.subsection_id === null) && (
+            {(rootAllocations.length > 0 ||
+              (pendingCreation?.kind === 'allocation' &&
+                pendingCreation.subsectionId === null)) && (
               <BudgetGroup
-                allocations={allocations.filter(
-                  (allocation) => allocation.subsection_id === null,
-                )}
+                allocations={allocationsForSubsection(null)}
                 busyId={busyId}
                 editingAllocationId={editingAllocationId}
                 focusedSemanticId={focusedSemanticId}
+                movingEntry={movingEntry}
                 name="Unsectioned"
                 onEdit={setEditingAllocationId}
                 onAmountEditorClosed={onAmountEditorClosed}
                 onAmountEditorOpenChange={onAmountEditorOpenChange}
                 onUpdate={updateAllocation}
+                pendingCreation={
+                  pendingCreation?.kind === 'allocation' &&
+                  pendingCreation.subsectionId === null
+                    ? pendingCreation
+                    : null
+                }
+                pendingName={pendingName}
+                pendingNameInputRef={pendingNameInputRef}
+                renameName={renameName}
+                renameNameInputRef={renameNameInputRef}
+                renameTarget={renameTarget}
+                showHeader={false}
+                subsection={null}
+                onPendingCreationCancel={closeCreation}
+                onPendingNameChange={setPendingName}
+                onPendingNameSave={() => void savePendingCreation()}
+                onRenameCancel={closeRename}
+                onRenameNameChange={setRenameName}
+                onRenameSave={() => void saveRename()}
               />
             )}
-            {subsections.map((subsection) => (
-              <BudgetGroup
-                allocations={allocations.filter(
-                  (allocation) => allocation.subsection_id === subsection.id,
-                )}
-                busyId={busyId}
-                editingAllocationId={editingAllocationId}
-                focusedSemanticId={focusedSemanticId}
-                key={subsection.id}
-                name={subsection.name}
-                onEdit={setEditingAllocationId}
-                onAmountEditorClosed={onAmountEditorClosed}
-                onAmountEditorOpenChange={onAmountEditorOpenChange}
-                onUpdate={updateAllocation}
-              />
+            {displayedSubsections.map((subsection, index) => (
+              <Fragment key={subsection.id}>
+                {pendingCreation?.kind === 'subsection' &&
+                  pendingCreation.position === index &&
+                  renderPendingSubsection()}
+                <BudgetGroup
+                  allocations={allocationsForSubsection(subsection.id)}
+                  busyId={busyId}
+                  editingAllocationId={editingAllocationId}
+                  focusedSemanticId={focusedSemanticId}
+                  movingEntry={movingEntry}
+                  name={subsection.name}
+                  onEdit={setEditingAllocationId}
+                  onAmountEditorClosed={onAmountEditorClosed}
+                  onAmountEditorOpenChange={onAmountEditorOpenChange}
+                  onUpdate={updateAllocation}
+                  pendingCreation={
+                    pendingCreation?.kind === 'allocation' &&
+                    pendingCreation.subsectionId === subsection.id
+                      ? pendingCreation
+                      : null
+                  }
+                  pendingName={pendingName}
+                  pendingNameInputRef={pendingNameInputRef}
+                  renameName={renameName}
+                  renameNameInputRef={renameNameInputRef}
+                  renameTarget={renameTarget}
+                  showHeader
+                  subsection={subsection}
+                  onPendingCreationCancel={closeCreation}
+                  onPendingNameChange={setPendingName}
+                  onPendingNameSave={() => void savePendingCreation()}
+                  onRenameCancel={closeRename}
+                  onRenameNameChange={setRenameName}
+                  onRenameSave={() => void saveRename()}
+                />
+              </Fragment>
             ))}
+            {pendingCreation?.kind === 'subsection' &&
+              pendingCreation.position === displayedSubsections.length &&
+              renderPendingSubsection()}
           </section>
         </>
+      )}
+      {deleteTarget && (
+        <BudgetActionDialog
+          deleteChoice={deleteChoice}
+          deleteYesButtonRef={deleteYesButtonRef}
+          deleteNoButtonRef={deleteNoButtonRef}
+          entry={deleteTarget}
+          allocationCount={
+            deleteTarget.kind === 'subsection'
+              ? allocations.filter(
+                  (allocation) =>
+                    allocation.subsection_id === deleteTarget.subsection.id,
+                ).length
+              : 0
+          }
+          onCancel={closeDeleteConfirmation}
+          onChoose={setDeleteChoice}
+          onConfirm={(choice) => void confirmDelete(choice)}
+        />
+      )}
+      {creationTarget && (
+        <CreateBudgetEntryDialog
+          allocationButtonRef={createAllocationButtonRef}
+          creationKind={creationKind}
+          entry={creationTarget}
+          subsectionButtonRef={createSubsectionButtonRef}
+          onChoose={setCreationKind}
+          onConfirm={beginPendingCreation}
+        />
       )}
     </>
   )
@@ -524,120 +1344,572 @@ function BudgetGroup({
   busyId,
   editingAllocationId,
   focusedSemanticId,
+  movingEntry,
   name,
   onEdit,
   onAmountEditorClosed,
   onAmountEditorOpenChange,
+  onPendingCreationCancel,
+  onPendingNameChange,
+  onPendingNameSave,
+  onRenameCancel,
+  onRenameNameChange,
+  onRenameSave,
   onUpdate,
+  pendingCreation,
+  pendingName,
+  pendingNameInputRef,
+  renameName,
+  renameNameInputRef,
+  renameTarget,
+  showHeader,
+  subsection,
 }: {
   allocations: BudgetAllocation[]
   busyId: string | null
   editingAllocationId: string | null
   focusedSemanticId: string | null
+  movingEntry: MovingEntry | null
   name: string
   onEdit: (allocationId: string | null) => void
   onAmountEditorClosed: (allocationId: string) => void
   onAmountEditorOpenChange: (isOpen: boolean) => void
+  onPendingCreationCancel: () => void
+  onPendingNameChange: (name: string) => void
+  onPendingNameSave: () => void
+  onRenameCancel: () => void
+  onRenameNameChange: (name: string) => void
+  onRenameSave: () => void
   onUpdate: (
     allocation: BudgetAllocation,
     magnitude: number,
     direction: BudgetDirection,
   ) => Promise<boolean>
+  pendingCreation: PendingCreation | null
+  pendingName: string
+  pendingNameInputRef: RefObject<HTMLInputElement | null>
+  renameName: string
+  renameNameInputRef: RefObject<HTMLInputElement | null>
+  renameTarget: BudgetEntry | null
+  showHeader: boolean
+  subsection: BudgetSubsection | null
 }) {
   const planned = allocations.reduce(
     (sum, allocation) => sum + Math.abs(allocation.budgeted_amount),
     0,
   )
+  const subsectionSemanticId = subsection
+    ? `budget-subsection-${subsection.id}`
+    : null
+  const isSubsectionSelected =
+    subsectionSemanticId !== null && focusedSemanticId === subsectionSemanticId
+  const isSubsectionRenaming =
+    renameTarget?.kind === 'subsection' &&
+    renameTarget.subsection.id === subsection?.id
+  const isSubsectionPickedUp =
+    movingEntry?.entry.kind === 'subsection' &&
+    movingEntry.entry.subsection.id === subsection?.id
+  const displayedAllocations: Array<BudgetAllocation | null> = [...allocations]
+  if (pendingCreation) {
+    displayedAllocations.splice(pendingCreation.position, 0, null)
+  }
 
   return (
-    <section className="budget-group">
-      <header>
-        <h3><span>⌄</span> {name}</h3>
-        <strong>{formatDisplayMoney(planned)}</strong>
-      </header>
-      {allocations.map((allocation) => {
-        const plannedAmount = Math.abs(allocation.budgeted_amount)
-        const isBusy = busyId === allocation.allocation_id
-        const spentAmount =
-          allocation.direction === 'spending'
-            ? Math.max(0, -allocation.actual_amount)
-            : Math.max(0, allocation.actual_amount)
-        const remaining = plannedAmount - spentAmount
-        const isSelected =
-          focusedSemanticId === `budget-row-${allocation.allocation_id}`
-        return (
-          <div key={allocation.allocation_id}>
-            <div
-              aria-current={isSelected ? 'true' : undefined}
-              className={`budget-row${isSelected ? ' is-selected' : ''}`}
-              data-allocation-id={allocation.allocation_id}
-              data-semantic-id={`budget-row-${allocation.allocation_id}`}
-              data-semantic-kind="budget-row"
-              data-semantic-region="workspace"
-              data-status-action="amount"
-              data-status-label={`budget / ${allocation.category_name.toLocaleLowerCase()}`}
-              id={`budget-row-${allocation.allocation_id}`}
-              tabIndex={0}
-            >
-              <span className="category-name">
-                {isSelected ? <i className="selection-caret">›</i> : null}
-                {allocation.category_name}
-                <button
-                  aria-label={`Toggle ${allocation.category_name} between spending and income`}
-                  className="direction-tag"
-                  data-status-action="toggle direction"
-                  data-status-label={`budget / ${allocation.category_name.toLocaleLowerCase()}`}
-                  disabled={isBusy}
-                  id={`direction-toggle-${allocation.allocation_id}`}
-                  type="button"
-                  onClick={() => {
-                    onEdit(null)
-                    onAmountEditorOpenChange(false)
-                    void onUpdate(
-                      allocation,
-                      plannedAmount,
-                      allocation.direction === 'spending' ? 'income' : 'spending',
-                    )
+    <section
+      className={`budget-group${showHeader ? '' : ' budget-group--root'}${
+        isSubsectionPickedUp ? ' is-picked-up' : ''
+      }`}
+    >
+      {showHeader && (
+        <header
+          aria-current={
+            isSubsectionSelected || isSubsectionRenaming ? 'true' : undefined
+          }
+          className={`budget-subsection-head${
+            isSubsectionSelected || isSubsectionRenaming ? ' is-selected' : ''
+          }`}
+          data-semantic-id={subsectionSemanticId ?? undefined}
+          data-semantic-kind={subsection ? 'budget-subsection' : undefined}
+          data-semantic-region={subsection ? 'workspace' : undefined}
+          data-status-action={subsection ? 'subsection' : undefined}
+          data-status-label={
+            subsection
+              ? `budget / ${subsection.name.toLocaleLowerCase()}`
+              : undefined
+          }
+          id={subsectionSemanticId ?? undefined}
+          tabIndex={subsection ? 0 : undefined}
+        >
+          <h3>
+            {isSubsectionRenaming ? (
+              <>
+                <i className="selection-caret">›</i>
+                <input
+                  aria-label="Subsection name"
+                  className="pending-budget-name-input"
+                  disabled={busyId !== null}
+                  maxLength={100}
+                  ref={renameNameInputRef}
+                  type="text"
+                  value={renameName}
+                  onChange={(event) => onRenameNameChange(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault()
+                      onRenameSave()
+                    } else if (event.key === 'Escape') {
+                      event.preventDefault()
+                      onRenameCancel()
+                    }
                   }}
-                >
-                  {allocation.direction === 'spending' ? 'Spending' : 'Income'}
-                </button>
-              </span>
-              {editingAllocationId === allocation.allocation_id ? (
-                <InlineBudgetAmount
-                  allocation={allocation}
-                  busy={isBusy}
-                  onCancel={() => {
-                    onEdit(null)
-                    onAmountEditorOpenChange(false)
-                    onAmountEditorClosed(allocation.allocation_id)
-                  }}
-                  onUpdate={onUpdate}
                 />
-              ) : (
-                <button
-                  className="amount-cell"
-                  data-status-action="edit amount"
-                  data-status-label={`budget / ${allocation.category_name.toLocaleLowerCase()}`}
-                  disabled={isBusy}
-                  type="button"
-                  onClick={() => {
-                    onEdit(allocation.allocation_id)
-                    onAmountEditorOpenChange(true)
-                  }}
-                >
-                  {formatDisplayMoney(plannedAmount)}
-                </button>
-              )}
-              <span className="spent">{formatDisplayMoney(spentAmount)}</span>
-              <span className={remaining < 0 ? 'spent' : 'available'}>
-                {formatDisplayMoney(remaining)}
-              </span>
-            </div>
-          </div>
-        )
-      })}
+              </>
+            ) : (
+              <>
+                {isSubsectionSelected ? (
+                  <i className="selection-caret">›</i>
+                ) : (
+                  <span>⌄</span>
+                )}
+                {name}
+              </>
+            )}
+          </h3>
+          <strong>{formatDisplayMoney(planned)}</strong>
+        </header>
+      )}
+      {displayedAllocations.map((allocation, index) =>
+        allocation ? (
+          <BudgetAllocationRow
+            allocation={allocation}
+            busyId={busyId}
+            editingAllocationId={editingAllocationId}
+            focusedSemanticId={focusedSemanticId}
+            isPickedUp={
+              movingEntry?.entry.kind === 'allocation' &&
+              movingEntry.entry.allocation.allocation_id ===
+                allocation.allocation_id
+            }
+            isRenaming={
+              renameTarget?.kind === 'allocation' &&
+              renameTarget.allocation.allocation_id === allocation.allocation_id
+            }
+            isSectioned={subsection !== null}
+            key={allocation.allocation_id}
+            onEdit={onEdit}
+            onAmountEditorClosed={onAmountEditorClosed}
+            onAmountEditorOpenChange={onAmountEditorOpenChange}
+            onRenameCancel={onRenameCancel}
+            onRenameNameChange={onRenameNameChange}
+            onRenameSave={onRenameSave}
+            onUpdate={onUpdate}
+            renameName={renameName}
+            renameNameInputRef={renameNameInputRef}
+          />
+        ) : (
+          <PendingBudgetAllocation
+            busy={busyId !== null}
+            isSectioned={subsection !== null}
+            key={`pending-allocation-${index}`}
+            name={pendingName}
+            nameInputRef={pendingNameInputRef}
+            onCancel={onPendingCreationCancel}
+            onNameChange={onPendingNameChange}
+            onSave={onPendingNameSave}
+          />
+        ),
+      )}
     </section>
+  )
+}
+
+function BudgetAllocationRow({
+  allocation,
+  busyId,
+  editingAllocationId,
+  focusedSemanticId,
+  isPickedUp,
+  isRenaming,
+  isSectioned,
+  onEdit,
+  onAmountEditorClosed,
+  onAmountEditorOpenChange,
+  onRenameCancel,
+  onRenameNameChange,
+  onRenameSave,
+  onUpdate,
+  renameName,
+  renameNameInputRef,
+}: {
+  allocation: BudgetAllocation
+  busyId: string | null
+  editingAllocationId: string | null
+  focusedSemanticId: string | null
+  isPickedUp: boolean
+  isRenaming: boolean
+  isSectioned: boolean
+  onEdit: (allocationId: string | null) => void
+  onAmountEditorClosed: (allocationId: string) => void
+  onAmountEditorOpenChange: (isOpen: boolean) => void
+  onRenameCancel: () => void
+  onRenameNameChange: (name: string) => void
+  onRenameSave: () => void
+  onUpdate: (
+    allocation: BudgetAllocation,
+    magnitude: number,
+    direction: BudgetDirection,
+  ) => Promise<boolean>
+  renameName: string
+  renameNameInputRef: RefObject<HTMLInputElement | null>
+}) {
+  const plannedAmount = Math.abs(allocation.budgeted_amount)
+  const isBusy = busyId === allocation.allocation_id
+  const spentAmount =
+    allocation.direction === 'spending'
+      ? Math.max(0, -allocation.actual_amount)
+      : Math.max(0, allocation.actual_amount)
+  const remaining = plannedAmount - spentAmount
+  const isSelected =
+    focusedSemanticId === `budget-row-${allocation.allocation_id}` ||
+    isRenaming
+
+  return (
+    <div
+      aria-current={isSelected ? 'true' : undefined}
+      className={`budget-row${isSectioned ? ' budget-row--sectioned' : ''}${
+        isSelected ? ' is-selected' : ''
+      }${
+        isPickedUp ? ' is-picked-up' : ''
+      }`}
+      data-allocation-id={allocation.allocation_id}
+      data-semantic-id={`budget-row-${allocation.allocation_id}`}
+      data-semantic-kind="budget-row"
+      data-semantic-region="workspace"
+      data-status-action="amount"
+      data-status-label={`budget / ${allocation.category_name.toLocaleLowerCase()}`}
+      id={`budget-row-${allocation.allocation_id}`}
+      tabIndex={0}
+    >
+      <span className="category-name">
+        {isSelected ? <i className="selection-caret">›</i> : null}
+        {isRenaming ? (
+          <input
+            aria-label="Budget line item name"
+            className="pending-budget-name-input"
+            disabled={isBusy}
+            maxLength={100}
+            ref={renameNameInputRef}
+            type="text"
+            value={renameName}
+            onChange={(event) => onRenameNameChange(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault()
+                onRenameSave()
+              } else if (event.key === 'Escape') {
+                event.preventDefault()
+                onRenameCancel()
+              }
+            }}
+          />
+        ) : (
+          allocation.category_name
+        )}
+        <button
+          aria-label={`Toggle ${allocation.category_name} between spending and income`}
+          className="direction-tag"
+          data-status-action="toggle direction"
+          data-status-label={`budget / ${allocation.category_name.toLocaleLowerCase()}`}
+          disabled={isBusy}
+          id={`direction-toggle-${allocation.allocation_id}`}
+          type="button"
+          onClick={() => {
+            onEdit(null)
+            onAmountEditorOpenChange(false)
+            void onUpdate(
+              allocation,
+              plannedAmount,
+              allocation.direction === 'spending' ? 'income' : 'spending',
+            )
+          }}
+        >
+          {allocation.direction === 'spending' ? 'Spending' : 'Income'}
+        </button>
+      </span>
+      {editingAllocationId === allocation.allocation_id ? (
+        <InlineBudgetAmount
+          allocation={allocation}
+          busy={isBusy}
+          onCancel={() => {
+            onEdit(null)
+            onAmountEditorOpenChange(false)
+            onAmountEditorClosed(allocation.allocation_id)
+          }}
+          onUpdate={onUpdate}
+        />
+      ) : (
+        <button
+          className="amount-cell"
+          data-status-action="edit amount"
+          data-status-label={`budget / ${allocation.category_name.toLocaleLowerCase()}`}
+          disabled={isBusy}
+          type="button"
+          onClick={() => {
+            onEdit(allocation.allocation_id)
+            onAmountEditorOpenChange(true)
+          }}
+        >
+          {formatDisplayMoney(plannedAmount)}
+        </button>
+      )}
+      <span className="spent">{formatDisplayMoney(spentAmount)}</span>
+      <span className={remaining < 0 ? 'spent' : 'available'}>
+        {formatDisplayMoney(remaining)}
+      </span>
+    </div>
+  )
+}
+
+function PendingBudgetAllocation({
+  busy,
+  isSectioned,
+  name,
+  nameInputRef,
+  onCancel,
+  onNameChange,
+  onSave,
+}: {
+  busy: boolean
+  isSectioned: boolean
+  name: string
+  nameInputRef: RefObject<HTMLInputElement | null>
+  onCancel: () => void
+  onNameChange: (name: string) => void
+  onSave: () => void
+}) {
+  return (
+    <div
+      className={`budget-row is-selected pending-budget-entry${
+        isSectioned ? ' budget-row--sectioned' : ''
+      }`}
+    >
+      <span className="category-name">
+        <i className="selection-caret">›</i>
+        <input
+          aria-label="New budget line item name"
+          className="pending-budget-name-input"
+          disabled={busy}
+          maxLength={100}
+          placeholder="Name this budget line item"
+          ref={nameInputRef}
+          type="text"
+          value={name}
+          onChange={(event) => onNameChange(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault()
+              onSave()
+            } else if (event.key === 'Escape') {
+              event.preventDefault()
+              onCancel()
+            }
+          }}
+        />
+        <button className="direction-tag" disabled type="button">
+          Spending
+        </button>
+      </span>
+      <span className="amount-cell">$0</span>
+      <span className="spent">$0</span>
+      <span className="available">$0</span>
+    </div>
+  )
+}
+
+function PendingSubsection({
+  busy,
+  name,
+  nameInputRef,
+  onCancel,
+  onNameChange,
+  onSave,
+}: {
+  busy: boolean
+  name: string
+  nameInputRef: RefObject<HTMLInputElement | null>
+  onCancel: () => void
+  onNameChange: (name: string) => void
+  onSave: () => void
+}) {
+  return (
+    <section className="budget-group pending-budget-subsection">
+      <header className="budget-subsection-head is-selected">
+        <h3>
+          <i className="selection-caret">›</i>
+          <input
+            aria-label="New subsection name"
+            className="pending-budget-name-input"
+            disabled={busy}
+            maxLength={100}
+            placeholder="Name this subsection"
+            ref={nameInputRef}
+            type="text"
+            value={name}
+            onChange={(event) => onNameChange(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault()
+                onSave()
+              } else if (event.key === 'Escape') {
+                event.preventDefault()
+                onCancel()
+              }
+            }}
+          />
+        </h3>
+        <strong>$0</strong>
+      </header>
+    </section>
+  )
+}
+
+function BudgetActionDialog({
+  allocationCount,
+  deleteChoice,
+  deleteNoButtonRef,
+  deleteYesButtonRef,
+  entry,
+  onCancel,
+  onChoose,
+  onConfirm,
+}: {
+  allocationCount: number
+  deleteChoice: 'yes' | 'no'
+  deleteNoButtonRef: RefObject<HTMLButtonElement | null>
+  deleteYesButtonRef: RefObject<HTMLButtonElement | null>
+  entry: BudgetEntry
+  onCancel: () => void
+  onChoose: (choice: 'yes' | 'no') => void
+  onConfirm: (choice?: 'yes' | 'no') => void
+}) {
+  const name =
+    entry.kind === 'allocation'
+      ? entry.allocation.category_name
+      : entry.subsection.name
+  const deletingSubsection = entry.kind === 'subsection'
+
+  return (
+    <div className="budget-action-layer">
+      <section
+        aria-describedby="budget-delete-description"
+        aria-labelledby="budget-delete-title"
+        aria-modal="true"
+        className="budget-action-dialog"
+        role="dialog"
+        onKeyDown={trapDialogFocus}
+      >
+        <p className="eyebrow">
+          Delete {deletingSubsection ? 'subsection' : 'budget line item'}
+        </p>
+        <h2 id="budget-delete-title">Delete {name}?</h2>
+        <p id="budget-delete-description">
+          {deletingSubsection
+            ? `Its ${allocationCount} budget line item${
+                allocationCount === 1 ? '' : 's'
+              } will also be deleted.`
+            : 'This removes it from this budget.'}
+        </p>
+        <div className="budget-action-choices">
+          <button
+            className={`budget-action-choice budget-action-choice--danger${
+              deleteChoice === 'yes' ? ' is-selected' : ''
+            }`}
+            ref={deleteYesButtonRef}
+            type="button"
+            onClick={() => {
+              onChoose('yes')
+              onConfirm('yes')
+            }}
+          >
+            Yes, delete
+          </button>
+          <button
+            className={`budget-action-choice${
+              deleteChoice === 'no' ? ' is-selected' : ''
+            }`}
+            ref={deleteNoButtonRef}
+            type="button"
+            onClick={onCancel}
+          >
+            No, keep it
+          </button>
+        </div>
+      </section>
+    </div>
+  )
+}
+
+function CreateBudgetEntryDialog({
+  allocationButtonRef,
+  creationKind,
+  entry,
+  subsectionButtonRef,
+  onChoose,
+  onConfirm,
+}: {
+  allocationButtonRef: RefObject<HTMLButtonElement | null>
+  creationKind: 'allocation' | 'subsection'
+  entry: BudgetEntry
+  subsectionButtonRef: RefObject<HTMLButtonElement | null>
+  onChoose: (kind: 'allocation' | 'subsection') => void
+  onConfirm: (kind?: 'allocation' | 'subsection') => void
+}) {
+  const name =
+    entry.kind === 'allocation'
+      ? entry.allocation.category_name
+      : entry.subsection.name
+
+  return (
+    <div className="budget-action-layer">
+      <section
+        aria-labelledby="budget-create-title"
+        aria-modal="true"
+        className="budget-action-dialog"
+        role="dialog"
+        onKeyDown={trapDialogFocus}
+      >
+        <p className="eyebrow">Create below {name}</p>
+        <h2 id="budget-create-title">What would you like to create?</h2>
+        <div className="budget-action-choices">
+          <button
+            className={`budget-action-choice${
+              creationKind === 'allocation' ? ' is-selected' : ''
+            }`}
+            ref={allocationButtonRef}
+            type="button"
+            onClick={() => {
+              onChoose('allocation')
+              onConfirm('allocation')
+            }}
+          >
+            Budget line item
+          </button>
+          <button
+            className={`budget-action-choice${
+              creationKind === 'subsection' ? ' is-selected' : ''
+            }`}
+            ref={subsectionButtonRef}
+            type="button"
+            onClick={() => {
+              onChoose('subsection')
+              onConfirm('subsection')
+            }}
+          >
+            Subsection
+          </button>
+        </div>
+      </section>
+    </div>
   )
 }
 

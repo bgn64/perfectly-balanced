@@ -2083,3 +2083,165 @@ summary:focus-visible {
   background: #292e42;
   color: #c0caf5;
 }
+
+.authenticated-app.terminal-app .budget-row--sectioned .category-name {
+  position: relative;
+  padding-left: 1.1rem;
+}
+
+.authenticated-app.terminal-app .budget-row--sectioned .category-name::before {
+  position: absolute;
+  left: 0;
+  color: #565f89;
+  content: "└";
+}
+
+.authenticated-app.terminal-app .budget-subsection-head {
+  min-height: 2.65rem;
+  padding: 0.65rem 1rem;
+  background: #24283b;
+}
+
+.authenticated-app.terminal-app .budget-subsection-head.is-selected {
+  position: relative;
+  background: #292e42;
+  color: #c0caf5;
+  outline: 2px solid #7dcfff;
+  outline-offset: -2px;
+}
+
+.authenticated-app.terminal-app .budget-subsection-head.is-selected::before,
+.authenticated-app.terminal-app .pending-budget-entry::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 2px;
+  background: #7aa2f7;
+  content: "";
+}
+
+.authenticated-app.terminal-app .budget-group.is-picked-up > .budget-subsection-head,
+.authenticated-app.terminal-app .budget-row.is-picked-up {
+  position: relative;
+  z-index: 2;
+  transform: translateY(-0.15rem);
+  outline: 2px solid #7dcfff;
+  outline-offset: -2px;
+  box-shadow: 0 0.45rem 0.8rem rgb(0 0 0 / 32%);
+}
+
+.authenticated-app.terminal-app .pending-budget-entry {
+  position: relative;
+}
+
+.authenticated-app.terminal-app .pending-budget-name-input {
+  min-width: 0;
+  flex: 1;
+  border: 1px solid #7dcfff;
+  border-radius: 0.2rem;
+  padding: 0.3rem 0.4rem;
+  background: #1a1b26;
+  color: #c0caf5;
+  font: inherit;
+  font-size: inherit;
+  outline: 1px solid #7aa2f7;
+}
+
+.authenticated-app.terminal-app .pending-budget-name-input::placeholder {
+  color: #787c99;
+}
+
+.authenticated-app.terminal-app .pending-budget-subsection {
+  border-bottom: 1px solid #3b4261;
+}
+
+.authenticated-app.terminal-app .budget-action-layer {
+  position: fixed;
+  z-index: 10;
+  inset: 4.75rem 0 3.5rem;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgb(26 27 38 / 68%);
+}
+
+.authenticated-app.terminal-app .budget-action-dialog {
+  display: grid;
+  width: min(100%, 24rem);
+  gap: 0.65rem;
+  padding: 1rem;
+  border: 1px solid #414868;
+  border-radius: 0.35rem;
+  background: #1a1b26;
+  box-shadow: 0 1rem 2.5rem rgb(0 0 0 / 35%);
+}
+
+.authenticated-app.terminal-app .budget-action-dialog > p {
+  margin: 0;
+  color: #787c99;
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
+.authenticated-app.terminal-app .budget-action-choices {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 0.2rem;
+}
+
+.authenticated-app.terminal-app .budget-action-choice {
+  border: 1px solid #414868;
+  border-radius: 0.25rem;
+  padding: 0.5rem 0.6rem;
+  background: #24283b;
+  color: #a9b1d6;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-align: left;
+}
+
+.authenticated-app.terminal-app .budget-action-choice--danger {
+  color: #f7768e;
+}
+
+.authenticated-app.terminal-app .budget-action-choice.is-selected {
+  border-color: #7dcfff;
+  background: #292e42;
+  color: #c0caf5;
+  box-shadow: inset 0 0 0 1px #7aa2f7;
+}
+
+.authenticated-app.terminal-app.theme-light .budget-subsection-head {
+  background: #dfe0e6;
+  color: #343b58;
+}
+
+.authenticated-app.terminal-app.theme-light .budget-subsection-head.is-selected,
+.authenticated-app.terminal-app.theme-light .budget-row.is-picked-up,
+.authenticated-app.terminal-app.theme-light .budget-group.is-picked-up > .budget-subsection-head,
+.authenticated-app.terminal-app.theme-light .budget-action-choice.is-selected {
+  background: #dfe0e6;
+  color: #343b58;
+}
+
+.authenticated-app.terminal-app.theme-light .pending-budget-name-input,
+.authenticated-app.terminal-app.theme-light .budget-action-dialog {
+  border-color: #a1a6b5;
+  background: #e9e9ed;
+  color: #343b58;
+}
+
+.authenticated-app.terminal-app.theme-light .budget-action-layer {
+  background: rgb(52 59 88 / 18%);
+}
+
+.authenticated-app.terminal-app.theme-light .budget-action-choice {
+  border-color: #a1a6b5;
+  background: #dfe0e6;
+  color: #343b58;
+}
+
+.authenticated-app.terminal-app.theme-light .budget-action-dialog > p,
+.authenticated-app.terminal-app.theme-light .pending-budget-name-input::placeholder {
+  color: #5a5f78;
+}

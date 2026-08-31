@@ -6,7 +6,11 @@ import {
   type FormEvent,
 } from 'react'
 import { useAuth } from './auth/useAuth.ts'
-import { BudgetPanel } from './budgets/BudgetPanel.tsx'
+import {
+  BudgetPanel,
+  type BudgetKeyboardAction,
+  type BudgetKeyboardInteraction,
+} from './budgets/BudgetPanel.tsx'
 import { getClientConfiguration } from './config.ts'
 import {
   currentMonth,
@@ -225,6 +229,10 @@ function AuthenticatedShell({
   const [isAmountEditorOpen, setIsAmountEditorOpen] = useState(false)
   const [amountEditRequest, setAmountEditRequest] =
     useState<AmountEditRequest | null>(null)
+  const [budgetKeyboardAction, setBudgetKeyboardAction] =
+    useState<BudgetKeyboardAction | null>(null)
+  const [budgetKeyboardInteraction, setBudgetKeyboardInteraction] =
+    useState<BudgetKeyboardInteraction | null>(null)
   const [focusedSemanticId, setFocusedSemanticId] = useState<string | null>(
     'nav-budgets',
   )
@@ -268,6 +276,19 @@ function AuthenticatedShell({
       window.requestAnimationFrame(() => {
         document.getElementById(`budget-row-${allocationId}`)?.focus()
       })
+    },
+    [],
+  )
+  const requestBudgetKeyboardAction = useCallback(
+    (
+      action: BudgetKeyboardAction['action'],
+      semanticId: string | null,
+    ) => {
+      setBudgetKeyboardAction((current) => ({
+        action,
+        semanticId,
+        sequence: (current?.sequence ?? 0) + 1,
+      }))
     },
     [],
   )
@@ -365,6 +386,28 @@ function AuthenticatedShell({
       ) {
         return
       }
+      const key = event.key.toLocaleLowerCase()
+      if (budgetKeyboardInteraction) {
+        const action =
+          event.key === 'Escape'
+            ? 'cancel'
+            : (key === 'j' || key === 'k') &&
+                budgetKeyboardInteraction.mode !== 'name-entry'
+              ? key === 'j'
+                ? 'next'
+                : 'previous'
+              : event.key === 'Enter' &&
+                  budgetKeyboardInteraction.mode !== 'moving'
+                ? 'confirm'
+                : key === 'p' && budgetKeyboardInteraction.mode === 'moving'
+                  ? 'confirm'
+                  : null
+        if (action) {
+          event.preventDefault()
+          requestBudgetKeyboardAction(action, focusedSemanticId)
+        }
+        return
+      }
       if (event.key === ':' && !isAmountEditorOpen) {
         event.preventDefault()
         openCommandPalette()
@@ -377,7 +420,6 @@ function AuthenticatedShell({
       if (!root) {
         return
       }
-      const key = event.key.toLocaleLowerCase()
       const sidebarControls = getSemanticControls(root, 'sidebar')
       const workspaceControls = getSemanticControls(root, 'workspace')
       const activeElement = document.activeElement
@@ -430,6 +472,25 @@ function AuthenticatedShell({
         }
         event.preventDefault()
         directionToggle.click()
+        return
+      }
+
+      if (
+        (key === 'd' || key === 'n' || key === 'r' || key === 'x') &&
+        (focusedControl?.dataset.semanticKind === 'budget-row' ||
+          focusedControl?.dataset.semanticKind === 'budget-subsection')
+      ) {
+        event.preventDefault()
+        requestBudgetKeyboardAction(
+          key === 'd'
+            ? 'start-delete'
+            : key === 'n'
+              ? 'start-create'
+              : key === 'r'
+                ? 'start-rename'
+                : 'start-move',
+          focusedControl.dataset.semanticId ?? null,
+        )
         return
       }
 
@@ -491,8 +552,11 @@ function AuthenticatedShell({
   }, [
     focusBudgetRow,
     focusWorkspaceControl,
+    focusedSemanticId,
     isAmountEditorOpen,
+    budgetKeyboardInteraction,
     openCommandPalette,
+    requestBudgetKeyboardAction,
   ])
 
   async function handleSignOut() {
@@ -615,10 +679,12 @@ function AuthenticatedShell({
           <BudgetPanel
             activityRevision={budgetActivityRevision}
             amountEditRequest={amountEditRequest}
+            keyboardActionRequest={budgetKeyboardAction}
             categoriesRevision={categoriesRevision}
             focusedSemanticId={focusedSemanticId}
             selectedMonth={selectedMonth}
             onCategoriesChanged={handleCategoriesChanged}
+            onKeyboardInteractionChange={setBudgetKeyboardInteraction}
             onAmountEditorClosed={(allocationId) => {
               setIsAmountEditorOpen(false)
               setAmountEditRequest(null)
@@ -690,24 +756,75 @@ function AuthenticatedShell({
         )}
 
         <footer className="statusline">
-          <div>
-            <strong>NAVIGATE</strong>
-            <span>{statusContext.label}</span>
-            <span>focus {focusedWorkspaceControl} of {workspaceControlCount}</span>
-          </div>
-          <div>
-            {statusContext.action !== 'amount' && (
-              <span><kbd>Enter</kbd> {statusContext.action}</span>
-            )}
-            {statusContext.action === 'amount' && (
-              <>
-                <span><kbd>a</kbd> amount</span>
-                <span><kbd>t</kbd> direction</span>
-              </>
-            )}
-            <span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> move</span>
-            <span><kbd>:</kbd> command</span>
-          </div>
+          {budgetKeyboardInteraction ? (
+            <>
+              <div>
+                <strong>
+                  {budgetKeyboardInteraction.mode === 'confirm-delete'
+                    ? 'CONFIRM'
+                    : budgetKeyboardInteraction.mode === 'choose-create'
+                      ? 'CREATE'
+                      : budgetKeyboardInteraction.mode === 'name-entry'
+                        ? 'NAME'
+                          : budgetKeyboardInteraction.mode === 'rename-entry'
+                            ? 'RENAME'
+                          : 'MOVE'}
+                </strong>
+                <span>{budgetKeyboardInteraction.label}</span>
+              </div>
+              <div>
+                {(budgetKeyboardInteraction.mode === 'confirm-delete' ||
+                  budgetKeyboardInteraction.mode === 'choose-create') && (
+                  <>
+                    <span><kbd>j</kbd><kbd>k</kbd> choose</span>
+                    <span><kbd>Enter</kbd> confirm</span>
+                  </>
+                )}
+                {(budgetKeyboardInteraction.mode === 'name-entry' ||
+                  budgetKeyboardInteraction.mode === 'rename-entry') && (
+                  <span><kbd>Enter</kbd> save</span>
+                )}
+                {budgetKeyboardInteraction.mode === 'moving' && (
+                  <>
+                    <span><kbd>j</kbd><kbd>k</kbd> position</span>
+                    <span><kbd>p</kbd> place</span>
+                  </>
+                )}
+                <span><kbd>Esc</kbd> cancel</span>
+              </div>
+            </>
+          ) : (
+            <>
+              <div>
+                <strong>NAVIGATE</strong>
+                <span>{statusContext.label}</span>
+                <span>focus {focusedWorkspaceControl} of {workspaceControlCount}</span>
+              </div>
+              <div>
+                {statusContext.action !== 'amount' &&
+                  statusContext.action !== 'subsection' && (
+                    <span><kbd>Enter</kbd> {statusContext.action}</span>
+                  )}
+                {statusContext.action === 'amount' && (
+                  <>
+                    <span><kbd>a</kbd> amount</span>
+                    <span><kbd>t</kbd> direction</span>
+                  </>
+                )}
+                {(statusContext.action === 'amount' ||
+                  statusContext.action === 'subsection') && (
+                  <>
+                    <span><kbd>n</kbd> new</span>
+                    <span><kbd>r</kbd> rename</span>
+                    <span><kbd>d</kbd> delete</span>
+                    <span><kbd>x</kbd> move</span>
+                  </>
+                )}
+                <span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span>
+                <span><kbd>:</kbd> command</span>
+              </div>
+            </>
+          )}
         </footer>
       </div>
     )
