@@ -363,6 +363,7 @@ export function BudgetPanel({
   categoriesRevision,
   activityRevision,
   onCategoriesChanged,
+  onUncategorizedCountChange,
   selectedMonth,
   onMonthChange,
   focusedSemanticId,
@@ -375,6 +376,7 @@ export function BudgetPanel({
   categoriesRevision: number
   activityRevision: number
   onCategoriesChanged: () => void
+  onUncategorizedCountChange: (count: number) => void
   selectedMonth: string
   onMonthChange: (month: string) => void
   focusedSemanticId: string | null
@@ -436,6 +438,7 @@ export function BudgetPanel({
       setAllocations(data.allocations)
       setCategories(data.categories)
       setUncategorizedCount(data.uncategorizedCount)
+      onUncategorizedCountChange(data.uncategorizedCount)
       setEditingAllocationId(null)
       setErrorMessage(null)
     } catch (error) {
@@ -449,7 +452,7 @@ export function BudgetPanel({
         setIsLoading(false)
       }
     }
-  }, [selectedMonth])
+  }, [onUncategorizedCountChange, selectedMonth])
 
   useEffect(() => {
     // oxlint-disable-next-line react/set-state-in-effect -- This effect synchronizes the selected month with Supabase.
@@ -1489,24 +1492,52 @@ export function BudgetPanel({
           Loading budget...
         </section>
       ) : !budget ? (
-        <section className="budget-table empty-state">
-          <h2>Create the {formatMonth(selectedMonth)} budget</h2>
-          <p>Start with an empty monthly budget, then add categories.</p>
-          <button
-            data-status-action="create budget"
-            data-status-label="budget / empty month"
-            type="button"
-            disabled={busyId === 'create-budget'}
-            onClick={() =>
-              void runMutation('create-budget', () =>
-                getSupabaseClient().rpc('create_monthly_budget', {
-                  p_month: `${selectedMonth}-01`,
-                }),
-              )
-            }
-          >
-            {busyId === 'create-budget' ? 'Creating month...' : 'Create this month'}
-          </button>
+        <section className="screen-panel empty-terminal">
+          <div className="empty-terminal__copy">
+            <p className="eyebrow">Buffer empty</p>
+            <h2>Create the {formatMonth(selectedMonth)} budget.</h2>
+            <p>
+              Set up an empty workspace now, then add subsections and
+              categories in the order that makes sense for the month.
+            </p>
+            <button
+              className="terminal-button terminal-button--primary"
+              data-status-action="create budget"
+              data-status-label="budget / empty month"
+              type="button"
+              disabled={busyId === 'create-budget'}
+              onClick={() =>
+                void runMutation('create-budget', () =>
+                  getSupabaseClient().rpc('create_monthly_budget', {
+                    p_month: `${selectedMonth}-01`,
+                  }),
+                )
+              }
+            >
+              {busyId === 'create-budget'
+                ? 'Creating month...'
+                : `+ Create ${formatMonth(selectedMonth)} budget`}
+            </button>
+          </div>
+          <aside className="empty-terminal__aside" aria-label="Nearby months">
+            <p className="eyebrow">Nearby months</p>
+            <nav className="month-list">
+              {[
+                shiftMonth(selectedMonth, -1),
+                selectedMonth,
+                shiftMonth(selectedMonth, 1),
+              ].map((month) => (
+                <button
+                  className={month === selectedMonth ? 'is-current' : ''}
+                  key={month}
+                  type="button"
+                  onClick={() => onMonthChange(month)}
+                >
+                  {formatMonth(month)}
+                </button>
+              ))}
+            </nav>
+          </aside>
         </section>
       ) : (
         <>

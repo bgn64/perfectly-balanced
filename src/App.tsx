@@ -98,11 +98,20 @@ function App({ appName }: AppProps) {
   if (initializationError) {
     return (
       <main className="auth-page">
-        <section className="auth-card" aria-labelledby="auth-error-title">
-          <p className="eyebrow">{appName}</p>
-          <h1 id="auth-error-title">We could not verify your session</h1>
-          <p className="auth-card__copy">{initializationError}</p>
-          <p className="auth-card__hint">Refresh the page to try again.</p>
+        <section className="auth-terminal" aria-labelledby="auth-error-title">
+          <header className="auth-terminal__head">
+            <span className="brand">
+              <span className="brand-mark" aria-hidden="true">pb</span>
+              <span>{appName.toLocaleLowerCase().replace(/\s+/g, '-')}</span>
+            </span>
+            <span className="spent">session unavailable</span>
+          </header>
+          <div className="auth-terminal__body">
+            <p className="eyebrow">Authentication</p>
+            <h1 id="auth-error-title">We could not verify your session</h1>
+            <p>{initializationError}</p>
+            <p className="auth-footnote">Refresh the page to try again.</p>
+          </div>
         </section>
       </main>
     )
@@ -123,10 +132,20 @@ function App({ appName }: AppProps) {
 function LoadingScreen({ appName }: AppProps) {
   return (
     <main className="auth-page">
-      <section className="auth-card" aria-live="polite">
-        <p className="eyebrow">{appName}</p>
-        <h1>Checking your session</h1>
-        <p className="auth-card__copy">One moment while we securely sign you in.</p>
+      <section className="auth-terminal" aria-live="polite">
+        <header className="auth-terminal__head">
+          <span className="brand">
+            <span className="brand-mark" aria-hidden="true">pb</span>
+            <span>{appName.toLocaleLowerCase().replace(/\s+/g, '-')}</span>
+          </span>
+          <span>secure session</span>
+        </header>
+        <div className="auth-terminal__body">
+          <p className="eyebrow">Authentication</p>
+          <h1>Checking your session</h1>
+          <p>One moment while we securely sign you in.</p>
+          <span className="terminal-pill">Working...</span>
+        </div>
       </section>
     </main>
   )
@@ -205,84 +224,97 @@ function SignInScreen({ appName }: AppProps) {
 
   return (
     <main className="auth-page">
-      <section className="auth-card" aria-labelledby="sign-in-title">
-        <p className="eyebrow">{appName}</p>
-        <h1 id="sign-in-title">Sign in with email</h1>
-        <p className="auth-card__copy">
-          Enter the email address associated with your invitation. We will send
-          you a one-time sign-in link.
-        </p>
-        <form className="sign-in-form" onSubmit={handleSubmit}>
-          <label htmlFor="email">Email address</label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            autoComplete="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            disabled={isSubmitting}
-            required
-          />
-          <button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? 'Sending sign-in link...' : 'Email me a sign-in link'}
-          </button>
-        </form>
-        {localDemoMode && (
-          <>
-            <div className="auth-divider" aria-hidden="true"><span>or</span></div>
-            <section
-              className="local-sign-in"
-              aria-labelledby="local-sign-in-title"
+      <section className="auth-terminal" aria-labelledby="sign-in-title">
+        <header className="auth-terminal__head">
+          <span className="brand">
+            <span className="brand-mark" aria-hidden="true">pb</span>
+            <span>{appName.toLocaleLowerCase().replace(/\s+/g, '-')}</span>
+          </span>
+          <span>secure session</span>
+        </header>
+        <div className="auth-terminal__body">
+          <p className="eyebrow">Welcome back</p>
+          <h1 id="sign-in-title">Sign in with email</h1>
+          <p>
+            Your invitation is tied to your email address. We will send a
+            single-use sign-in link.
+          </p>
+          <form className="auth-form" onSubmit={handleSubmit}>
+            <label htmlFor="email">Email address</label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              disabled={isSubmitting}
+              required
+            />
+            <button
+              className="terminal-button terminal-button--primary"
+              type="submit"
+              disabled={isSubmitting}
             >
-              <div>
-                <p className="eyebrow">Local development</p>
-                <h2 id="local-sign-in-title">Test account</h2>
+              {isSubmitting ? 'Sending sign-in link...' : 'Send sign-in link'}
+            </button>
+          </form>
+          {localDemoMode && (
+            <>
+              <div className="auth-divider" aria-hidden="true">
+                local development
               </div>
-              <p>Use the seeded local account to test budgets and migrations.</p>
-              <form
-                className="sign-in-form sign-in-form--compact"
-                onSubmit={handleLocalSubmit}
+              <section
+                className="local-access"
+                aria-labelledby="local-sign-in-title"
               >
-                <label htmlFor="local-email">Email address</label>
-                <input
-                  id="local-email"
-                  name="local-email"
-                  type="email"
-                  autoComplete="username"
-                  disabled={isLocalSubmitting}
-                  value={localEmail}
-                  onChange={(event) => setLocalEmail(event.target.value)}
-                  required
-                />
-                <label htmlFor="local-password">Password</label>
-                <input
-                  id="local-password"
-                  name="local-password"
-                  type="password"
-                  autoComplete="current-password"
-                  disabled={isLocalSubmitting}
-                  value={localPassword}
-                  onChange={(event) => setLocalPassword(event.target.value)}
-                  required
-                />
-                <button type="submit" disabled={isLocalSubmitting}>
-                  {isLocalSubmitting ? 'Signing in locally...' : 'Sign in locally'}
-                </button>
-              </form>
-            </section>
-          </>
-        )}
-        {errorMessage && (
-          <p className="form-message form-message--error" role="alert">
-            {errorMessage}
-          </p>
-        )}
-        {successMessage && (
-          <p className="form-message form-message--success" aria-live="polite">
-            {successMessage}
-          </p>
-        )}
+                <h2 id="local-sign-in-title">Use the seeded local account</h2>
+                <p>Only shown in the local environment.</p>
+                <form className="auth-form" onSubmit={handleLocalSubmit}>
+                  <label htmlFor="local-email">Email address</label>
+                  <input
+                    id="local-email"
+                    name="local-email"
+                    type="email"
+                    autoComplete="username"
+                    disabled={isLocalSubmitting}
+                    value={localEmail}
+                    onChange={(event) => setLocalEmail(event.target.value)}
+                    required
+                  />
+                  <label htmlFor="local-password">Password</label>
+                  <input
+                    id="local-password"
+                    name="local-password"
+                    type="password"
+                    autoComplete="current-password"
+                    disabled={isLocalSubmitting}
+                    value={localPassword}
+                    onChange={(event) => setLocalPassword(event.target.value)}
+                    required
+                  />
+                  <button
+                    className="terminal-button"
+                    type="submit"
+                    disabled={isLocalSubmitting}
+                  >
+                    {isLocalSubmitting ? 'Signing in locally...' : 'Sign in locally'}
+                  </button>
+                </form>
+              </section>
+            </>
+          )}
+          {errorMessage && (
+            <p className="form-message form-message--error" role="alert">
+              {errorMessage}
+            </p>
+          )}
+          {successMessage && (
+            <p className="form-message form-message--success" aria-live="polite">
+              {successMessage}
+            </p>
+          )}
+        </div>
       </section>
     </main>
   )
@@ -302,6 +334,8 @@ function AuthenticatedShell({
   const [signOutError, setSignOutError] = useState<string | null>(null)
   const [categoriesRevision, setCategoriesRevision] = useState(0)
   const [budgetActivityRevision, setBudgetActivityRevision] = useState(0)
+  const [uncategorizedTransactionCount, setUncategorizedTransactionCount] =
+    useState(0)
   const [commandQuery, setCommandQuery] = useState('go')
   const [theme, setTheme] = useState<WorkspaceTheme>(readInitialTheme)
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
@@ -329,6 +363,9 @@ function AuthenticatedShell({
   }, [])
   const handleCategoriesChanged = useCallback(() => {
     setCategoriesRevision((revision) => revision + 1)
+  }, [])
+  const handleUncategorizedCountChange = useCallback((count: number) => {
+    setUncategorizedTransactionCount(count)
   }, [])
   const initials = email
     .split('@')[0]
@@ -729,6 +766,9 @@ function AuthenticatedShell({
                 onClick={() => navigateToView(item.view)}
               >
                 <span>{item.label}</span>
+                {item.view === 'transactions' && (
+                  <strong>{uncategorizedTransactionCount}</strong>
+                )}
               </button>
             ))}
           </nav>
@@ -765,6 +805,7 @@ function AuthenticatedShell({
             focusedSemanticId={focusedSemanticId}
             selectedMonth={selectedMonth}
             onCategoriesChanged={handleCategoriesChanged}
+            onUncategorizedCountChange={handleUncategorizedCountChange}
             onKeyboardInteractionChange={setBudgetKeyboardInteraction}
             onAmountEditorClosed={(allocationId) => {
               setIsAmountEditorOpen(false)
@@ -919,39 +960,142 @@ function AuthenticatedShell({
   }
 
   return (
-    <div className="authenticated-app">
-      <header className="topbar">
-        <button className="brand" type="button" onClick={() => navigateToView('budgets')}>
-          <span className="brand-mark" aria-hidden="true">P</span>
-          {appName}
+    <div
+      className={`authenticated-app terminal-app command-closed screen-app theme-${theme}`}
+    >
+      <header className="titlebar">
+        <button
+          className="brand"
+          type="button"
+          onClick={() => navigateToView('budgets')}
+        >
+          <span className="brand-mark" aria-hidden="true">pb</span>
+          <span>{appName.toLocaleLowerCase().replace(/\s+/g, '-')}</span>
         </button>
-        <nav className="primary-nav" aria-label="Primary navigation">
-          {navigationItems.map(({ view, label }) => (
+        <p>{formatMonth(selectedMonth)} · Personal budget</p>
+        <div className="theme-switcher" role="group" aria-label="Theme">
+          <input
+            checked={theme === 'dark'}
+            id="theme-dark"
+            name="theme"
+            type="radio"
+            onChange={() => setTheme('dark')}
+          />
+          <label htmlFor="theme-dark">Dark</label>
+          <input
+            checked={theme === 'light'}
+            id="theme-light"
+            name="theme"
+            type="radio"
+            onChange={() => setTheme('light')}
+          />
+          <label htmlFor="theme-light">Light</label>
+        </div>
+        <details className="profile">
+          <summary>
+            <span>{initials || 'PB'}</span>
+            {email.split('@')[0]}
+          </summary>
+          <div className="account-popover">
+            <strong>{email}</strong>
             <button
-              aria-current={activeView === view ? 'page' : undefined}
-              className={activeView === view ? 'active' : ''}
-              key={view}
+              className="terminal-button"
+              disabled={isSigningOut}
               type="button"
-              onClick={() => navigateToView(view)}
+              onClick={() => void handleSignOut()}
             >
-              {label}
+              {isSigningOut ? 'Signing out...' : 'Sign out'}
+            </button>
+          </div>
+        </details>
+      </header>
+
+      <aside className="sidebar" aria-label="Application navigation">
+        <nav className="main-nav">
+          {navigationItems.map((item) => (
+            <button
+              aria-current={activeView === item.view ? 'page' : undefined}
+              className={`nav-item${
+                activeView === item.view ? ' is-active' : ''
+              }`}
+              key={item.view}
+              type="button"
+              onClick={() => navigateToView(item.view)}
+            >
+              <span>{item.label}</span>
+              {item.view === 'transactions' && (
+                <strong>{uncategorizedTransactionCount}</strong>
+              )}
             </button>
           ))}
         </nav>
-      </header>
-      {activeView === 'transactions' && (
-        <TransactionsPanel
-          categoriesRevision={categoriesRevision}
-          onCategoriesChanged={handleCategoriesChanged}
-          onTransactionsChanged={handleTransactionsChanged}
-        />
-      )}
-      {activeView === 'insights' && (
-        <InsightsPanel
-          activityRevision={budgetActivityRevision}
-          categoriesRevision={categoriesRevision}
-        />
-      )}
+        {activeView === 'insights' && (
+          <section className="sidebar-section" aria-labelledby="report-range-title">
+            <h2 id="report-range-title">Report range</h2>
+            {[
+              selectedMonth,
+              shiftMonth(selectedMonth, -1),
+              shiftMonth(selectedMonth, -2),
+            ].map((month) => (
+              <button
+                className={month === selectedMonth ? 'is-current' : ''}
+                key={month}
+                type="button"
+                onClick={() => setSelectedMonth(month)}
+              >
+                {formatMonth(month)}
+              </button>
+            ))}
+          </section>
+        )}
+      </aside>
+
+      <main className="workspace">
+        {signOutError && (
+          <p className="form-message form-message--error" role="alert">
+            {signOutError}
+          </p>
+        )}
+        {activeView === 'transactions' && (
+          <TransactionsPanel
+            categoriesRevision={categoriesRevision}
+            selectedMonth={selectedMonth}
+            onCategoriesChanged={handleCategoriesChanged}
+            onTransactionsChanged={handleTransactionsChanged}
+            onUncategorizedCountChange={handleUncategorizedCountChange}
+          />
+        )}
+        {activeView === 'insights' && (
+          <InsightsPanel
+            activityRevision={budgetActivityRevision}
+            categoriesRevision={categoriesRevision}
+            selectedMonth={selectedMonth}
+            onMonthChange={setSelectedMonth}
+            onOpenTransactions={() => navigateToView('transactions')}
+          />
+        )}
+      </main>
+
+      <footer className="statusline">
+        <div>
+          <strong>{activeView === 'transactions' ? 'VIEW' : 'REPORT'}</strong>
+          <span>
+            {activeView === 'transactions'
+              ? 'transactions / all accounts'
+              : `${formatMonth(selectedMonth)} / all accounts`}
+          </span>
+        </div>
+        <div>
+          {activeView === 'transactions' ? (
+            <>
+              <span><kbd>j</kbd><kbd>k</kbd> select</span>
+              <span><kbd>c</kbd> categorize</span>
+            </>
+          ) : (
+            <span>Monthly summary</span>
+          )}
+        </div>
+      </footer>
     </div>
   )
 }
