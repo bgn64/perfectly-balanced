@@ -1,4 +1,5 @@
 import {
+  Fragment,
   useCallback,
   useEffect,
   useMemo,
@@ -440,7 +441,9 @@ export function TransactionsPanel({
       const key = event.key.toLocaleLowerCase()
       const focusedTransactionRow =
         event.target instanceof HTMLElement
-          ? event.target.closest<HTMLButtonElement>('.transaction-select')
+          ? event.target.closest<HTMLButtonElement>(
+              '.transaction-row-simple__select',
+            )
           : null
       const direction =
         !event.ctrlKey && !event.shiftKey && key === 'j'
@@ -764,10 +767,9 @@ export function TransactionsPanel({
           </div>
         </div>
       <div className="data-toolbar">
-        <div className="search">
-          <label className="sr-only" htmlFor="merchant-search">
-            Search merchant name
-          </label>
+        <label className="terminal-search" htmlFor="merchant-search">
+          <span aria-hidden="true">/</span>
+          <span className="sr-only">Search merchant name</span>
           <input
             id="merchant-search"
             placeholder="Search merchant name..."
@@ -775,10 +777,34 @@ export function TransactionsPanel({
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
           />
-        </div>
+        </label>
+        {activeFilterCount > 0 && (
+          <div
+            className="active-filters toolbar-tokens"
+            aria-label="Active filters"
+          >
+            {scopeFilter && (
+              <FilterChip
+                label={scopeByKey.get(scopeFilter)?.label ?? scopeFilter}
+                onRemove={() => setScopeFilter(null)}
+              />
+            )}
+            {categoryFilters.map((filter) => (
+              <FilterChip
+                key={filter}
+                label={
+                  filter === uncategorizedFilter
+                    ? 'Uncategorized'
+                    : categoriesById.get(filter)?.name ?? filter
+                }
+                onRemove={() => toggleFilter(filter, setCategoryFilters)}
+              />
+            ))}
+          </div>
+        )}
         <div className="toolbar-group transaction-tools">
           <details className="filter-wrap">
-            <summary className="pill-button">
+            <summary className="terminal-button pill-button">
               Filter{activeFilterCount ? ` · ${activeFilterCount}` : ''}
             </summary>
             <div className="popover filter-popover">
@@ -820,7 +846,7 @@ export function TransactionsPanel({
             </div>
           </details>
           <details className="filter-wrap">
-            <summary className="pill-button">
+            <summary className="terminal-button pill-button">
               {sort === 'date'
                 ? 'Newest first'
                 : sort === 'merchant'
@@ -850,53 +876,36 @@ export function TransactionsPanel({
         </div>
       </div>
 
-      {activeFilterCount > 0 && (
-        <div className="active-filters" aria-label="Active filters">
-          {scopeFilter && (
-            <FilterChip
-              label={scopeByKey.get(scopeFilter)?.label ?? scopeFilter}
-              onRemove={() => setScopeFilter(null)}
-            />
-          )}
-          {categoryFilters.map((filter) => (
-            <FilterChip
-              key={filter}
-              label={
-                filter === uncategorizedFilter
-                  ? 'Uncategorized'
-                  : categoriesById.get(filter)?.name ?? filter
-              }
-              onRemove={() => toggleFilter(filter, setCategoryFilters)}
-            />
-          ))}
-        </div>
-      )}
+      <div className="transaction-column-head" aria-hidden="true">
+        <span>Transaction</span>
+        <span>Category</span>
+        <span>Amount</span>
+      </div>
 
-      <div className="transaction-layout transaction-layout--stacked">
-        <section className="transactions">
-          {isLoading ? (
-            <div className="empty-state" aria-live="polite">
-              Loading transactions...
-            </div>
-          ) : displayedTransactions.length === 0 ? (
-            <div className="empty-state">
-              No transactions match the current search and filters.
-            </div>
-          ) : (
-            displayedTransactions.map((transaction) => {
-              const transactionSplits =
-                splitsByTransaction.get(transaction.id) ?? []
-              const isSelected = transaction.id === selectedTransactionId
-              return (
+      <section className="transactions">
+        {isLoading ? (
+          <div className="empty-state" aria-live="polite">
+            Loading transactions...
+          </div>
+        ) : displayedTransactions.length === 0 ? (
+          <div className="empty-state">
+            No transactions match the current search and filters.
+          </div>
+        ) : (
+          displayedTransactions.map((transaction) => {
+            const transactionSplits =
+              splitsByTransaction.get(transaction.id) ?? []
+            const isSelected = transaction.id === selectedTransactionId
+            return (
+              <Fragment key={transaction.id}>
                 <div
-                  className={`transaction-row${
-                    isSelected ? ' selected-transaction' : ''
+                  className={`transaction-row-simple${
+                    isSelected ? ' is-selected' : ''
                   }`}
-                  key={transaction.id}
                 >
                   <button
                     aria-pressed={isSelected}
-                    className="transaction-select"
+                    className="transaction-row-simple__select"
                     data-transaction-id={transaction.id}
                     ref={(button) => {
                       if (button) {
@@ -908,9 +917,9 @@ export function TransactionsPanel({
                     type="button"
                     onClick={() => selectTransaction(transaction)}
                   >
-                    <div className="transaction-main">
+                    <span className="transaction-row-simple__name">
                       <strong>{transactionDescription(transaction)}</strong>
-                      <p>
+                      <span>
                         {new Intl.DateTimeFormat(undefined, {
                           day: 'numeric',
                           month: 'short',
@@ -920,18 +929,8 @@ export function TransactionsPanel({
                         {' · '}
                         {transaction.account_name}
                         {transaction.is_pending ? ' · Pending' : ''}
-                      </p>
-                    </div>
-                    <strong
-                      className={`transaction-amount ${
-                        transaction.amount >= 0 ? 'positive' : 'negative'
-                      }`}
-                    >
-                      {formatMoney(
-                        transaction.amount,
-                        transaction.currency_code ?? 'USD',
-                      )}
-                    </strong>
+                      </span>
+                    </span>
                   </button>
                   <button
                     className={`category-chip${
@@ -951,202 +950,206 @@ export function TransactionsPanel({
                             ?.name ?? '1 category'
                         : `${transactionSplits.length} categories`}
                   </button>
-                </div>
-              )
-            })
-          )}
-        </section>
-
-        <aside className="detail-panel" aria-live="polite">
-          {!selectedTransaction ? (
-            <div className="detail-panel__empty">
-              <p className="eyebrow">Selected transaction</p>
-              <h2>Choose a transaction</h2>
-              <p className="subtle">
-                Its category split will stay open here while you work.
-              </p>
-            </div>
-          ) : (
-            <>
-              <p className="eyebrow">Selected transaction</p>
-              <div className="section-head">
-                <div>
-                  <h2>{transactionDescription(selectedTransaction)}</h2>
-                  <p className="subtle">
-                    {new Intl.DateTimeFormat(undefined, {
-                      dateStyle: 'medium',
-                    }).format(
-                      new Date(`${selectedTransaction.transaction_date}T00:00:00`),
-                    )}
-                    {' · '}
-                    {selectedTransaction.account_name}
-                  </p>
-                </div>
-                <strong
-                  className={
-                    selectedTransaction.amount >= 0 ? 'positive' : 'negative'
-                  }
-                >
-                  {formatMoney(
-                    selectedTransaction.amount,
-                    selectedTransaction.currency_code ?? 'USD',
-                  )}
-                </strong>
-              </div>
-              <h3 className="split-heading">Category split</h3>
-              {draftSplits.map((split) => (
-                <div
-                  className="split-line"
-                  key={`${split.key}-${split.categoryId}`}
-                >
-                  <CategoryCombobox
-                    autoFocus={focusedSplitKey === split.key}
-                    categories={categories}
-                    disabled={isSavingSplits}
-                    excludedCategoryIds={draftSplits
-                      .filter((candidate) => candidate.key !== split.key)
-                      .flatMap((candidate) =>
-                        candidate.categoryId ? [candidate.categoryId] : [],
-                      )}
-                    label={`${
-                      (split.categoryId
-                        ? categoriesById.get(split.categoryId)?.name
-                        : null) ?? 'Category'
-                    } category`}
-                    selectedCategory={
-                      split.categoryId
-                        ? categoriesById.get(split.categoryId)
-                        : undefined
-                    }
-                    createAlternativeLabel={
-                      applicableBudget
-                        ? (name) => `+ Create “${name}” and add to budget`
-                        : undefined
-                    }
-                    inputRef={(input) => {
-                      if (input) {
-                        splitCategoryInputRefs.current.set(split.key, input)
-                      } else {
-                        splitCategoryInputRefs.current.delete(split.key)
-                      }
-                    }}
-                    onCreate={createCategory}
-                    onCreateAlternative={
-                      applicableBudget
-                        ? createCategoryAndAddToBudget
-                        : undefined
-                    }
-                    onCancel={
-                      split.categoryId === null
-                        ? () =>
-                            setDraftSplits((current) =>
-                              current.filter(
-                                (candidate) => candidate.key !== split.key,
-                              ),
-                            )
-                        : undefined
-                    }
-                    onSelect={(category) =>
-                      changeSplitCategory(split.key, category)
-                    }
-                  />
-                  <label>
-                    <span className="sr-only">
-                      {split.categoryId
-                        ? categoriesById.get(split.categoryId)?.name
-                        : 'Category'}{' '}
-                      amount
-                    </span>
-                    <input
-                      aria-invalid={splitError ? 'true' : undefined}
-                      disabled={isSavingSplits}
-                      inputMode="decimal"
-                      type="text"
-                      value={split.amount}
-                      onChange={(event) => {
-                        setIsManualSplit(true)
-                        setDraftSplits((current) =>
-                          current.map((candidate) =>
-                            candidate.key === split.key
-                              ? { ...candidate, amount: event.target.value }
-                              : candidate,
-                          ),
-                        )
-                        setSplitError(null)
-                      }}
-                    />
-                  </label>
-                  <button
-                    aria-label={`Remove ${
-                      (split.categoryId
-                        ? categoriesById.get(split.categoryId)?.name
-                        : null) ?? 'category'
+                  <strong
+                    className={`transaction-amount ${
+                      transaction.amount >= 0 ? 'positive' : 'negative'
                     }`}
-                    className="icon-button"
-                    disabled={isSavingSplits}
-                    type="button"
-                    onClick={() => removeSplit(split.key)}
                   >
-                    &times;
-                  </button>
-                </div>
-              ))}
-              {selectedTransaction.currency_code === 'USD' && (
-                <div className="detail-category-add">
-                  <CategoryCombobox
-                    categories={categories}
-                    disabled={isSavingSplits}
-                    excludedCategoryIds={draftSplits.map(
-                      (split) => split.categoryId,
-                    ).filter(
-                      (categoryId): categoryId is string => categoryId !== null,
+                    {formatMoney(
+                      transaction.amount,
+                      transaction.currency_code ?? 'USD',
                     )}
-                    inputRef={addCategoryInputRef}
-                    label="Add or create a split category"
-                    placeholder="Search or create a category..."
-                    onCreate={createCategory}
-                    createAlternativeLabel={
-                      applicableBudget
-                        ? (name) => `+ Create “${name}” and add to budget`
-                        : undefined
-                    }
-                    onCreateAlternative={
-                      applicableBudget
-                        ? createCategoryAndAddToBudget
-                        : undefined
-                    }
-                    onSelect={addCategoryToSplit}
-                  />
+                  </strong>
                 </div>
-              )}
-              <p className="split-note">
-                {isManualSplit
-                  ? 'Amounts are manual. New categories receive the remaining amount.'
-                  : 'Categories are evenly split; the final category receives any leftover cent.'}
-              </p>
-              {splitError && (
-                <p className="form-message form-message--error" role="alert">
-                  {splitError}
-                </p>
-              )}
-              <button
-                className="button detail-save"
-                disabled={
-                  isSavingSplits || selectedTransaction.currency_code !== 'USD'
-                }
-                type="button"
-                onClick={() => void saveSplits()}
-              >
-                {isSavingSplits
-                  ? 'Saving...'
-                  : draftSplits.length === 0
-                    ? 'Save as uncategorized'
-                    : 'Done'}
-              </button>
-            </>
-          )}
-        </aside>
-      </div>
+
+                {isSelected && selectedTransaction && (
+                  <form
+                    aria-label={`Categorize ${transactionDescription(transaction)}`}
+                    aria-live="polite"
+                    className="transaction-inline-editor transaction-inline-editor--live"
+                    onSubmit={(event) => event.preventDefault()}
+                  >
+                    <div className="transaction-inline-editor__head">
+                      <span>Split {transactionDescription(transaction)}</span>
+                      <span className="terminal-pill">
+                        {formatMoney(
+                          transaction.amount,
+                          transaction.currency_code ?? 'USD',
+                        )}
+                      </span>
+                    </div>
+                    <h3 className="split-heading">Category split</h3>
+                    {draftSplits.map((split) => (
+                      <div
+                        className="split-line"
+                        key={`${split.key}-${split.categoryId}`}
+                      >
+                        <CategoryCombobox
+                          autoFocus={focusedSplitKey === split.key}
+                          categories={categories}
+                          disabled={isSavingSplits}
+                          excludedCategoryIds={draftSplits
+                            .filter((candidate) => candidate.key !== split.key)
+                            .flatMap((candidate) =>
+                              candidate.categoryId
+                                ? [candidate.categoryId]
+                                : [],
+                            )}
+                          label={`${
+                            (split.categoryId
+                              ? categoriesById.get(split.categoryId)?.name
+                              : null) ?? 'Category'
+                          } category`}
+                          selectedCategory={
+                            split.categoryId
+                              ? categoriesById.get(split.categoryId)
+                              : undefined
+                          }
+                          createAlternativeLabel={
+                            applicableBudget
+                              ? (name) =>
+                                  `+ Create “${name}” and add to budget`
+                              : undefined
+                          }
+                          inputRef={(input) => {
+                            if (input) {
+                              splitCategoryInputRefs.current.set(
+                                split.key,
+                                input,
+                              )
+                            } else {
+                              splitCategoryInputRefs.current.delete(split.key)
+                            }
+                          }}
+                          onCreate={createCategory}
+                          onCreateAlternative={
+                            applicableBudget
+                              ? createCategoryAndAddToBudget
+                              : undefined
+                          }
+                          onCancel={
+                            split.categoryId === null
+                              ? () =>
+                                  setDraftSplits((current) =>
+                                    current.filter(
+                                      (candidate) =>
+                                        candidate.key !== split.key,
+                                    ),
+                                  )
+                              : undefined
+                          }
+                          onSelect={(category) =>
+                            changeSplitCategory(split.key, category)
+                          }
+                        />
+                        <label>
+                          <span className="sr-only">
+                            {split.categoryId
+                              ? categoriesById.get(split.categoryId)?.name
+                              : 'Category'}{' '}
+                            amount
+                          </span>
+                          <input
+                            aria-invalid={splitError ? 'true' : undefined}
+                            disabled={isSavingSplits}
+                            inputMode="decimal"
+                            type="text"
+                            value={split.amount}
+                            onChange={(event) => {
+                              setIsManualSplit(true)
+                              setDraftSplits((current) =>
+                                current.map((candidate) =>
+                                  candidate.key === split.key
+                                    ? {
+                                        ...candidate,
+                                        amount: event.target.value,
+                                      }
+                                    : candidate,
+                                ),
+                              )
+                              setSplitError(null)
+                            }}
+                          />
+                        </label>
+                        <button
+                          aria-label={`Remove ${
+                            (split.categoryId
+                              ? categoriesById.get(split.categoryId)?.name
+                              : null) ?? 'category'
+                          }`}
+                          className="icon-button"
+                          disabled={isSavingSplits}
+                          type="button"
+                          onClick={() => removeSplit(split.key)}
+                        >
+                          &times;
+                        </button>
+                      </div>
+                    ))}
+                    {transaction.currency_code === 'USD' && (
+                      <div className="transaction-inline-editor__add-category">
+                        <CategoryCombobox
+                          categories={categories}
+                          disabled={isSavingSplits}
+                          excludedCategoryIds={draftSplits
+                            .map((split) => split.categoryId)
+                            .filter(
+                              (categoryId): categoryId is string =>
+                                categoryId !== null,
+                            )}
+                          inputRef={addCategoryInputRef}
+                          label="Add or create a split category"
+                          placeholder="Search or create a category..."
+                          onCreate={createCategory}
+                          createAlternativeLabel={
+                            applicableBudget
+                              ? (name) =>
+                                  `+ Create “${name}” and add to budget`
+                              : undefined
+                          }
+                          onCreateAlternative={
+                            applicableBudget
+                              ? createCategoryAndAddToBudget
+                              : undefined
+                          }
+                          onSelect={addCategoryToSplit}
+                        />
+                      </div>
+                    )}
+                    <p className="split-note">
+                      {isManualSplit
+                        ? 'Amounts are manual. New categories receive the remaining amount.'
+                        : 'Categories are evenly split; the final category receives any leftover cent.'}
+                    </p>
+                    {splitError && (
+                      <p
+                        className="form-message form-message--error"
+                        role="alert"
+                      >
+                        {splitError}
+                      </p>
+                    )}
+                    <button
+                      className="terminal-button terminal-button--primary transaction-inline-editor__save"
+                      disabled={
+                        isSavingSplits || transaction.currency_code !== 'USD'
+                      }
+                      type="button"
+                      onClick={() => void saveSplits()}
+                    >
+                      {isSavingSplits
+                        ? 'Saving...'
+                        : draftSplits.length === 0
+                          ? 'Save as uncategorized'
+                          : 'Done'}
+                    </button>
+                  </form>
+                )}
+              </Fragment>
+            )
+          })
+        )}
+      </section>
       </section>
     </section>
   )
@@ -1160,7 +1163,7 @@ function FilterChip({
   onRemove: () => void
 }) {
   return (
-    <span className="filter-chip">
+    <span className="filter-token">
       {label}
       <button aria-label={`Remove ${label} filter`} type="button" onClick={onRemove}>
         &times;
