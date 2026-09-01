@@ -2,29 +2,41 @@ import { spawnSync } from 'node:child_process'
 import { writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-function run(command, args) {
+function run(
+  command,
+  args,
+  { errorLabel = command, printOutput = true } = {},
+) {
   const result = spawnSync(command, args, {
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
   })
 
-  if (result.stdout) {
+  if (printOutput && result.stdout) {
     process.stdout.write(result.stdout)
   }
-  if (result.stderr) {
+  if (printOutput && result.stderr) {
     process.stderr.write(result.stderr)
   }
 
   if (result.error || result.status !== 0) {
-    throw result.error ?? new Error(`${command} exited with ${result.status}.`)
+    const diagnostic = result.stderr?.trim() ?? ''
+    throw result.error ?? new Error(
+      `${errorLabel} exited with ${result.status}.${diagnostic ? ` ${diagnostic}` : ''}`,
+    )
   }
 
   return result.stdout
 }
 
-function runSupabase(args) {
+function runSupabase(args, options) {
+  const runOptions = {
+    ...options,
+    errorLabel: `supabase ${args.join(' ')}`,
+  }
+
   if (process.platform !== 'win32') {
-    return run('supabase', args)
+    return run('supabase', args, runOptions)
   }
 
   const command = ['supabase', ...args]
@@ -35,7 +47,11 @@ function runSupabase(args) {
     )
     .join(' ')
 
-  return run(process.env.ComSpec ?? 'cmd.exe', ['/d', '/s', '/c', command])
+  return run(
+    process.env.ComSpec ?? 'cmd.exe',
+    ['/d', '/s', '/c', command],
+    runOptions,
+  )
 }
 
 function parseEnvironment(output) {
@@ -70,8 +86,11 @@ try {
   )
 }
 
-runSupabase(['start'])
-const environment = parseEnvironment(runSupabase(['status', '--output', 'env']))
+console.log('Starting local Supabase...')
+runSupabase(['start'], { printOutput: false })
+const environment = parseEnvironment(
+  runSupabase(['status', '--output', 'env'], { printOutput: false }),
+)
 const apiUrl = environment.get('API_URL')
 const anonKey = environment.get('ANON_KEY')
 

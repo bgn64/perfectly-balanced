@@ -6,6 +6,10 @@ insert into auth.users (
   email,
   encrypted_password,
   email_confirmed_at,
+  confirmation_token,
+  email_change,
+  email_change_token_new,
+  recovery_token,
   raw_app_meta_data,
   raw_user_meta_data,
   created_at,
@@ -19,6 +23,10 @@ values (
   'dev@example.test',
   crypt('local-dev-password', gen_salt('bf')),
   now(),
+  '',
+  '',
+  '',
+  '',
   '{"provider":"email","providers":["email"]}',
   '{}',
   now(),
@@ -27,6 +35,10 @@ values (
 on conflict (id) do update
 set encrypted_password = excluded.encrypted_password,
     email_confirmed_at = excluded.email_confirmed_at,
+    confirmation_token = excluded.confirmation_token,
+    email_change = excluded.email_change,
+    email_change_token_new = excluded.email_change_token_new,
+    recovery_token = excluded.recovery_token,
     raw_app_meta_data = excluded.raw_app_meta_data,
     updated_at = now();
 
