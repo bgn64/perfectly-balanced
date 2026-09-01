@@ -34,8 +34,35 @@
           />
           <button class="button" type="button">Email me a sign-in link</button>
         </form>
+        <div class="auth-divider" aria-hidden="true"><span>or</span></div>
+        <section class="local-sign-in" aria-labelledby="local-sign-in-title">
+          <div>
+            <p class="eyebrow">Local development</p>
+            <h2 id="local-sign-in-title">Test account</h2>
+          </div>
+          <p>Use the seeded local account to test budgets and migrations.</p>
+          <form class="sign-in-form sign-in-form--compact">
+            <label for="local-email">Email address</label>
+            <input
+              id="local-email"
+              name="local-email"
+              type="email"
+              autocomplete="username"
+              value="dev@example.test"
+            />
+            <label for="local-password">Password</label>
+            <input
+              id="local-password"
+              name="local-password"
+              type="password"
+              autocomplete="current-password"
+              value="local-dev-password"
+            />
+            <button class="button" type="button">Sign in locally</button>
+          </form>
+        </section>
         <p class="auth-card__hint">
-          Static mockup: submitting this form does not send email.
+          Static mockup: neither sign-in method is active.
         </p>
       </section>
     </main>

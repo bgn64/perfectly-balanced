@@ -4,11 +4,15 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "predev": "npm run local:up",
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "mockup": "vite mockup",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "local:up": "node scripts/bootstrap-local-supabase.mjs",
+    "local:reset": "npm run local:up && supabase db reset --local --yes && node scripts/bootstrap-local-supabase.mjs",
+    "local:down": "supabase stop"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.3",
@@ -22,6 +26,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.4",
     "oxlint": "^1.75.0",
+    "supabase": "2.116.0-beta.7",
     "typescript": "~6.0.2",
     "vite": "^8.2.0"
   }

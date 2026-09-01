@@ -133,10 +133,19 @@ function LoadingScreen({ appName }: AppProps) {
 }
 
 function SignInScreen({ appName }: AppProps) {
+  const { localDemoMode, localTestCredentials, siteUrl } =
+    getClientConfiguration()
   const [email, setEmail] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [localEmail, setLocalEmail] = useState(
+    localTestCredentials?.email ?? '',
+  )
+  const [localPassword, setLocalPassword] = useState(
+    localTestCredentials?.password ?? '',
+  )
+  const [isLocalSubmitting, setIsLocalSubmitting] = useState(false)
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -154,7 +163,7 @@ function SignInScreen({ appName }: AppProps) {
     const { error } = await getSupabaseClient().auth.signInWithOtp({
       email: normalizedEmail,
       options: {
-        emailRedirectTo: getClientConfiguration().siteUrl,
+        emailRedirectTo: siteUrl,
         shouldCreateUser: false,
       },
     })
@@ -167,6 +176,31 @@ function SignInScreen({ appName }: AppProps) {
     }
 
     setSuccessMessage(`We sent a secure sign-in link to ${normalizedEmail}.`)
+  }
+
+  async function handleLocalSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    const normalizedEmail = localEmail.trim()
+    if (!normalizedEmail || !localPassword) {
+      setErrorMessage('Enter the local test account email and password.')
+      return
+    }
+
+    setIsLocalSubmitting(true)
+    setErrorMessage(null)
+    setSuccessMessage(null)
+
+    const { error } = await getSupabaseClient().auth.signInWithPassword({
+      email: normalizedEmail,
+      password: localPassword,
+    })
+
+    setIsLocalSubmitting(false)
+
+    if (error) {
+      setErrorMessage(error.message)
+    }
   }
 
   return (
@@ -194,6 +228,51 @@ function SignInScreen({ appName }: AppProps) {
             {isSubmitting ? 'Sending sign-in link...' : 'Email me a sign-in link'}
           </button>
         </form>
+        {localDemoMode && (
+          <>
+            <div className="auth-divider" aria-hidden="true"><span>or</span></div>
+            <section
+              className="local-sign-in"
+              aria-labelledby="local-sign-in-title"
+            >
+              <div>
+                <p className="eyebrow">Local development</p>
+                <h2 id="local-sign-in-title">Test account</h2>
+              </div>
+              <p>Use the seeded local account to test budgets and migrations.</p>
+              <form
+                className="sign-in-form sign-in-form--compact"
+                onSubmit={handleLocalSubmit}
+              >
+                <label htmlFor="local-email">Email address</label>
+                <input
+                  id="local-email"
+                  name="local-email"
+                  type="email"
+                  autoComplete="username"
+                  disabled={isLocalSubmitting}
+                  value={localEmail}
+                  onChange={(event) => setLocalEmail(event.target.value)}
+                  required
+                />
+                <label htmlFor="local-password">Password</label>
+                <input
+                  id="local-password"
+                  name="local-password"
+                  type="password"
+                  autoComplete="current-password"
+                  disabled={isLocalSubmitting}
+                  value={localPassword}
+                  onChange={(event) => setLocalPassword(event.target.value)}
+                  required
+                />
+                <button type="submit" disabled={isLocalSubmitting}>
+                  {isLocalSubmitting ? 'Signing in locally...' : 'Sign in locally'}
+                </button>
+              </form>
+            </section>
+          </>
+        )}
         {errorMessage && (
           <p className="form-message form-message--error" role="alert">
             {errorMessage}
