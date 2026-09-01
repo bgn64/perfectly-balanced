@@ -279,7 +279,8 @@ kbd {
 }
 
 .sidebar-section > a,
-.sidebar-section > button {
+.sidebar-section > button,
+.sidebar-section > span {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -1339,6 +1340,15 @@ input:focus-visible {
     border-radius: 0;
   }
 
+  .terminal-app.command-closed {
+    grid-template:
+      "title" auto
+      "sidebar" auto
+      "main" minmax(0, 1fr)
+      "status" auto
+      / 1fr;
+  }
+
   .sidebar {
     border-top: 1px solid #3b4261;
     border-right: 0;
@@ -1790,6 +1800,116 @@ input:focus-visible {
   color: #9ece6a;
 }
 
+.transaction-row-simple__select {
+  min-width: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+.transaction-row-simple__select:focus-visible {
+  outline: 2px solid #7dcfff;
+  outline-offset: 0.3rem;
+}
+
+.transaction-inline-editor--live {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 0.65rem;
+  padding: 0.8rem 1rem 1rem 2.1rem;
+}
+
+.transaction-inline-editor--live .transaction-inline-editor__head {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.transaction-inline-editor--live .transaction-inline-editor__head > span:first-child {
+  color: #7dcfff;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.transaction-inline-editor--live .split-editor {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 0.5rem;
+}
+
+.transaction-inline-editor--live .split-line {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(0, 1fr) 6.25rem 2rem;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.transaction-inline-editor--live .split-line .icon-button {
+  width: 2rem;
+  height: 2rem;
+  border-color: #414868;
+  border-radius: 0.25rem;
+  background: #24283b;
+  color: #f7768e;
+}
+
+.transaction-inline-editor--live .detail-category-add,
+.transaction-inline-editor--live .split-note,
+.transaction-inline-editor--live .form-message,
+.transaction-inline-editor--live .detail-actions,
+.transaction-inline-editor--live .transaction-inline-editor__add-category,
+.transaction-inline-editor--live .transaction-inline-editor__save,
+.transaction-inline-editor--live .split-heading {
+  grid-column: 1 / -1;
+}
+
+.transaction-inline-editor--live .split-heading {
+  margin: 0;
+  color: #c0caf5;
+  font-size: 0.72rem;
+}
+
+.transaction-inline-editor--live .detail-category-add {
+  margin-top: 0;
+}
+
+.transaction-inline-editor--live .split-note {
+  margin: 0;
+}
+
+.transaction-inline-editor--live .form-message {
+  margin: 0;
+}
+
+.transaction-inline-editor--live .detail-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin: 0;
+}
+
+.transaction-inline-editor--live .detail-save {
+  width: auto;
+  margin: 0;
+}
+
+.transaction-inline-editor--live .transaction-inline-editor__add-category {
+  margin: 0;
+}
+
+.transaction-inline-editor--live .transaction-inline-editor__save {
+  justify-self: end;
+  width: auto;
+  margin: 0;
+}
+
 .transaction-inline-editor {
   display: grid;
   grid-template-columns: auto minmax(10rem, 1fr) auto auto;
@@ -2015,6 +2135,7 @@ input:focus-visible {
 }
 
 .donut-chart {
+  position: relative;
   display: grid;
   width: 7.75rem;
   height: 7.75rem;
@@ -2033,6 +2154,7 @@ input:focus-visible {
 
 .donut-chart span {
   position: absolute;
+  z-index: 1;
   color: #c0caf5;
   font-size: 0.75rem;
   font-weight: 700;
@@ -2577,6 +2699,20 @@ input:focus-visible {
   color: #7dcfff;
 }
 
+.authenticated-app.terminal-app.screen-app .transaction-table .transaction-row-simple .category-chip {
+  min-width: 0;
+  margin: 0;
+  padding: 0.35rem 0.45rem;
+  font: inherit;
+  font-size: 0.68rem;
+}
+
+.authenticated-app.terminal-app.screen-app .transaction-table .transaction-inline-editor--live {
+  border-top: 1px solid #292e42;
+  border-bottom: 1px solid #3b4261;
+  background: #1a1b26;
+}
+
 .authenticated-app.terminal-app.screen-app .transaction-table .detail-panel {
   position: static;
   min-height: 0;
@@ -2761,6 +2897,11 @@ input:focus-visible {
   color: #343b58;
 }
 
+.authenticated-app.terminal-app.theme-light .transaction-table .transaction-inline-editor--live {
+  border-color: #a1a6b5;
+  background: #e9e9ed;
+}
+
 @media (max-width: 52rem) {
   .authenticated-app.terminal-app.screen-app .workspace > .page {
     padding: 0;
@@ -2768,5 +2909,28 @@ input:focus-visible {
 
   .authenticated-app.terminal-app.screen-app .transaction-table .search {
     min-width: 100%;
+  }
+
+  .transaction-inline-editor--live {
+    grid-template-columns: 1fr;
+    padding-left: 1rem;
+  }
+
+  .transaction-inline-editor--live > header > strong,
+  .transaction-inline-editor--live .split-editor,
+  .transaction-inline-editor--live .detail-category-add,
+  .transaction-inline-editor--live .split-note,
+  .transaction-inline-editor--live .form-message,
+  .transaction-inline-editor--live .detail-actions,
+  .transaction-inline-editor--live .transaction-inline-editor__add-category,
+  .transaction-inline-editor--live .transaction-inline-editor__save,
+  .transaction-inline-editor--live .split-heading {
+    grid-column: 1;
+  }
+}
+
+@media (max-width: 38rem) {
+  .transaction-inline-editor--live .split-line {
+    grid-template-columns: 1fr 5.5rem 2rem;
   }
 }
