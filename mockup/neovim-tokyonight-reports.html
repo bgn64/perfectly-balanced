@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Perfectly Balanced - Tokyo Night reports mockup</title>
+    <link rel="stylesheet" href="neovim-tokyonight.css" />
+  </head>
+  <body>
+    <div class="terminal-app command-closed screen-app">
+      <header class="titlebar">
+        <a class="brand" href="neovim-tokyonight.html" aria-label="Perfectly Balanced budget mockup"><span class="brand-mark">pb</span><span>perfectly-balanced</span></a>
+        <p>August 2026 · Personal budget</p>
+        <a class="mockup-sample-link" href="neovim-tokyonight.html">View budget</a>
+        <div class="theme-switcher" role="group" aria-label="Theme"><input checked id="theme-dark" name="theme" type="radio" /><label for="theme-dark">Dark</label><input id="theme-light" name="theme" type="radio" /><label for="theme-light">Light</label></div>
+        <button class="profile" type="button" aria-label="Open profile menu"><span>BG</span>ben@local</button>
+      </header>
+
+      <aside class="sidebar" aria-label="Application navigation">
+        <nav class="main-nav"><a class="nav-item" href="neovim-tokyonight.html"><span>Budget</span></a><a class="nav-item" href="neovim-tokyonight-transactions.html"><span>Transactions</span><strong>12</strong></a><a class="nav-item is-active" href="neovim-tokyonight-reports.html"><span>Reports</span></a></nav>
+        <section class="sidebar-section" aria-labelledby="report-range-title"><h2 id="report-range-title">Report range</h2><a href="#august" class="is-current">August 2026</a><a href="#july">July 2026</a><a href="#year">2026 year to date</a></section>
+        <section class="sidebar-section mockup-screen-nav" aria-labelledby="more-screens-title"><h2 id="more-screens-title">More screens</h2><a href="neovim-tokyonight-budget-empty.html">Empty budget</a><a href="neovim-tokyonight-sign-in.html">Sign in</a><a href="neovim-tokyonight-auth-states.html">Sign-in states</a><a href="neovim-tokyonight-configuration-error.html">Setup error</a><a href="neovim-tokyonight-actions.html">Action samples</a></section>
+      </aside>
+
+      <main id="august" class="workspace">
+        <header class="workspace-head workspace-head--compact">
+          <div><p class="eyebrow">Reports / 2026 / 08</p><h1>August at a glance</h1><p class="subtitle">A compact readout of how this month is tracking against your plan.</p></div>
+          <div class="month-controls" aria-label="Month navigation"><button type="button" aria-label="Previous month">← Previous</button><button type="button" aria-label="Next month">Next →</button></div>
+        </header>
+
+        <section class="summary" aria-label="August report summary">
+          <div><span>Received</span><strong class="available">$2,500.00</strong></div>
+          <div><span>Spent</span><strong class="spent">$1,864.32</strong></div>
+          <div><span>Still available</span><strong class="available">$1,386.00</strong></div>
+          <div><span>Needs review</span><strong class="warning">12 transactions</strong></div>
+        </section>
+
+        <section class="report-grid" aria-label="August reports">
+          <article class="report-card report-card--wide">
+            <header class="report-card__head"><div><p class="eyebrow">Spending breakdown</p><h2>Where the $1,864 went</h2></div><strong>$1,864</strong></header>
+            <div class="report-card__body donut-report">
+              <div class="donut-chart" aria-label="Spending breakdown chart"><span>$1,864</span></div>
+              <ul class="bar-list">
+                <li><span>Essentials</span><span class="bar-track"><i style="--bar-width: 71%; --bar-color: #7aa2f7"></i></span><strong>$1,320</strong></li>
+                <li><span>Flexible</span><span class="bar-track"><i style="--bar-width: 35%; --bar-color: #bb9af7"></i></span><strong>$280</strong></li>
+                <li><span>Not budgeted</span><span class="bar-track"><i style="--bar-width: 22%; --bar-color: #e0af68"></i></span><strong>$100</strong></li>
+                <li><span>Uncategorized</span><span class="bar-track"><i style="--bar-width: 30%; --bar-color: #f7768e"></i></span><strong>$164</strong></li>
+              </ul>
+            </div>
+          </article>
+
+          <article class="report-card">
+            <header class="report-card__head"><div><p class="eyebrow">Income</p><h2>Progress to plan</h2></div><strong class="available">50%</strong></header>
+            <div class="report-card__body">
+              <ul class="bar-list">
+                <li><span>Paycheck</span><span class="bar-track"><i style="--bar-width: 50%; --bar-color: #9ece6a"></i></span><strong>$2,100</strong></li>
+                <li><span>Freelance</span><span class="bar-track"><i style="--bar-width: 18%; --bar-color: #7dcfff"></i></span><strong>$200</strong></li>
+                <li><span>Uncategorized</span><span class="bar-track"><i style="--bar-width: 14%; --bar-color: #e0af68"></i></span><strong>$200</strong></li>
+              </ul>
+            </div>
+          </article>
+
+          <article class="report-card">
+            <header class="report-card__head"><div><p class="eyebrow">Plan variance</p><h2>Over budget</h2></div><span class="terminal-pill terminal-pill--danger">3 items</span></header>
+            <div class="report-card__body">
+              <ol class="variance-list">
+                <li><span>Restaurants<small>$314 spent · $250 planned</small></span><strong class="is-over">+$64</strong></li>
+                <li><span>Utilities<small>$278 spent · $250 planned</small></span><strong class="is-over">+$28</strong></li>
+                <li><span>Entertainment<small>$362 spent · $350 planned</small></span><strong class="is-over">+$12</strong></li>
+              </ol>
+            </div>
+          </article>
+
+          <article class="report-card">
+            <header class="report-card__head"><div><p class="eyebrow">Plan variance</p><h2>Under budget</h2></div><span class="terminal-pill terminal-pill--ok">3 items</span></header>
+            <div class="report-card__body">
+              <ol class="variance-list">
+                <li><span>Groceries<small>$475 spent · $600 planned</small></span><strong class="is-under">$125</strong></li>
+                <li><span>Transit<small>$72 spent · $150 planned</small></span><strong class="is-under">$78</strong></li>
+                <li><span>Fun money<small>$121 spent · $200 planned</small></span><strong class="is-under">$79</strong></li>
+              </ol>
+            </div>
+          </article>
+
+          <article class="report-card">
+            <header class="report-card__head"><div><p class="eyebrow">Review queue</p><h2>Uncategorized activity</h2></div><strong class="warning">12</strong></header>
+            <div class="report-card__body"><p class="detail-note">Uncategorized spending remains visible in every total so reports never conceal it.</p><a class="terminal-button" style="display: inline-block; margin-top: 1rem" href="neovim-tokyonight-transactions.html">Open transaction queue</a></div>
+          </article>
+        </section>
+      </main>
+
+      <footer class="statusline"><div><strong>REPORT</strong><span>august 2026 / all accounts</span></div><div><span><kbd>h</kbd><kbd>l</kbd> change month</span><span><kbd>tab</kbd> focus card</span><span><kbd>enter</kbd> drill down</span></div></footer>
+    </div>
+  </body>
+</html>

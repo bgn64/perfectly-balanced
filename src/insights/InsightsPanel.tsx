@@ -9,7 +9,6 @@ import type {
   TransactionSplit,
 } from '../finance/types.ts'
 import {
-  currentMonth,
   formatDisplayMoney,
   formatMonth,
   monthKey,
@@ -156,11 +155,16 @@ async function queryInsights(month: string): Promise<InsightsData> {
 export function InsightsPanel({
   categoriesRevision,
   activityRevision,
+  selectedMonth,
+  onMonthChange,
+  onOpenTransactions,
 }: {
   categoriesRevision: number
   activityRevision: number
+  selectedMonth: string
+  onMonthChange: (month: string) => void
+  onOpenTransactions: () => void
 }) {
-  const [selectedMonth, setSelectedMonth] = useState(currentMonth)
   const [data, setData] = useState<InsightsData>({
     budgets: [],
     budget: null,
@@ -244,7 +248,7 @@ export function InsightsPanel({
   ).sort((left, right) => right.localeCompare(left))
   function changeMonth(month: string) {
     setIsLoading(true)
-    setSelectedMonth(month)
+    onMonthChange(month)
   }
 
   const overBudget = data.allocations
@@ -257,16 +261,30 @@ export function InsightsPanel({
     .map(toVarianceItem)
     .filter((item) => item.variance < 0)
     .sort((left, right) => left.variance - right.variance)
+  const received = data.transactions
+    .filter((transaction) => transaction.amount > 0)
+    .reduce((sum, transaction) => sum + transaction.amount, 0)
+  const spent = data.transactions
+    .filter((transaction) => transaction.amount < 0)
+    .reduce((sum, transaction) => sum + Math.abs(transaction.amount), 0)
+  const plannedSpending = data.allocations
+    .filter((allocation) => allocation.direction === 'spending')
+    .reduce(
+      (sum, allocation) => sum + Math.abs(allocation.budgeted_amount),
+      0,
+    )
+  const uncategorizedTransactionCount = data.transactions.filter(
+    (transaction) => !transactionIdsWithSplits.has(transaction.id),
+  ).length
 
   return (
-    <main className="page insights-page">
-      <div className="page-head">
+    <section className="page insights-page insights-page--terminal">
+      <header className="workspace-head workspace-head--compact">
         <div>
-          <p className="eyebrow">Monthly insights</p>
-          <h1>{formatMonth(selectedMonth)}</h1>
+          <p className="eyebrow">Reports / {selectedMonth.replace('-', ' / ')}</p>
+          <h1>{formatMonth(selectedMonth)} at a glance</h1>
           <p className="subtle">
-            Understand where this month&apos;s money went and how it compares
-            with the plan.
+            A compact readout of how this month is tracking against your plan.
           </p>
         </div>
         <div className="toolbar-group month-toolbar">
@@ -302,7 +320,7 @@ export function InsightsPanel({
             &rarr;
           </button>
         </div>
-      </div>
+      </header>
 
       {errorMessage && (
         <p className="form-message form-message--error" role="alert">
@@ -311,44 +329,89 @@ export function InsightsPanel({
       )}
 
       {isLoading ? (
-        <section className="panel empty-state" aria-live="polite">
+        <section className="screen-panel empty-state" aria-live="polite">
           Loading insights...
         </section>
       ) : (
         <>
-          <InsightChart
-            activityByCategory={activityByCategory}
-            allocations={data.allocations}
-            allocationsByCategory={allocationsByCategory}
-            categoriesById={categoriesById}
-            direction="income"
-            mode={incomeMode}
-            splits={data.splits}
-            subsections={data.subsections}
-            transactions={data.transactions}
-            transactionIdsWithSplits={transactionIdsWithSplits}
-            onModeChange={setIncomeMode}
-          />
-          <InsightChart
-            activityByCategory={activityByCategory}
-            allocations={data.allocations}
-            allocationsByCategory={allocationsByCategory}
-            categoriesById={categoriesById}
-            direction="spending"
-            mode={spendingMode}
-            splits={data.splits}
-            subsections={data.subsections}
-            transactions={data.transactions}
-            transactionIdsWithSplits={transactionIdsWithSplits}
-            onModeChange={setSpendingMode}
-          />
-          <div className="variance-grid">
+          <section className="summary" aria-label="Report overview">
+            <div>
+              <span>Received</span>
+              <strong className="available">{formatDisplayMoney(received)}</strong>
+            </div>
+            <div>
+              <span>Spent</span>
+              <strong className="spent">{formatDisplayMoney(spent)}</strong>
+            </div>
+            <div>
+              <span>Still available</span>
+              <strong className="available">
+                {formatDisplayMoney(plannedSpending - spent)}
+              </strong>
+            </div>
+            <div>
+              <span>Needs review</span>
+              <strong className="warning">
+                {uncategorizedTransactionCount} transaction
+                {uncategorizedTransactionCount === 1 ? '' : 's'}
+              </strong>
+            </div>
+          </section>
+          <section className="report-grid">
+            <InsightChart
+              activityByCategory={activityByCategory}
+              allocations={data.allocations}
+              allocationsByCategory={allocationsByCategory}
+              categoriesById={categoriesById}
+              direction="spending"
+              mode={spendingMode}
+              splits={data.splits}
+              subsections={data.subsections}
+              transactions={data.transactions}
+              transactionIdsWithSplits={transactionIdsWithSplits}
+              onModeChange={setSpendingMode}
+            />
+            <InsightChart
+              activityByCategory={activityByCategory}
+              allocations={data.allocations}
+              allocationsByCategory={allocationsByCategory}
+              categoriesById={categoriesById}
+              direction="income"
+              mode={incomeMode}
+              splits={data.splits}
+              subsections={data.subsections}
+              transactions={data.transactions}
+              transactionIdsWithSplits={transactionIdsWithSplits}
+              onModeChange={setIncomeMode}
+            />
             <VarianceCard direction="over" items={overBudget} />
             <VarianceCard direction="under" items={underBudget} />
-          </div>
+            <section className="report-card report-card--review">
+              <header className="report-card__head">
+                <div>
+                  <p className="eyebrow">Review queue</p>
+                  <h2>Uncategorized activity</h2>
+                </div>
+                <strong className="warning">{uncategorizedTransactionCount}</strong>
+              </header>
+              <div className="report-card__body">
+                <p className="detail-note">
+                  Uncategorized spending remains visible in every total so
+                  reports never conceal it.
+                </p>
+                <button
+                  className="terminal-button"
+                  type="button"
+                  onClick={onOpenTransactions}
+                >
+                  Open transaction queue
+                </button>
+              </div>
+            </section>
+          </section>
         </>
       )}
-    </main>
+    </section>
   )
 }
 
@@ -429,8 +492,12 @@ function InsightChart({
     .reduce((sum, transaction) => sum + Math.abs(transaction.amount), 0)
 
   return (
-    <section className="panel chart-card">
-      <div className="chart-head">
+    <section
+      className={`panel chart-card report-card${
+        direction === 'spending' ? ' report-card--wide' : ''
+      }`}
+    >
+      <div className="chart-head report-card__head">
         <div>
           <p className="eyebrow">
             {direction === 'income' ? 'Income' : 'Spending'}
@@ -487,7 +554,7 @@ function InsightChart({
           {selectedSlice && (
             <aside className="drilldown">
               <p className="eyebrow">Selected subsection</p>
-              <div className="chart-head">
+              <div className="chart-head report-card__head">
                 <h3>{selectedSlice.label}</h3>
                 <button
                   className="button ghost"

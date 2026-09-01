@@ -149,12 +149,16 @@ function splitsMatchEvenDistribution(
 
 export function TransactionsPanel({
   categoriesRevision,
+  selectedMonth,
   onCategoriesChanged,
   onTransactionsChanged,
+  onUncategorizedCountChange,
 }: {
   categoriesRevision: number
+  selectedMonth: string
   onCategoriesChanged: () => void
   onTransactionsChanged: () => void
+  onUncategorizedCountChange: (count: number) => void
 }) {
   const { user } = useAuth()
   const [transactions, setTransactions] = useState<Transaction[]>([])
@@ -255,6 +259,27 @@ export function TransactionsPanel({
     () => new Map(categories.map((category) => [category.id, category])),
     [categories],
   )
+  const uncategorizedTransactionCount = useMemo(
+    () =>
+      transactions.filter(
+        (transaction) =>
+          (splitsByTransaction.get(transaction.id) ?? []).length === 0,
+      ).length,
+    [splitsByTransaction, transactions],
+  )
+  const selectedMonthTransactionCount = useMemo(
+    () =>
+      transactions.filter(
+        (transaction) => monthKey(transaction.transaction_date) === selectedMonth,
+      ).length,
+    [selectedMonth, transactions],
+  )
+  const categorizedTransactionCount =
+    transactions.length - uncategorizedTransactionCount
+
+  useEffect(() => {
+    onUncategorizedCountChange(uncategorizedTransactionCount)
+  }, [onUncategorizedCountChange, uncategorizedTransactionCount])
   const monthOptions = useMemo(
     () =>
       Array.from(
@@ -683,19 +708,20 @@ export function TransactionsPanel({
   const activeFilterCount = (scopeFilter ? 1 : 0) + categoryFilters.length
 
   return (
-    <main className="page transactions-page">
-      <div className="page-head">
+    <section className="page transactions-page transactions-page--terminal">
+      <header className="workspace-head workspace-head--compact">
         <div>
-          <p className="eyebrow">Complete transaction stream</p>
+          <p className="eyebrow">Transaction stream / all accounts</p>
           <h1>Transactions</h1>
           <p className="subtle">
-            Search, filter, and categorize activity from every connected account.
+            Search, filter, sort, and categorize every imported transaction from
+            one simple queue.
           </p>
         </div>
-        <span className="subtle">
-          {displayedTransactions.length.toLocaleString()} transactions
+        <span className="terminal-pill terminal-pill--warning">
+          {uncategorizedTransactionCount} uncategorized
         </span>
-      </div>
+      </header>
 
       {dataError && (
         <p className="form-message form-message--error" role="alert">
@@ -703,7 +729,41 @@ export function TransactionsPanel({
         </p>
       )}
 
-      <div className="toolbar">
+      <section className="summary" aria-label="Transaction overview">
+        <div>
+          <span>All activity</span>
+          <strong>{transactions.length.toLocaleString()}</strong>
+        </div>
+        <div>
+          <span>{formatMonth(selectedMonth)} activity</span>
+          <strong>{selectedMonthTransactionCount.toLocaleString()}</strong>
+        </div>
+        <div>
+          <span>Categorized</span>
+          <strong className="available">
+            {categorizedTransactionCount.toLocaleString()}
+          </strong>
+        </div>
+        <div>
+          <span>Needs review</span>
+          <strong className="warning">
+            {uncategorizedTransactionCount.toLocaleString()}
+          </strong>
+        </div>
+      </section>
+
+      <section
+        className="budget-table transaction-table"
+        aria-busy={isLoading}
+        aria-labelledby="transactions-title"
+      >
+        <div className="table-head">
+          <div>
+            <p className="eyebrow">Imported activity</p>
+            <h2 id="transactions-title">Every account, one queue</h2>
+          </div>
+        </div>
+      <div className="data-toolbar">
         <div className="search">
           <label className="sr-only" htmlFor="merchant-search">
             Search merchant name
@@ -812,8 +872,8 @@ export function TransactionsPanel({
         </div>
       )}
 
-      <div className="transaction-layout with-detail">
-        <section className="panel transactions" aria-busy={isLoading}>
+      <div className="transaction-layout transaction-layout--stacked">
+        <section className="transactions">
           {isLoading ? (
             <div className="empty-state" aria-live="polite">
               Loading transactions...
@@ -1087,7 +1147,8 @@ export function TransactionsPanel({
           )}
         </aside>
       </div>
-    </main>
+      </section>
+    </section>
   )
 }
 
