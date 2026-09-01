@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Perfectly Balanced - Tokyo Night empty budget mockup</title>
+    <link rel="stylesheet" href="neovim-tokyonight.css" />
+  </head>
+  <body>
+    <div class="terminal-app command-closed screen-app">
+      <header class="titlebar">
+        <a class="brand" href="neovim-tokyonight.html" aria-label="Perfectly Balanced budget mockup"><span class="brand-mark">pb</span><span>perfectly-balanced</span></a>
+        <p>September 2026 · Personal budget</p>
+        <a class="mockup-sample-link" href="neovim-tokyonight.html">View August</a>
+        <div class="theme-switcher" role="group" aria-label="Theme"><input checked id="theme-dark" name="theme" type="radio" /><label for="theme-dark">Dark</label><input id="theme-light" name="theme" type="radio" /><label for="theme-light">Light</label></div>
+        <button class="profile" type="button" aria-label="Open profile menu"><span>BG</span>ben@local</button>
+      </header>
+
+      <aside class="sidebar" aria-label="Application navigation">
+        <nav class="main-nav"><a class="nav-item is-active" href="neovim-tokyonight-budget-empty.html"><span>Budget</span></a><a class="nav-item" href="neovim-tokyonight-transactions.html"><span>Transactions</span><strong>12</strong></a><a class="nav-item" href="neovim-tokyonight-reports.html"><span>Reports</span></a></nav>
+        <section class="sidebar-section" aria-labelledby="months-title"><h2 id="months-title">Months</h2><a href="neovim-tokyonight.html">August 2026</a><a class="is-current" href="neovim-tokyonight-budget-empty.html">September 2026</a><a href="#october">October 2026</a></section>
+        <section class="sidebar-section mockup-screen-nav" aria-labelledby="more-screens-title"><h2 id="more-screens-title">More screens</h2><a href="neovim-tokyonight-sign-in.html">Sign in</a><a href="neovim-tokyonight-auth-states.html">Sign-in states</a><a href="neovim-tokyonight-configuration-error.html">Setup error</a><a href="neovim-tokyonight-actions.html">Action samples</a></section>
+      </aside>
+
+      <main class="workspace">
+        <header class="workspace-head workspace-head--compact">
+          <div><p class="eyebrow">Budget / 2026 / 09</p><h1>September 2026</h1><p class="subtitle">No monthly plan exists here yet.</p></div>
+          <div class="month-controls" aria-label="Month navigation"><button type="button">← Previous</button><button type="button">Next →</button></div>
+        </header>
+
+        <section class="screen-panel empty-terminal" aria-labelledby="empty-budget-title">
+          <div class="empty-terminal__copy">
+            <p class="eyebrow">Buffer empty</p>
+            <h2 id="empty-budget-title">Start a clean September budget.</h2>
+            <p>Set up an empty workspace now, then add subsections and categories in the order that makes sense for the month.</p>
+            <button class="terminal-button terminal-button--primary" type="button">+ Create September budget</button>
+          </div>
+          <aside class="empty-terminal__aside" aria-label="Nearby budgets">
+            <p class="eyebrow">Nearby months</p>
+            <nav class="month-list"><a href="neovim-tokyonight.html">August 2026 <span class="available">✓</span></a><a class="is-current" href="neovim-tokyonight-budget-empty.html">September 2026 <span class="warning">○</span></a><a href="#october">October 2026 <span class="warning">○</span></a></nav>
+          </aside>
+        </section>
+      </main>
+
+      <footer class="statusline"><div><strong>READY</strong><span>september 2026 / no budget</span></div><div><span><kbd>enter</kbd> create budget</span><span><kbd>h</kbd><kbd>l</kbd> change month</span></div></footer>
+    </div>
+  </body>
+</html>
