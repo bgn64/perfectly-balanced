@@ -66,6 +66,14 @@ rejects it in production builds or when its Supabase URL is not localhost.
 Do not put a Supabase service-role key, Vercel token, Plaid credential, or
 other secret in a `VITE_` value.
 
+Local Supabase keeps `[auth].enable_signup = false` to prevent new user
+registration while enabling the email provider for the seeded account. The
+separate `[auth.email].enable_signup = true` setting is required by the local
+Supabase CLI to permit email/password and Magic Link login.
+After changing `supabase/config.toml`, run `npm run local:down` followed by
+`npm run local:reset` to recreate the local Auth container with the new
+configuration.
+
 ### Hosted client configuration
 
 For Vercel or another hosted client deployment, provide the browser-safe values
