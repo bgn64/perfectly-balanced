@@ -1032,11 +1032,7 @@ function AuthenticatedShell({
         {activeView === 'insights' && (
           <section className="sidebar-section" aria-labelledby="report-range-title">
             <h2 id="report-range-title">Report range</h2>
-            {[
-              selectedMonth,
-              shiftMonth(selectedMonth, -1),
-              shiftMonth(selectedMonth, -2),
-            ].map((month) => (
+            {[selectedMonth, shiftMonth(selectedMonth, -1)].map((month) => (
               <button
                 className={month === selectedMonth ? 'is-current' : ''}
                 key={month}
@@ -1046,6 +1042,7 @@ function AuthenticatedShell({
                 {formatMonth(month)}
               </button>
             ))}
+            <span>{selectedMonth.slice(0, 4)} year to date</span>
           </section>
         )}
       </aside>
@@ -1078,21 +1075,27 @@ function AuthenticatedShell({
 
       <footer className="statusline">
         <div>
-          <strong>{activeView === 'transactions' ? 'VIEW' : 'REPORT'}</strong>
+          <strong>{activeView === 'transactions' ? 'EDIT' : 'REPORT'}</strong>
           <span>
             {activeView === 'transactions'
-              ? 'transactions / all accounts'
+              ? 'transaction / category split'
               : `${formatMonth(selectedMonth)} / all accounts`}
           </span>
         </div>
         <div>
           {activeView === 'transactions' ? (
             <>
+              <span><kbd>/</kbd> search</span>
               <span><kbd>j</kbd><kbd>k</kbd> select</span>
-              <span><kbd>c</kbd> categorize</span>
+              <span><kbd>enter</kbd> categorize</span>
+              <span><kbd>esc</kbd> cancel</span>
             </>
           ) : (
-            <span>Monthly summary</span>
+            <>
+              <span><kbd>h</kbd><kbd>l</kbd> change month</span>
+              <span><kbd>tab</kbd> focus card</span>
+              <span><kbd>enter</kbd> drill down</span>
+            </>
           )}
         </div>
       </footer>
