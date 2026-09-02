@@ -11,14 +11,14 @@
       <header class="titlebar">
         <a class="brand" href="neovim-tokyonight.html" aria-label="Perfectly Balanced budget mockup"><span class="brand-mark">pb</span><span>perfectly-balanced</span></a>
         <p>August 2026 · Personal budget</p>
-        <a class="mockup-sample-link" href="neovim-tokyonight-reports.html">View reports</a>
+        <a class="mockup-sample-link" href="neovim-tokyonight-transaction-editing.html">Category picker states</a>
         <div class="theme-switcher" role="group" aria-label="Theme"><input checked id="theme-dark" name="theme" type="radio" /><label for="theme-dark">Dark</label><input id="theme-light" name="theme" type="radio" /><label for="theme-light">Light</label></div>
         <button class="profile" type="button" aria-label="Open profile menu"><span>BG</span>ben@local</button>
       </header>
 
       <aside class="sidebar" aria-label="Application navigation">
         <nav class="main-nav"><a class="nav-item" href="neovim-tokyonight.html"><span>Budget</span></a><a class="nav-item is-active" href="neovim-tokyonight-transactions.html"><span>Transactions</span><strong>12</strong></a><a class="nav-item" href="neovim-tokyonight-reports.html"><span>Reports</span></a></nav>
-        <section class="sidebar-section mockup-screen-nav" aria-labelledby="more-screens-title"><h2 id="more-screens-title">More screens</h2><a href="neovim-tokyonight-budget-empty.html">Empty budget</a><a href="neovim-tokyonight-sign-in.html">Sign in</a><a href="neovim-tokyonight-auth-states.html">Sign-in states</a><a href="neovim-tokyonight-configuration-error.html">Setup error</a><a href="neovim-tokyonight-actions.html">Action samples</a></section>
+        <section class="sidebar-section mockup-screen-nav" aria-labelledby="more-screens-title"><h2 id="more-screens-title">More screens</h2><a href="neovim-tokyonight-transaction-editing.html">Category picker states</a><a href="neovim-tokyonight-budget-empty.html">Empty budget</a><a href="neovim-tokyonight-sign-in.html">Sign in</a><a href="neovim-tokyonight-auth-states.html">Sign-in states</a><a href="neovim-tokyonight-configuration-error.html">Setup error</a><a href="neovim-tokyonight-actions.html">Action samples</a></section>
       </aside>
 
       <main class="workspace">
@@ -46,23 +46,27 @@
           </div>
           <div class="transaction-column-head" aria-hidden="true"><span>Transaction</span><span>Category</span><span>Amount</span></div>
 
-          <button class="transaction-row-simple" type="button"><span class="transaction-row-simple__name"><strong>Co-op Market</strong><span>Aug 26 · Checking · Pending</span></span><span class="category-chip">2 categories</span><strong class="is-outflow">-$84.01</strong></button>
-          <button class="transaction-row-simple" type="button"><span class="transaction-row-simple__name"><strong>Costco</strong><span>Aug 26 · Visa Credit Card</span></span><span class="category-chip">Groceries</span><strong class="is-outflow">-$237.42</strong></button>
-          <button class="transaction-row-simple is-selected" type="button"><span class="transaction-row-simple__name"><strong>Corner Coffee</strong><span>Aug 25 · Everyday Checking</span></span><span class="category-chip">Categorize</span><strong class="is-outflow">-$12.80</strong></button>
-          <form class="transaction-inline-editor" aria-label="Categorize Corner Coffee">
-            <span>Split Corner Coffee</span>
-            <input class="inline-input" aria-label="Category for Corner Coffee" value="Restaurants" autofocus />
-            <span class="terminal-pill terminal-pill--danger">$4.80 left</span>
-            <button class="terminal-button terminal-button--primary" disabled type="button">Save split</button>
-            <p class="inline-error">Type to match or create a category, then assign the remaining $4.80.</p>
-          </form>
-          <button class="transaction-row-simple" type="button"><span class="transaction-row-simple__name"><strong>Payroll deposit</strong><span>Aug 25 · Everyday Checking</span></span><span class="category-chip">Paycheck</span><strong class="is-inflow">+$2,500.00</strong></button>
-          <button class="transaction-row-simple" type="button"><span class="transaction-row-simple__name"><strong>Metro Transit</strong><span>Aug 24 · Everyday Checking</span></span><span class="category-chip">Transit</span><strong class="is-outflow">-$72.00</strong></button>
+          <button class="transaction-row-simple" type="button"><span class="transaction-row-simple__name"><strong>Co-op Market</strong><span>Aug 26 · Checking · Pending</span></span><span class="category-summary">Groceries, Household</span><strong class="is-outflow">-$84.01</strong></button>
+          <button class="transaction-row-simple" type="button"><span class="transaction-row-simple__name"><strong>Costco</strong><span>Aug 26 · Visa Credit Card</span></span><span class="category-summary">Groceries</span><strong class="is-outflow">-$237.42</strong></button>
+          <div class="transaction-row-simple is-selected">
+            <button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Corner Coffee</strong><span>Aug 25 · Everyday Checking</span></span></button>
+            <div class="transaction-category-editor">
+              <input class="category-search-input" aria-label="Choose a category for Corner Coffee" value="res" autofocus />
+              <div class="category-search-menu" role="listbox" aria-label="Categories matching res">
+                <button class="is-highlighted" type="button" role="option">Restaurants</button>
+                <button type="button" role="option">Restaurant delivery</button>
+                <button class="category-search-menu__create" type="button" role="option">+ Create “res”</button>
+              </div>
+            </div>
+            <strong class="is-outflow">-$12.80</strong>
+          </div>
+          <button class="transaction-row-simple" type="button"><span class="transaction-row-simple__name"><strong>Payroll deposit</strong><span>Aug 25 · Everyday Checking</span></span><span class="category-summary">Paycheck</span><strong class="is-inflow">+$2,500.00</strong></button>
+          <button class="transaction-row-simple" type="button"><span class="transaction-row-simple__name"><strong>Metro Transit</strong><span>Aug 24 · Everyday Checking</span></span><span class="category-summary">Transit</span><strong class="is-outflow">-$72.00</strong></button>
 
         </section>
       </main>
 
-      <footer class="statusline"><div><strong>EDIT</strong><span>corner coffee / category split</span></div><div><span><kbd>/</kbd> search</span><span><kbd>j</kbd><kbd>k</kbd> select</span><span><kbd>enter</kbd> categorize</span><span><kbd>esc</kbd> cancel</span></div></footer>
+      <footer class="statusline"><div><strong>EDIT</strong><span>corner coffee / category</span></div><div><span><kbd>/</kbd> search</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span><span><kbd>c</kbd> category</span><span><kbd>enter</kbd> select</span><span><kbd>esc</kbd> cancel</span></div></footer>
     </div>
   </body>
 </html>

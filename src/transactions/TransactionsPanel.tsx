@@ -1,13 +1,15 @@
 import {
-  Fragment,
   useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
+  type Dispatch,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type RefObject,
+  type SetStateAction,
 } from 'react'
 import { useAuth } from '../auth/useAuth.ts'
-import { CategoryCombobox } from '../finance/CategoryCombobox.tsx'
 import type {
   Budget,
   Category,
@@ -31,15 +33,10 @@ interface TransactionsData {
   budgets: Budget[]
 }
 
-interface DraftSplit {
-  key: string
-  categoryId: string | null
-  amount: string
-}
-
 type TransactionSort = 'date' | 'merchant' | 'amount'
 
 const uncategorizedFilter = 'uncategorized'
+const nonUsdCategoryMessage = 'Only USD transactions can be categorized.'
 
 async function queryTransactions(): Promise<TransactionsData> {
   const client = getSupabaseClient()
@@ -93,61 +90,6 @@ async function queryTransactions(): Promise<TransactionsData> {
   }
 }
 
-function parseSplitAmount(value: string): number | null {
-  const normalized = value.trim().replace(/[$,\s]/g, '')
-  if (!/^-?\d+(?:\.\d{1,2})?$/.test(normalized)) {
-    return null
-  }
-  const amount = Number(normalized)
-  return Number.isFinite(amount) ? amount : null
-}
-
-function evenlyDistributedSplits(
-  transactionAmount: number,
-  splits: DraftSplit[],
-): DraftSplit[] {
-  if (splits.length === 0) {
-    return []
-  }
-
-  const totalCents = Math.round(transactionAmount * 100)
-  const evenCents = Math.trunc(totalCents / splits.length)
-  const remainder = totalCents - evenCents * splits.length
-
-  return splits.map((split, index) => ({
-    ...split,
-    amount: (
-      (evenCents + (index === splits.length - 1 ? remainder : 0)) /
-      100
-    ).toFixed(2),
-  }))
-}
-
-function splitsMatchEvenDistribution(
-  transactionAmount: number,
-  splits: TransactionSplit[],
-): boolean {
-  if (splits.length === 0) {
-    return true
-  }
-
-  const expected = evenlyDistributedSplits(
-    transactionAmount,
-    splits.map((split) => ({
-      key: split.id,
-      categoryId: split.category_id,
-      amount: split.amount.toFixed(2),
-    })),
-  )
-    .map((split) => Math.round(Number(split.amount) * 100))
-    .sort((left, right) => left - right)
-  const actual = splits
-    .map((split) => Math.round(split.amount * 100))
-    .sort((left, right) => left - right)
-
-  return actual.every((amount, index) => amount === expected[index])
-}
-
 export function TransactionsPanel({
   categoriesRevision,
   selectedMonth,
@@ -175,51 +117,34 @@ export function TransactionsPanel({
   const [selectedTransactionId, setSelectedTransactionId] = useState<
     string | null
   >(null)
-  const [draftSplits, setDraftSplits] = useState<DraftSplit[]>([])
-  const [isManualSplit, setIsManualSplit] = useState(false)
-  const [splitError, setSplitError] = useState<string | null>(null)
-  const [isSavingSplits, setIsSavingSplits] = useState(false)
-  const [focusedSplitKey, setFocusedSplitKey] = useState<string | null>(null)
+  const [editingTransactionId, setEditingTransactionId] = useState<
+    string | null
+  >(null)
+  const [pickerError, setPickerError] = useState<string | null>(null)
+  const [categoryNotice, setCategoryNotice] = useState<string | null>(null)
+  const [isSavingCategories, setIsSavingCategories] = useState(false)
   const requestGeneration = useRef(0)
   const selectedTransactionIdRef = useRef<string | null>(null)
-  const transactionButtonRefs = useRef(
-    new Map<string, HTMLButtonElement>(),
-  )
-  const splitCategoryInputRefs = useRef(
-    new Map<string, HTMLInputElement>(),
-  )
-  const addCategoryInputRef = useRef<HTMLInputElement>(null)
+  const transactionButtonRefs = useRef(new Map<string, HTMLButtonElement>())
+  const pickerSearchInputRef = useRef<HTMLInputElement>(null)
 
   const refreshTransactions = useCallback(async () => {
     const generation = ++requestGeneration.current
     try {
       const data = await queryTransactions()
       if (generation !== requestGeneration.current) {
-        return
+        return false
       }
       setTransactions(data.transactions)
       setCategories(data.categories)
       setSplits(data.splits)
       setBudgets(data.budgets)
       if (!selectedTransactionIdRef.current && data.transactions[0]) {
-        const firstTransaction = data.transactions[0]
-        const firstSplits = data.splits.filter(
-          (split) => split.transaction_id === firstTransaction.id,
-        )
-        selectedTransactionIdRef.current = firstTransaction.id
-        setSelectedTransactionId(firstTransaction.id)
-        setDraftSplits(
-          firstSplits.map((split) => ({
-            key: split.id,
-            categoryId: split.category_id,
-            amount: split.amount.toFixed(2),
-          })),
-        )
-        setIsManualSplit(
-          !splitsMatchEvenDistribution(firstTransaction.amount, firstSplits),
-        )
+        selectedTransactionIdRef.current = data.transactions[0].id
+        setSelectedTransactionId(data.transactions[0].id)
       }
       setDataError(null)
+      return true
     } catch (error) {
       if (generation === requestGeneration.current) {
         setDataError(
@@ -228,6 +153,7 @@ export function TransactionsPanel({
             : 'We could not load transactions.',
         )
       }
+      return false
     } finally {
       if (generation === requestGeneration.current) {
         setIsLoading(false)
@@ -281,6 +207,7 @@ export function TransactionsPanel({
   useEffect(() => {
     onUncategorizedCountChange(uncategorizedTransactionCount)
   }, [onUncategorizedCountChange, uncategorizedTransactionCount])
+
   const monthOptions = useMemo(
     () =>
       Array.from(
@@ -367,56 +294,39 @@ export function TransactionsPanel({
   const selectedTransaction =
     transactions.find((transaction) => transaction.id === selectedTransactionId) ??
     null
-  const applicableBudget = selectedTransaction
-    ? budgets.find(
-        (candidate) =>
-          monthKey(candidate.month) === monthKey(selectedTransaction.transaction_date),
-      ) ?? null
-    : null
 
-  const selectTransaction = useCallback(
-    (transaction: Transaction) => {
-      const transactionSplits = splitsByTransaction.get(transaction.id) ?? []
-      selectedTransactionIdRef.current = transaction.id
-      setSelectedTransactionId(transaction.id)
-      setDraftSplits(
-        transactionSplits.map((split) => ({
-          key: split.id,
-          categoryId: split.category_id,
-          amount: split.amount.toFixed(2),
-        })),
-      )
-      setIsManualSplit(
-        !splitsMatchEvenDistribution(transaction.amount, transactionSplits),
-      )
-      setSplitError(
-        transaction.currency_code === 'USD'
-          ? null
-          : 'Only USD transactions can be categorized.',
-      )
-      setFocusedSplitKey(null)
-    },
-    [splitsByTransaction],
-  )
+  const selectTransaction = useCallback((transaction: Transaction) => {
+    selectedTransactionIdRef.current = transaction.id
+    setSelectedTransactionId(transaction.id)
+    setEditingTransactionId(null)
+    setPickerError(null)
+    setCategoryNotice(
+      transaction.currency_code === 'USD' ? null : nonUsdCategoryMessage,
+    )
+  }, [])
 
-  const quickCategorize = useCallback(
+  const focusPickerSearch = useCallback(() => {
+    window.requestAnimationFrame(() => {
+      pickerSearchInputRef.current?.focus({ preventScroll: true })
+    })
+  }, [])
+
+  const openCategoryPicker = useCallback(
     (transaction: Transaction) => {
       selectTransaction(transaction)
       if (transaction.currency_code !== 'USD') {
+        setEditingTransactionId(null)
+        setCategoryNotice(nonUsdCategoryMessage)
+        setPickerError(nonUsdCategoryMessage)
         return
       }
-      const key = window.crypto.randomUUID()
-      setDraftSplits([
-        {
-          key,
-          categoryId: null,
-          amount: transaction.amount.toFixed(2),
-        },
-      ])
-      setIsManualSplit(false)
-      setFocusedSplitKey(key)
+      if (editingTransactionId !== transaction.id) {
+        setEditingTransactionId(transaction.id)
+        setPickerError(null)
+      }
+      focusPickerSearch()
     },
-    [selectTransaction],
+    [editingTransactionId, focusPickerSearch, selectTransaction],
   )
 
   useEffect(() => {
@@ -429,12 +339,10 @@ export function TransactionsPanel({
     }
 
     function handleKeyDown(event: KeyboardEvent) {
-      if (
-        event.defaultPrevented ||
-        event.altKey ||
-        event.metaKey ||
-        isTextEntryTarget(event.target)
-      ) {
+      if (event.defaultPrevented || event.altKey || event.metaKey) {
+        return
+      }
+      if (isTextEntryTarget(event.target)) {
         return
       }
 
@@ -461,8 +369,7 @@ export function TransactionsPanel({
         }
         event.preventDefault()
         const originTransactionId =
-          focusedTransactionRow?.dataset.transactionId ??
-          selectedTransactionId
+          focusedTransactionRow?.dataset.transactionId ?? selectedTransactionId
         const currentIndex = displayedTransactions.findIndex(
           (transaction) => transaction.id === originTransactionId,
         )
@@ -486,24 +393,9 @@ export function TransactionsPanel({
         return
       }
 
-      if (
-        key === 'c' &&
-        !event.ctrlKey &&
-        !event.shiftKey &&
-        selectedTransaction?.currency_code === 'USD'
-      ) {
+      if (key === 'c' && !event.ctrlKey && !event.shiftKey && selectedTransaction) {
         event.preventDefault()
-        const transactionSplits =
-          splitsByTransaction.get(selectedTransaction.id) ?? []
-        if (transactionSplits.length === 0) {
-          if (draftSplits.length === 0) {
-            quickCategorize(selectedTransaction)
-          } else {
-            splitCategoryInputRefs.current.get(draftSplits[0].key)?.focus()
-          }
-        } else {
-          addCategoryInputRef.current?.focus()
-        }
+        openCategoryPicker(selectedTransaction)
       }
     }
 
@@ -511,12 +403,10 @@ export function TransactionsPanel({
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [
     displayedTransactions,
-    draftSplits,
-    quickCategorize,
+    openCategoryPicker,
     selectTransaction,
     selectedTransaction,
     selectedTransactionId,
-    splitsByTransaction,
   ])
 
   async function createCategory(name: string): Promise<Category> {
@@ -540,166 +430,65 @@ export function TransactionsPanel({
     return data
   }
 
-  async function createCategoryAndAddToBudget(name: string): Promise<Category> {
-    if (!applicableBudget) {
-      throw new Error('This transaction month does not have a budget.')
-    }
-    const { data, error } = await getSupabaseClient().rpc(
-      'create_category_with_root_budget_allocation',
-      {
-        p_budget_id: applicableBudget.id,
-        p_name: name.trim(),
-      },
-    )
-    if (error) {
-      throw new Error(
-        error.code === '23505' ? 'Category names must be unique.' : error.message,
-      )
-    }
-    if (
-      !data ||
-      typeof data !== 'object' ||
-      !('id' in data) ||
-      !('name' in data) ||
-      typeof data.id !== 'string' ||
-      typeof data.name !== 'string'
-    ) {
-      throw new Error('The created category could not be read.')
-    }
-    const category = { id: data.id, name: data.name }
-    setCategories((current) =>
-      [...current, category].sort((left, right) =>
-        left.name.localeCompare(right.name),
-      ),
-    )
-    onCategoriesChanged()
-    return category
-  }
-
-  function addCategoryToSplit(category: Category) {
-    if (!selectedTransaction) {
+  async function saveCategory(
+    transaction: Transaction,
+    category: Category,
+  ): Promise<void> {
+    if (transaction.id !== editingTransactionId) {
       return
     }
-    if (draftSplits.some((split) => split.categoryId === category.id)) {
-      throw new Error('That category is already assigned.')
+    if (transaction.currency_code !== 'USD') {
+      setPickerError(nonUsdCategoryMessage)
+      return
     }
-    const next = [
-      ...draftSplits,
-      {
-        key: window.crypto.randomUUID(),
-        categoryId: category.id,
-        amount: '0.00',
-      },
-    ]
-    if (isManualSplit) {
-      const assignedCents = draftSplits.reduce(
-        (sum, split) =>
-          sum + Math.round((parseSplitAmount(split.amount) ?? 0) * 100),
-        0,
+
+    setIsSavingCategories(true)
+    setPickerError(null)
+    try {
+      const { error } = await getSupabaseClient().rpc(
+        'replace_transaction_category_splits',
+        {
+          p_transaction_id: transaction.id,
+          p_splits: [{ category_id: category.id, amount: transaction.amount }],
+        },
       )
-      const remainingCents =
-        Math.round(selectedTransaction.amount * 100) - assignedCents
-      next[next.length - 1] = {
-        ...next[next.length - 1],
-        amount: (remainingCents / 100).toFixed(2),
+      if (error) {
+        setPickerError(error.message)
+        return
       }
-      setDraftSplits(next)
-    } else {
-      setDraftSplits(evenlyDistributedSplits(selectedTransaction.amount, next))
-    }
-    setSplitError(null)
-  }
-
-  function removeSplit(key: string) {
-    const next = draftSplits.filter((split) => split.key !== key)
-    setDraftSplits(
-      !isManualSplit && selectedTransaction
-        ? evenlyDistributedSplits(selectedTransaction.amount, next)
-        : next,
-    )
-    setSplitError(null)
-  }
-
-  function changeSplitCategory(key: string, category: Category) {
-    setDraftSplits((current) =>
-      current.map((split) =>
-        split.key === key ? { ...split, categoryId: category.id } : split,
-      ),
-    )
-    setFocusedSplitKey(null)
-    setSplitError(null)
-  }
-
-  function validateSplits(transaction: Transaction): string | null {
-    if (draftSplits.length === 0) {
-      return null
-    }
-    if (draftSplits.some((split) => !split.categoryId)) {
-      return 'Choose a category for every split.'
-    }
-    const amounts = draftSplits.map((split) => parseSplitAmount(split.amount))
-    if (amounts.some((amount) => amount === null || amount === 0)) {
-      return 'Every category needs a nonzero amount with no more than two decimals.'
-    }
-    const validAmounts = amounts as number[]
-    if (
-      validAmounts.some(
-        (amount) => Math.sign(amount) !== Math.sign(transaction.amount),
+      const didRefresh = await refreshTransactions()
+      if (!didRefresh) {
+        setPickerError(
+          'The category changes were saved, but transactions could not be refreshed.',
+        )
+        return
+      }
+      onTransactionsChanged()
+      setEditingTransactionId(null)
+    } catch (error) {
+      setPickerError(
+        error instanceof Error
+          ? error.message
+          : 'The category changes could not be saved.',
       )
-    ) {
-      return `Every amount must be ${transaction.amount > 0 ? 'income' : 'spending'}.`
+    } finally {
+      setIsSavingCategories(false)
     }
-    const splitCents = validAmounts.reduce(
-      (sum, amount) => sum + Math.round(amount * 100),
-      0,
-    )
-    if (splitCents !== Math.round(transaction.amount * 100)) {
-      return `Splits must total ${formatMoney(
-        transaction.amount,
-        transaction.currency_code ?? 'USD',
-      )}.`
-    }
-    return null
   }
 
-  async function saveSplits() {
-    if (!selectedTransaction) {
-      return
-    }
-    const validationError = validateSplits(selectedTransaction)
-    if (validationError) {
-      setSplitError(validationError)
-      return
-    }
-    setIsSavingSplits(true)
-    setSplitError(null)
-    const { error } = await getSupabaseClient().rpc(
-      'replace_transaction_category_splits',
-      {
-        p_transaction_id: selectedTransaction.id,
-        p_splits: draftSplits.map((split) => {
-          if (!split.categoryId) {
-            throw new Error('Choose a category for every split.')
-          }
-          return {
-            category_id: split.categoryId,
-            amount: Number(split.amount),
-          }
-        }),
-      },
-    )
-    setIsSavingSplits(false)
-    if (error) {
-      setSplitError(error.message)
-      return
-    }
-    await refreshTransactions()
-    onTransactionsChanged()
+  function cancelCategoryPicker(transactionId: string) {
+    setEditingTransactionId(null)
+    setPickerError(null)
+    window.requestAnimationFrame(() => {
+      transactionButtonRefs.current.get(transactionId)?.focus({
+        preventScroll: true,
+      })
+    })
   }
 
   function toggleFilter(
     value: string,
-    setFilters: React.Dispatch<React.SetStateAction<string[]>>,
+    setFilters: Dispatch<SetStateAction<string[]>>,
   ) {
     setFilters((current) =>
       current.includes(value)
@@ -766,146 +555,205 @@ export function TransactionsPanel({
             <h2 id="transactions-title">Every account, one queue</h2>
           </div>
         </div>
-      <div className="data-toolbar">
-        <label className="terminal-search" htmlFor="merchant-search">
-          <span aria-hidden="true">/</span>
-          <span className="sr-only">Search merchant name</span>
-          <input
-            id="merchant-search"
-            placeholder="Search merchant name..."
-            type="search"
-            value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
-          />
-        </label>
-        {activeFilterCount > 0 && (
-          <div
-            className="active-filters toolbar-tokens"
-            aria-label="Active filters"
+        <div className="data-toolbar">
+          <label
+            className="terminal-search"
+            data-semantic-id="transactions-search-label"
+            data-semantic-kind="search-label"
+            data-semantic-region="workspace"
+            data-semantic-status-label="Search transactions"
+            htmlFor="merchant-search"
           >
-            {scopeFilter && (
-              <FilterChip
-                label={scopeByKey.get(scopeFilter)?.label ?? scopeFilter}
-                onRemove={() => setScopeFilter(null)}
-              />
-            )}
-            {categoryFilters.map((filter) => (
-              <FilterChip
-                key={filter}
-                label={
-                  filter === uncategorizedFilter
-                    ? 'Uncategorized'
-                    : categoriesById.get(filter)?.name ?? filter
-                }
-                onRemove={() => toggleFilter(filter, setCategoryFilters)}
-              />
-            ))}
-          </div>
-        )}
-        <div className="toolbar-group transaction-tools">
-          <details className="filter-wrap">
-            <summary className="terminal-button pill-button">
-              Filter{activeFilterCount ? ` · ${activeFilterCount}` : ''}
-            </summary>
-            <div className="popover filter-popover">
-              <h2>Budget or month</h2>
-              {scopeOptions.map((option) => (
-                <label className="radio" key={option.key}>
-                  <input
-                    checked={scopeFilter === option.key}
-                    name="transaction-scope"
-                    type="radio"
-                    onChange={() => setScopeFilter(option.key)}
-                  />
-                  {option.label}
-                </label>
-              ))}
-              <h2>Categories · match any</h2>
-              <label className="check">
-                <input
-                  checked={categoryFilters.includes(uncategorizedFilter)}
-                  type="checkbox"
-                  onChange={() =>
-                    toggleFilter(uncategorizedFilter, setCategoryFilters)
-                  }
+            <span aria-hidden="true">/</span>
+            <span className="sr-only">Search merchant name</span>
+            <input
+              data-semantic-id="transactions-search"
+              data-semantic-kind="search-input"
+              data-semantic-region="workspace"
+              data-semantic-status-action="search-transactions"
+              data-semantic-status-label="Search merchant name"
+              id="merchant-search"
+              placeholder="Search merchant name..."
+              type="search"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+            />
+          </label>
+          {activeFilterCount > 0 && (
+            <div
+              className="active-filters toolbar-tokens"
+              aria-label="Active filters"
+            >
+              {scopeFilter && (
+                <FilterChip
+                  label={scopeByKey.get(scopeFilter)?.label ?? scopeFilter}
+                  semanticId={`transaction-filter-remove-${scopeFilter}`}
+                  onRemove={() => setScopeFilter(null)}
                 />
-                Uncategorized
-              </label>
-              {categories.map((category) => (
-                <label className="check" key={category.id}>
+              )}
+              {categoryFilters.map((filter) => (
+                <FilterChip
+                  key={filter}
+                  label={
+                    filter === uncategorizedFilter
+                      ? 'Uncategorized'
+                      : categoriesById.get(filter)?.name ?? filter
+                  }
+                  semanticId={`transaction-filter-remove-${filter}`}
+                  onRemove={() => toggleFilter(filter, setCategoryFilters)}
+                />
+              ))}
+            </div>
+          )}
+          <div className="toolbar-group transaction-tools">
+            <details className="filter-wrap">
+              <summary
+                className="terminal-button pill-button"
+                data-semantic-id="transactions-filter"
+                data-semantic-kind="filter-summary"
+                data-semantic-region="workspace"
+                data-semantic-status-action="filter-transactions"
+                data-semantic-status-label="Transaction filters"
+              >
+                Filter{activeFilterCount ? ` · ${activeFilterCount}` : ''}
+              </summary>
+              <div className="popover filter-popover">
+                <h2>Budget or month</h2>
+                {scopeOptions.map((option) => (
+                  <label className="radio" key={option.key}>
+                    <input
+                      checked={scopeFilter === option.key}
+                      data-semantic-id={`transaction-scope-${option.key}`}
+                      data-semantic-kind="filter-option"
+                      data-semantic-region="workspace"
+                      data-semantic-status-action="filter-transactions"
+                      data-semantic-status-label={option.label}
+                      name="transaction-scope"
+                      type="radio"
+                      onChange={() => setScopeFilter(option.key)}
+                    />
+                    {option.label}
+                  </label>
+                ))}
+                <h2>Categories · match any</h2>
+                <label className="check">
                   <input
-                    checked={categoryFilters.includes(category.id)}
+                    checked={categoryFilters.includes(uncategorizedFilter)}
+                    data-semantic-id="transaction-filter-uncategorized"
+                    data-semantic-kind="filter-option"
+                    data-semantic-region="workspace"
+                    data-semantic-status-action="filter-transactions"
+                    data-semantic-status-label="Uncategorized"
                     type="checkbox"
                     onChange={() =>
-                      toggleFilter(category.id, setCategoryFilters)
+                      toggleFilter(uncategorizedFilter, setCategoryFilters)
                     }
                   />
-                  {category.name}
+                  Uncategorized
                 </label>
-              ))}
-            </div>
-          </details>
-          <details className="filter-wrap">
-            <summary className="terminal-button pill-button">
-              {sort === 'date'
-                ? 'Newest first'
-                : sort === 'merchant'
-                  ? 'Merchant A-Z'
-                  : 'Highest amount'}
-            </summary>
-            <div className="popover sort-popover">
-              {(
-                [
-                  ['date', 'Date · newest'],
-                  ['merchant', 'Merchant · A-Z'],
-                  ['amount', 'Amount · highest'],
-                ] as const
-              ).map(([value, label]) => (
-                <label className="radio" key={value}>
-                  <input
-                    checked={sort === value}
-                    name="transaction-sort"
-                    type="radio"
-                    onChange={() => setSort(value)}
-                  />
-                  {label}
-                </label>
-              ))}
-            </div>
-          </details>
+                {categories.map((category) => (
+                  <label className="check" key={category.id}>
+                    <input
+                      checked={categoryFilters.includes(category.id)}
+                      data-semantic-id={`transaction-filter-category-${category.id}`}
+                      data-semantic-kind="filter-option"
+                      data-semantic-region="workspace"
+                      data-semantic-status-action="filter-transactions"
+                      data-semantic-status-label={category.name}
+                      type="checkbox"
+                      onChange={() =>
+                        toggleFilter(category.id, setCategoryFilters)
+                      }
+                    />
+                    {category.name}
+                  </label>
+                ))}
+              </div>
+            </details>
+            <details className="filter-wrap">
+              <summary
+                className="terminal-button pill-button"
+                data-semantic-id="transactions-sort"
+                data-semantic-kind="sort-summary"
+                data-semantic-region="workspace"
+                data-semantic-status-action="sort-transactions"
+                data-semantic-status-label="Transaction sort"
+              >
+                {sort === 'date'
+                  ? 'Newest first'
+                  : sort === 'merchant'
+                    ? 'Merchant A-Z'
+                    : 'Highest amount'}
+              </summary>
+              <div className="popover sort-popover">
+                {(
+                  [
+                    ['date', 'Date · newest'],
+                    ['merchant', 'Merchant · A-Z'],
+                    ['amount', 'Amount · highest'],
+                  ] as const
+                ).map(([value, label]) => (
+                  <label className="radio" key={value}>
+                    <input
+                      checked={sort === value}
+                      data-semantic-id={`transaction-sort-${value}`}
+                      data-semantic-kind="sort-option"
+                      data-semantic-region="workspace"
+                      data-semantic-status-action="sort-transactions"
+                      data-semantic-status-label={label}
+                      name="transaction-sort"
+                      type="radio"
+                      onChange={() => setSort(value)}
+                    />
+                    {label}
+                  </label>
+                ))}
+              </div>
+            </details>
+          </div>
         </div>
-      </div>
 
-      <div className="transaction-column-head" aria-hidden="true">
-        <span>Transaction</span>
-        <span>Category</span>
-        <span>Amount</span>
-      </div>
+        <div className="transaction-column-head" aria-hidden="true">
+          <span>Transaction</span>
+          <span>Category</span>
+          <span>Amount</span>
+        </div>
 
-      <section className="transactions">
-        {isLoading ? (
-          <div className="empty-state" aria-live="polite">
-            Loading transactions...
-          </div>
-        ) : displayedTransactions.length === 0 ? (
-          <div className="empty-state">
-            No transactions match the current search and filters.
-          </div>
-        ) : (
-          displayedTransactions.map((transaction) => {
-            const transactionSplits =
-              splitsByTransaction.get(transaction.id) ?? []
-            const isSelected = transaction.id === selectedTransactionId
-            return (
-              <Fragment key={transaction.id}>
+        <section className="transactions">
+          {isLoading ? (
+            <div className="empty-state" aria-live="polite">
+              Loading transactions...
+            </div>
+          ) : displayedTransactions.length === 0 ? (
+            <div className="empty-state">
+              No transactions match the current search and filters.
+            </div>
+          ) : (
+            displayedTransactions.map((transaction) => {
+              const transactionSplits =
+                splitsByTransaction.get(transaction.id) ?? []
+              const categoryNames = transactionSplits.map(
+                (split) =>
+                  categoriesById.get(split.category_id)?.name ?? 'Unknown category',
+              )
+              const isSelected = transaction.id === selectedTransactionId
+              const isEditing = transaction.id === editingTransactionId
+              const isUsd = transaction.currency_code === 'USD'
+              return (
                 <div
                   className={`transaction-row-simple${
                     isSelected ? ' is-selected' : ''
                   }`}
+                  key={transaction.id}
                 >
                   <button
                     aria-pressed={isSelected}
                     className="transaction-row-simple__select"
+                    data-semantic-id={`transaction-select-${transaction.id}`}
+                    data-semantic-kind="transaction-selection"
+                    data-semantic-region="workspace"
+                    data-semantic-status-action="select-transaction"
+                    data-semantic-status-label={transactionDescription(transaction)}
                     data-transaction-id={transaction.id}
                     ref={(button) => {
                       if (button) {
@@ -932,24 +780,56 @@ export function TransactionsPanel({
                       </span>
                     </span>
                   </button>
-                  <button
-                    className={`category-chip${
-                      transactionSplits.length === 0 ? ' empty' : ''
-                    }`}
-                    type="button"
-                    onClick={() =>
-                      transactionSplits.length === 0
-                        ? quickCategorize(transaction)
-                        : selectTransaction(transaction)
-                    }
-                  >
-                    {transactionSplits.length === 0
-                      ? '+ Categorize'
-                      : transactionSplits.length === 1
-                        ? categoriesById.get(transactionSplits[0].category_id)
-                            ?.name ?? '1 category'
-                        : `${transactionSplits.length} categories`}
-                  </button>
+                  {isEditing ? (
+                    <CategorySingleSelectPicker
+                      categories={categories}
+                      disabled={isSavingCategories}
+                      errorMessage={pickerError}
+                      inputRef={pickerSearchInputRef}
+                      transaction={transaction}
+                      onCreate={createCategory}
+                      onCancel={() => cancelCategoryPicker(transaction.id)}
+                      onError={setPickerError}
+                      onSelect={(category) => saveCategory(transaction, category)}
+                    />
+                  ) : (
+                    <div className="transaction-category-cell">
+                      <button
+                        aria-label={
+                          isUsd
+                            ? `Choose a category for ${transactionDescription(transaction)}`
+                            : nonUsdCategoryMessage
+                        }
+                        className={`category-chip${
+                          transactionSplits.length === 0 ? ' empty' : ''
+                        }`}
+                        data-semantic-id={`transaction-category-${transaction.id}`}
+                        data-semantic-kind="category-action"
+                        data-semantic-region="workspace"
+                        data-semantic-status-action={
+                          isUsd ? 'edit-transaction-categories' : 'category-unavailable'
+                        }
+                        data-semantic-status-label={transactionDescription(transaction)}
+                        disabled={!isUsd}
+                        type="button"
+                        onClick={() => openCategoryPicker(transaction)}
+                      >
+                        {transactionSplits.length === 0 ? (
+                          '+ Categorize'
+                        ) : (
+                          <CategorySummary categoryNames={categoryNames} />
+                        )}
+                      </button>
+                      {isSelected && !isUsd && categoryNotice && (
+                        <span
+                          className="form-message form-message--error"
+                          role="status"
+                        >
+                          {categoryNotice}
+                        </span>
+                      )}
+                    </div>
+                  )}
                   <strong
                     className={`transaction-amount ${
                       transaction.amount >= 0 ? 'positive' : 'negative'
@@ -961,211 +841,256 @@ export function TransactionsPanel({
                     )}
                   </strong>
                 </div>
-
-                {isSelected && selectedTransaction && (
-                  <form
-                    aria-label={`Categorize ${transactionDescription(transaction)}`}
-                    aria-live="polite"
-                    className="transaction-inline-editor transaction-inline-editor--live"
-                    onSubmit={(event) => event.preventDefault()}
-                  >
-                    <div className="transaction-inline-editor__head">
-                      <span>Split {transactionDescription(transaction)}</span>
-                      <span className="terminal-pill">
-                        {formatMoney(
-                          transaction.amount,
-                          transaction.currency_code ?? 'USD',
-                        )}
-                      </span>
-                    </div>
-                    <h3 className="split-heading">Category split</h3>
-                    {draftSplits.map((split) => (
-                      <div
-                        className="split-line"
-                        key={`${split.key}-${split.categoryId}`}
-                      >
-                        <CategoryCombobox
-                          autoFocus={focusedSplitKey === split.key}
-                          categories={categories}
-                          disabled={isSavingSplits}
-                          excludedCategoryIds={draftSplits
-                            .filter((candidate) => candidate.key !== split.key)
-                            .flatMap((candidate) =>
-                              candidate.categoryId
-                                ? [candidate.categoryId]
-                                : [],
-                            )}
-                          label={`${
-                            (split.categoryId
-                              ? categoriesById.get(split.categoryId)?.name
-                              : null) ?? 'Category'
-                          } category`}
-                          selectedCategory={
-                            split.categoryId
-                              ? categoriesById.get(split.categoryId)
-                              : undefined
-                          }
-                          createAlternativeLabel={
-                            applicableBudget
-                              ? (name) =>
-                                  `+ Create “${name}” and add to budget`
-                              : undefined
-                          }
-                          inputRef={(input) => {
-                            if (input) {
-                              splitCategoryInputRefs.current.set(
-                                split.key,
-                                input,
-                              )
-                            } else {
-                              splitCategoryInputRefs.current.delete(split.key)
-                            }
-                          }}
-                          onCreate={createCategory}
-                          onCreateAlternative={
-                            applicableBudget
-                              ? createCategoryAndAddToBudget
-                              : undefined
-                          }
-                          onCancel={
-                            split.categoryId === null
-                              ? () =>
-                                  setDraftSplits((current) =>
-                                    current.filter(
-                                      (candidate) =>
-                                        candidate.key !== split.key,
-                                    ),
-                                  )
-                              : undefined
-                          }
-                          onSelect={(category) =>
-                            changeSplitCategory(split.key, category)
-                          }
-                        />
-                        <label>
-                          <span className="sr-only">
-                            {split.categoryId
-                              ? categoriesById.get(split.categoryId)?.name
-                              : 'Category'}{' '}
-                            amount
-                          </span>
-                          <input
-                            aria-invalid={splitError ? 'true' : undefined}
-                            disabled={isSavingSplits}
-                            inputMode="decimal"
-                            type="text"
-                            value={split.amount}
-                            onChange={(event) => {
-                              setIsManualSplit(true)
-                              setDraftSplits((current) =>
-                                current.map((candidate) =>
-                                  candidate.key === split.key
-                                    ? {
-                                        ...candidate,
-                                        amount: event.target.value,
-                                      }
-                                    : candidate,
-                                ),
-                              )
-                              setSplitError(null)
-                            }}
-                          />
-                        </label>
-                        <button
-                          aria-label={`Remove ${
-                            (split.categoryId
-                              ? categoriesById.get(split.categoryId)?.name
-                              : null) ?? 'category'
-                          }`}
-                          className="icon-button"
-                          disabled={isSavingSplits}
-                          type="button"
-                          onClick={() => removeSplit(split.key)}
-                        >
-                          &times;
-                        </button>
-                      </div>
-                    ))}
-                    {transaction.currency_code === 'USD' && (
-                      <div className="transaction-inline-editor__add-category">
-                        <CategoryCombobox
-                          categories={categories}
-                          disabled={isSavingSplits}
-                          excludedCategoryIds={draftSplits
-                            .map((split) => split.categoryId)
-                            .filter(
-                              (categoryId): categoryId is string =>
-                                categoryId !== null,
-                            )}
-                          inputRef={addCategoryInputRef}
-                          label="Add or create a split category"
-                          placeholder="Search or create a category..."
-                          onCreate={createCategory}
-                          createAlternativeLabel={
-                            applicableBudget
-                              ? (name) =>
-                                  `+ Create “${name}” and add to budget`
-                              : undefined
-                          }
-                          onCreateAlternative={
-                            applicableBudget
-                              ? createCategoryAndAddToBudget
-                              : undefined
-                          }
-                          onSelect={addCategoryToSplit}
-                        />
-                      </div>
-                    )}
-                    <p className="split-note">
-                      {isManualSplit
-                        ? 'Amounts are manual. New categories receive the remaining amount.'
-                        : 'Categories are evenly split; the final category receives any leftover cent.'}
-                    </p>
-                    {splitError && (
-                      <p
-                        className="form-message form-message--error"
-                        role="alert"
-                      >
-                        {splitError}
-                      </p>
-                    )}
-                    <button
-                      className="terminal-button terminal-button--primary transaction-inline-editor__save"
-                      disabled={
-                        isSavingSplits || transaction.currency_code !== 'USD'
-                      }
-                      type="button"
-                      onClick={() => void saveSplits()}
-                    >
-                      {isSavingSplits
-                        ? 'Saving...'
-                        : draftSplits.length === 0
-                          ? 'Save as uncategorized'
-                          : 'Done'}
-                    </button>
-                  </form>
-                )}
-              </Fragment>
-            )
-          })
-        )}
-      </section>
+              )
+            })
+          )}
+        </section>
       </section>
     </section>
   )
 }
 
+function CategorySummary({ categoryNames }: { categoryNames: string[] }) {
+  return <span className="category-summary">{categoryNames.join(', ')}</span>
+}
+
+type ActivePickerOption = string | 'create' | null
+
+function CategorySingleSelectPicker({
+  categories,
+  disabled,
+  errorMessage,
+  inputRef,
+  transaction,
+  onCreate,
+  onCancel,
+  onError,
+  onSelect,
+}: {
+  categories: Category[]
+  disabled: boolean
+  errorMessage: string | null
+  inputRef: RefObject<HTMLInputElement | null>
+  transaction: Transaction
+  onCreate: (name: string) => Promise<Category>
+  onCancel: () => void
+  onError: (error: string | null) => void
+  onSelect: (category: Category) => Promise<void>
+}) {
+  const [query, setQuery] = useState('')
+  const [activeOption, setActiveOption] = useState<ActivePickerOption>(null)
+  const [activeQuery, setActiveQuery] = useState('')
+  const [isCreating, setIsCreating] = useState(false)
+  const normalizedQuery = query.trim().toLocaleLowerCase()
+  const matchingCategories = useMemo(
+    () =>
+      normalizedQuery
+        ? categories.filter((category) =>
+            category.name.toLocaleLowerCase().includes(normalizedQuery),
+          )
+        : categories,
+    [categories, normalizedQuery],
+  )
+  const canCreate =
+    normalizedQuery.length > 0 &&
+    !categories.some(
+      (category) => category.name.trim().toLocaleLowerCase() === normalizedQuery,
+    )
+  const createOption: ActivePickerOption[] = canCreate ? ['create'] : []
+  const pickerOptionIds: ActivePickerOption[] = [
+    ...matchingCategories.map((category) => category.id),
+    ...createOption,
+  ]
+  const activeOptionIsAvailable = pickerOptionIds.includes(activeOption)
+  const effectiveActiveOption =
+    activeQuery === normalizedQuery && activeOptionIsAvailable
+      ? activeOption
+      : (pickerOptionIds[0] ?? null)
+
+  async function createFromQuery() {
+    const name = query.trim()
+    if (!name || !canCreate || disabled || isCreating) {
+      return
+    }
+    setIsCreating(true)
+    onError(null)
+    try {
+      const category = await onCreate(name)
+      await onSelect(category)
+    } catch (error) {
+      onError(
+        error instanceof Error
+          ? error.message
+          : 'The category could not be created.',
+      )
+    } finally {
+      setIsCreating(false)
+    }
+  }
+
+  function moveActiveOption(direction: 1 | -1) {
+    if (pickerOptionIds.length === 0) {
+      return
+    }
+    const activeIndex = pickerOptionIds.indexOf(effectiveActiveOption)
+    const nextIndex =
+      activeIndex === -1
+        ? 0
+        : Math.max(
+            0,
+            Math.min(pickerOptionIds.length - 1, activeIndex + direction),
+          )
+    setActiveOption(pickerOptionIds[nextIndex])
+    setActiveQuery(normalizedQuery)
+  }
+
+  function handleKeyDown(event: ReactKeyboardEvent<HTMLInputElement>) {
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      if (!disabled && !isCreating) {
+        onCancel()
+      }
+      return
+    }
+    const movesDown =
+      event.key === 'ArrowDown' ||
+      (event.ctrlKey && !event.shiftKey && event.key.toLocaleLowerCase() === 'n')
+    const movesUp =
+      event.key === 'ArrowUp' ||
+      (event.ctrlKey && !event.shiftKey && event.key.toLocaleLowerCase() === 'p')
+    if (movesDown || movesUp) {
+      event.preventDefault()
+      moveActiveOption(movesDown ? 1 : -1)
+      return
+    }
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      if (effectiveActiveOption === 'create') {
+        void createFromQuery()
+        return
+      }
+      const category = matchingCategories.find(
+        (candidate) => candidate.id === effectiveActiveOption,
+      )
+      if (category) {
+        void onSelect(category)
+      }
+    }
+  }
+
+  const transactionLabel = transactionDescription(transaction)
+
+  return (
+    <div className="transaction-category-editor">
+      <input
+        aria-activedescendant={
+          typeof effectiveActiveOption === 'string' &&
+          effectiveActiveOption !== 'create'
+            ? `transaction-category-picker-option-${transaction.id}-${effectiveActiveOption}`
+            : undefined
+        }
+        aria-label={`Choose a category for ${transactionLabel}`}
+        aria-controls={`transaction-category-picker-menu-${transaction.id}`}
+        className="category-search-input"
+        data-semantic-id={`transaction-category-picker-search-${transaction.id}`}
+        data-semantic-kind="category-picker-search"
+        data-semantic-region="workspace"
+        data-semantic-status-action="search-transaction-categories"
+        data-semantic-status-label={transactionLabel}
+        disabled={disabled || isCreating}
+        placeholder="Search categories"
+        ref={inputRef}
+        type="text"
+        value={query}
+        onChange={(event) => {
+          setQuery(event.target.value)
+          setActiveQuery('')
+          onError(null)
+        }}
+        onKeyDown={handleKeyDown}
+      />
+      <div
+        aria-label={
+          normalizedQuery
+            ? `Categories matching ${query.trim()}`
+            : 'All categories'
+        }
+        className="category-search-menu"
+        id={`transaction-category-picker-menu-${transaction.id}`}
+        role="listbox"
+      >
+        {matchingCategories.map((category) => {
+          const isActive = category.id === effectiveActiveOption
+          return (
+            <button
+              aria-selected={isActive}
+              className={isActive ? 'is-highlighted' : ''}
+              data-semantic-id={`transaction-category-picker-option-${transaction.id}-${category.id}`}
+              data-semantic-kind="category-picker-option"
+              data-semantic-region="workspace"
+              data-semantic-status-action="select-transaction-category"
+              data-semantic-status-label={`${transactionLabel}: ${category.name}`}
+              disabled={disabled || isCreating}
+              id={`transaction-category-picker-option-${transaction.id}-${category.id}`}
+              key={category.id}
+              role="option"
+              type="button"
+              onClick={() => void onSelect(category)}
+            >
+              {category.name}
+            </button>
+          )
+        })}
+        {canCreate && (
+          <button
+            className={`category-search-menu__create${
+              effectiveActiveOption === 'create' ? ' is-highlighted' : ''
+            }`}
+            data-semantic-id={`transaction-category-picker-create-${transaction.id}`}
+            data-semantic-kind="category-picker-create"
+            data-semantic-region="workspace"
+            data-semantic-status-action="create-transaction-category"
+            data-semantic-status-label={`${transactionLabel}: ${query.trim()}`}
+            disabled={disabled || isCreating}
+            role="option"
+            type="button"
+            onClick={() => void createFromQuery()}
+          >
+          {`+ Create “${query.trim()}”`}
+          </button>
+        )}
+      </div>
+      {errorMessage && (
+        <p className="form-message form-message--error" role="alert">
+          {errorMessage}
+        </p>
+      )}
+    </div>
+  )
+}
+
 function FilterChip({
   label,
+  semanticId,
   onRemove,
 }: {
   label: string
+  semanticId: string
   onRemove: () => void
 }) {
   return (
     <span className="filter-token">
       {label}
-      <button aria-label={`Remove ${label} filter`} type="button" onClick={onRemove}>
+      <button
+        aria-label={`Remove ${label} filter`}
+        data-semantic-id={semanticId}
+        data-semantic-kind="filter-remove"
+        data-semantic-region="workspace"
+        data-semantic-status-action="remove-transaction-filter"
+        data-semantic-status-label={label}
+        type="button"
+        onClick={onRemove}
+      >
         &times;
       </button>
     </span>
