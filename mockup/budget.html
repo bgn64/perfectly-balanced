@@ -1,0 +1,949 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Perfectly Balanced - Canonical budget mockup</title>
+    <link rel="stylesheet" href="neovim-tokyonight.css" />
+  </head>
+  <body class="review-page">
+    <nav class="review-nav" aria-label="Mockup review navigation">
+      <div class="review-nav__screens">
+        <strong>Mockups</strong>
+        <a href="index.html">Sign in</a>
+        <a href="configuration-error.html">Configuration error</a>
+        <a aria-current="page" href="budget.html">Budget</a>
+        <a href="transactions.html">Transactions</a>
+        <a href="reports.html">Reports</a>
+      </div>
+      <div class="review-nav__states">
+        <strong>Budget states</strong>
+        <a href="#startup">Startup</a>
+        <a href="#current">Current month</a>
+        <a href="#canonical">Canonical</a>
+        <a href="#row-focus">Row focus</a>
+        <a href="#subsection-focus">Subsection focus</a>
+        <a href="#profile">Profile</a>
+        <a href="#command">Command</a>
+        <a href="#errors">Error</a>
+        <a href="#category">Category</a>
+        <a href="#amount">Amount</a>
+        <a href="#direction">Direction</a>
+        <a href="#create">Create</a>
+        <a href="#rename">Rename</a>
+        <a href="#delete">Delete</a>
+        <a href="#move">Move</a>
+      </div>
+    </nav>
+
+    <main class="review-stack">
+      <section id="startup" class="review-frame">
+        <header class="review-frame__head">
+          <div><span class="review-frame__id">01</span><h1>Startup loading</h1></div>
+          <p class="review-frame__note">Source-derived transient: the authenticated shell starts on the live current month, September 2026, and the uncategorized badge stays at 0 until the first budget query resolves.</p>
+        </header>
+        <div class="frame-screen">
+          <div class="authenticated-app terminal-app command-closed theme-dark">
+            <header class="titlebar">
+              <button class="brand" type="button"><span class="brand-mark">pb</span><span>perfectly-balanced</span></button>
+              <p>September 2026 &middot; Personal budget</p>
+              <div class="theme-switcher" role="group" aria-label="Theme">
+                <input checked id="theme-dark-01" name="theme-01" type="radio" />
+                <label for="theme-dark-01">Dark</label>
+                <input id="theme-light-01" name="theme-01" type="radio" />
+                <label for="theme-light-01">Light</label>
+              </div>
+              <details class="profile"><summary><span>D</span>dev</summary></details>
+            </header>
+            <aside class="sidebar" aria-label="Application navigation">
+              <nav class="main-nav">
+                <button aria-current="page" class="nav-item is-active is-focused" type="button"><span>Budget</span></button>
+                <button class="nav-item" type="button"><span>Transactions</span><strong>0</strong></button>
+                <button class="nav-item" type="button"><span>Reports</span></button>
+              </nav>
+              <section class="sidebar-section"><h2>Months</h2><button type="button">August 2026</button><button class="is-current" type="button">September 2026</button><button type="button">October 2026</button></section>
+            </aside>
+            <main class="workspace">
+              <header class="workspace-head">
+                <div><p class="eyebrow">Budget / 2026 / 09</p><h1>September 2026</h1><p class="subtitle">Plan with the keyboard. Review with a glance.</p></div>
+                <div class="month-controls"><button type="button">&larr; Previous</button><button type="button">Next &rarr;</button></div>
+              </header>
+              <section class="budget-table empty-state" aria-live="polite">Loading budget...</section>
+            </main>
+            <footer class="statusline"><div><strong>NAVIGATE</strong><span>budget / budget</span><span>focus 1 of 8</span></div><div><span><kbd>Enter</kbd> select</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span><span><kbd>:</kbd> command</span></div></footer>
+          </div>
+        </div>
+      </section>
+
+      <section id="current" class="review-frame">
+        <header class="review-frame__head">
+          <div><span class="review-frame__id">02</span><h2>Current month empty state</h2></div>
+          <p class="review-frame__note">After loading, the current month remains September 2026. The seeded August budget is only visible after explicitly selecting the previous month.</p>
+        </header>
+        <div class="frame-screen">
+          <div class="authenticated-app terminal-app command-closed theme-dark">
+            <header class="titlebar">
+              <button class="brand" type="button"><span class="brand-mark">pb</span><span>perfectly-balanced</span></button>
+              <p>September 2026 &middot; Personal budget</p>
+              <div class="theme-switcher" role="group" aria-label="Theme">
+                <input checked id="theme-dark-02" name="theme-02" type="radio" />
+                <label for="theme-dark-02">Dark</label>
+                <input id="theme-light-02" name="theme-02" type="radio" />
+                <label for="theme-light-02">Light</label>
+              </div>
+              <details class="profile"><summary><span>D</span>dev</summary></details>
+            </header>
+            <aside class="sidebar" aria-label="Application navigation">
+              <nav class="main-nav">
+                <button aria-current="page" class="nav-item is-active" type="button"><span>Budget</span></button>
+                <button class="nav-item" type="button"><span>Transactions</span><strong>1</strong></button>
+                <button class="nav-item" type="button"><span>Reports</span></button>
+              </nav>
+              <section class="sidebar-section"><h2>Months</h2><button type="button">August 2026</button><button class="is-current" type="button">September 2026</button><button type="button">October 2026</button></section>
+            </aside>
+            <main class="workspace">
+              <header class="workspace-head">
+                <div><p class="eyebrow">Budget / 2026 / 09</p><h1>September 2026</h1><p class="subtitle">Plan with the keyboard. Review with a glance.</p></div>
+                <div class="month-controls"><button type="button">&larr; Previous</button><button type="button">Next &rarr;</button></div>
+              </header>
+              <section class="screen-panel empty-terminal">
+                <div class="empty-terminal__copy">
+                  <p class="eyebrow">Buffer empty</p>
+                  <h2>Create the September 2026 budget.</h2>
+                  <p>Set up an empty workspace now, then add subsections and categories in the order that makes sense for the month.</p>
+                  <button class="terminal-button terminal-button--primary" type="button">+ Create September 2026 budget</button>
+                </div>
+                <aside class="empty-terminal__aside"><p class="eyebrow">Nearby months</p><nav class="month-list"><button type="button">August 2026</button><button class="is-current" type="button">September 2026</button><button type="button">October 2026</button></nav></aside>
+              </section>
+            </main>
+            <footer class="statusline"><div><strong>NAVIGATE</strong><span>budget / empty month</span><span>focus 1 of 8</span></div><div><span><kbd>Enter</kbd> create budget</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span><span><kbd>:</kbd> command</span></div></footer>
+          </div>
+        </div>
+      </section>
+
+      <section id="canonical" class="review-frame">
+        <header class="review-frame__head">
+          <div><span class="review-frame__id">03</span><h2>Canonical populated August budget</h2></div>
+          <p class="review-frame__note">Selected August 2026 fixture: 4 transactions total, 1 uncategorized, Katie Pay budgeted at $200, and the Income subsection totals $7,200.</p>
+        </header>
+        <div class="frame-screen">
+          <div class="authenticated-app terminal-app command-closed theme-dark">
+            <header class="titlebar">
+              <button class="brand" type="button"><span class="brand-mark">pb</span><span>perfectly-balanced</span></button>
+              <p>August 2026 &middot; Personal budget</p>
+              <div class="theme-switcher" role="group" aria-label="Theme">
+                <input checked id="theme-dark-03" name="theme-03" type="radio" />
+                <label for="theme-dark-03">Dark</label>
+                <input id="theme-light-03" name="theme-03" type="radio" />
+                <label for="theme-light-03">Light</label>
+              </div>
+              <details class="profile"><summary><span>D</span>dev</summary></details>
+            </header>
+            <aside class="sidebar" aria-label="Application navigation">
+              <nav class="main-nav">
+                <button aria-current="page" class="nav-item is-active is-focused" type="button"><span>Budget</span></button>
+                <button class="nav-item" type="button"><span>Transactions</span><strong>1</strong></button>
+                <button class="nav-item" type="button"><span>Reports</span></button>
+              </nav>
+              <section class="sidebar-section"><h2>Months</h2><button type="button">July 2026</button><button class="is-current" type="button">August 2026</button><button type="button">September 2026</button></section>
+            </aside>
+            <main class="workspace">
+              <header class="workspace-head">
+                <div><p class="eyebrow">Budget / 2026 / 08</p><h1>August 2026</h1><p class="subtitle">Plan with the keyboard. Review with a glance.</p></div>
+                <div class="month-controls"><button type="button">&larr; Previous</button><button type="button">Next &rarr;</button></div>
+              </header>
+              <section class="summary" aria-label="Budget overview">
+                <div><span>Available</span><strong class="available">$557.50</strong></div>
+                <div><span>Planned</span><strong>$725</strong></div>
+                <div><span>Spent</span><strong class="spent">$167.50</strong></div>
+                <div><span>Uncategorized</span><strong class="warning">1 transaction</strong></div>
+              </section>
+              <section class="budget-table">
+                <div class="table-head"><div><p class="eyebrow">Monthly plan</p><h2>Categories</h2></div><button class="new-category" type="button"><span>+</span> Add category</button></div>
+                <div class="column-head"><span>Category</span><span>Planned</span><span>Spent</span><span>Remaining</span></div>
+                <div class="budget-group budget-group--root"><div class="budget-row"><span class="category-name">Internet <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$60</button><span class="spent">$0</span><span class="available">$60</span></div></div>
+                <section class="budget-group"><header class="budget-subsection-head"><h3><span>&#8964;</span> Income</h3><strong>$7,200</strong></header><div class="budget-row budget-row--sectioned"><span class="category-name">Katie Pay <button class="direction-tag" type="button">Income</button></span><button class="amount-cell" type="button">$200</button><span class="spent">$0</span><span class="available">$200</span></div><div class="budget-row budget-row--sectioned"><span class="category-name">Ben Pay <button class="direction-tag" type="button">Income</button></span><button class="amount-cell" type="button">$7,000</button><span class="spent">$7,000</span><span class="available">$0</span></div></section>
+                <section class="budget-group"><header class="budget-subsection-head"><h3><span>&#8964;</span> Food</h3><strong>$650</strong></header><div class="budget-row budget-row--sectioned"><span class="category-name">Groceries <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$400</button><span class="spent">$125.50</span><span class="available">$274.50</span></div><div class="budget-row budget-row--sectioned"><span class="category-name">Restaurants <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$250</button><span class="spent">$42</span><span class="available">$208</span></div></section>
+                <section class="budget-group"><header class="budget-subsection-head"><h3><span>&#8964;</span> Subscriptions</h3><strong>$15</strong></header><div class="budget-row budget-row--sectioned"><span class="category-name">YouTube Premium <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$15</button><span class="spent">$0</span><span class="available">$15</span></div></section>
+              </section>
+            </main>
+            <footer class="statusline"><div><strong>NAVIGATE</strong><span>budget / budget</span><span>focus 1 of 18</span></div><div><span><kbd>Enter</kbd> select</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span><span><kbd>:</kbd> command</span></div></footer>
+          </div>
+        </div>
+      </section>
+
+      <section id="row-focus" class="review-frame">
+        <header class="review-frame__head">
+          <div><span class="review-frame__id">04</span><h2>Focused allocation</h2></div>
+          <p class="review-frame__note">Only one semantic target can be focused at a time. Here the Groceries allocation is focused, so the Income subsection is no longer selected.</p>
+        </header>
+        <div class="frame-screen">
+          <div class="authenticated-app terminal-app command-closed theme-dark">
+            <header class="titlebar">
+              <button class="brand" type="button"><span class="brand-mark">pb</span><span>perfectly-balanced</span></button>
+              <p>August 2026 &middot; Personal budget</p>
+              <div class="theme-switcher" role="group" aria-label="Theme">
+                <input checked id="theme-dark-04" name="theme-04" type="radio" />
+                <label for="theme-dark-04">Dark</label>
+                <input id="theme-light-04" name="theme-04" type="radio" />
+                <label for="theme-light-04">Light</label>
+              </div>
+              <details class="profile"><summary><span>D</span>dev</summary></details>
+            </header>
+            <aside class="sidebar" aria-label="Application navigation">
+              <nav class="main-nav">
+                <button aria-current="page" class="nav-item is-active" type="button"><span>Budget</span></button>
+                <button class="nav-item" type="button"><span>Transactions</span><strong>1</strong></button>
+                <button class="nav-item" type="button"><span>Reports</span></button>
+              </nav>
+              <section class="sidebar-section"><h2>Months</h2><button type="button">July 2026</button><button class="is-current" type="button">August 2026</button><button type="button">September 2026</button></section>
+            </aside>
+            <main class="workspace">
+              <header class="workspace-head">
+                <div><p class="eyebrow">Budget / 2026 / 08</p><h1>August 2026</h1><p class="subtitle">Plan with the keyboard. Review with a glance.</p></div>
+                <div class="month-controls"><button type="button">&larr; Previous</button><button type="button">Next &rarr;</button></div>
+              </header>
+              <section class="summary"><div><span>Available</span><strong class="available">$557.50</strong></div><div><span>Planned</span><strong>$725</strong></div><div><span>Spent</span><strong class="spent">$167.50</strong></div><div><span>Uncategorized</span><strong class="warning">1 transaction</strong></div></section>
+              <section class="budget-table">
+                <div class="table-head"><div><p class="eyebrow">Monthly plan</p><h2>Categories</h2></div><button class="new-category" type="button"><span>+</span> Add category</button></div>
+                <div class="column-head"><span>Category</span><span>Planned</span><span>Spent</span><span>Remaining</span></div>
+                <div class="budget-group budget-group--root"><div class="budget-row"><span class="category-name">Internet <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$60</button><span class="spent">$0</span><span class="available">$60</span></div></div>
+                <section class="budget-group"><header class="budget-subsection-head"><h3><span>&#8964;</span> Income</h3><strong>$7,200</strong></header><div class="budget-row budget-row--sectioned"><span class="category-name">Katie Pay <button class="direction-tag" type="button">Income</button></span><button class="amount-cell" type="button">$200</button><span class="spent">$0</span><span class="available">$200</span></div><div class="budget-row budget-row--sectioned"><span class="category-name">Ben Pay <button class="direction-tag" type="button">Income</button></span><button class="amount-cell" type="button">$7,000</button><span class="spent">$7,000</span><span class="available">$0</span></div></section>
+                <section class="budget-group"><header class="budget-subsection-head"><h3><span>&#8964;</span> Food</h3><strong>$650</strong></header><div class="budget-row budget-row--sectioned is-selected"><span class="category-name"><i class="selection-caret">&rsaquo;</i>Groceries <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$400</button><span class="spent">$125.50</span><span class="available">$274.50</span></div><div class="budget-row budget-row--sectioned"><span class="category-name">Restaurants <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$250</button><span class="spent">$42</span><span class="available">$208</span></div></section>
+                <section class="budget-group"><header class="budget-subsection-head"><h3><span>&#8964;</span> Subscriptions</h3><strong>$15</strong></header><div class="budget-row budget-row--sectioned"><span class="category-name">YouTube Premium <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$15</button><span class="spent">$0</span><span class="available">$15</span></div></section>
+              </section>
+            </main>
+            <footer class="statusline"><div><strong>NAVIGATE</strong><span>budget / groceries</span><span>focus 15 of 18</span></div><div><span><kbd>a</kbd> amount</span><span><kbd>t</kbd> direction</span><span><kbd>n</kbd> new</span><span><kbd>r</kbd> rename</span><span><kbd>d</kbd> delete</span><span><kbd>x</kbd> move</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span><span><kbd>:</kbd> command</span></div></footer>
+          </div>
+        </div>
+      </section>
+
+      <section id="subsection-focus" class="review-frame">
+        <header class="review-frame__head">
+          <div><span class="review-frame__id">05</span><h2>Focused subsection</h2></div>
+          <p class="review-frame__note">Subsection focus is its own state and exposes subsection actions without simultaneously selecting any child allocation.</p>
+        </header>
+        <div class="frame-screen">
+          <div class="authenticated-app terminal-app command-closed theme-dark">
+            <header class="titlebar">
+              <button class="brand" type="button"><span class="brand-mark">pb</span><span>perfectly-balanced</span></button>
+              <p>August 2026 &middot; Personal budget</p>
+              <div class="theme-switcher" role="group" aria-label="Theme">
+                <input checked id="theme-dark-05" name="theme-05" type="radio" />
+                <label for="theme-dark-05">Dark</label>
+                <input id="theme-light-05" name="theme-05" type="radio" />
+                <label for="theme-light-05">Light</label>
+              </div>
+              <details class="profile"><summary><span>D</span>dev</summary></details>
+            </header>
+            <aside class="sidebar" aria-label="Application navigation">
+              <nav class="main-nav">
+                <button aria-current="page" class="nav-item is-active" type="button"><span>Budget</span></button>
+                <button class="nav-item" type="button"><span>Transactions</span><strong>1</strong></button>
+                <button class="nav-item" type="button"><span>Reports</span></button>
+              </nav>
+              <section class="sidebar-section"><h2>Months</h2><button type="button">July 2026</button><button class="is-current" type="button">August 2026</button><button type="button">September 2026</button></section>
+            </aside>
+            <main class="workspace">
+              <header class="workspace-head">
+                <div><p class="eyebrow">Budget / 2026 / 08</p><h1>August 2026</h1><p class="subtitle">Plan with the keyboard. Review with a glance.</p></div>
+                <div class="month-controls"><button type="button">&larr; Previous</button><button type="button">Next &rarr;</button></div>
+              </header>
+              <section class="summary"><div><span>Available</span><strong class="available">$557.50</strong></div><div><span>Planned</span><strong>$725</strong></div><div><span>Spent</span><strong class="spent">$167.50</strong></div><div><span>Uncategorized</span><strong class="warning">1 transaction</strong></div></section>
+              <section class="budget-table">
+                <div class="table-head"><div><p class="eyebrow">Monthly plan</p><h2>Categories</h2></div><button class="new-category" type="button"><span>+</span> Add category</button></div>
+                <div class="column-head"><span>Category</span><span>Planned</span><span>Spent</span><span>Remaining</span></div>
+                <div class="budget-group budget-group--root"><div class="budget-row"><span class="category-name">Internet <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$60</button><span class="spent">$0</span><span class="available">$60</span></div></div>
+                <section class="budget-group"><header class="budget-subsection-head is-selected"><h3><i class="selection-caret">&rsaquo;</i>Income</h3><strong>$7,200</strong></header><div class="budget-row budget-row--sectioned"><span class="category-name">Katie Pay <button class="direction-tag" type="button">Income</button></span><button class="amount-cell" type="button">$200</button><span class="spent">$0</span><span class="available">$200</span></div><div class="budget-row budget-row--sectioned"><span class="category-name">Ben Pay <button class="direction-tag" type="button">Income</button></span><button class="amount-cell" type="button">$7,000</button><span class="spent">$7,000</span><span class="available">$0</span></div></section>
+                <section class="budget-group"><header class="budget-subsection-head"><h3><span>&#8964;</span> Food</h3><strong>$650</strong></header><div class="budget-row budget-row--sectioned"><span class="category-name">Groceries <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$400</button><span class="spent">$125.50</span><span class="available">$274.50</span></div><div class="budget-row budget-row--sectioned"><span class="category-name">Restaurants <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$250</button><span class="spent">$42</span><span class="available">$208</span></div></section>
+                <section class="budget-group"><header class="budget-subsection-head"><h3><span>&#8964;</span> Subscriptions</h3><strong>$15</strong></header><div class="budget-row budget-row--sectioned"><span class="category-name">YouTube Premium <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$15</button><span class="spent">$0</span><span class="available">$15</span></div></section>
+              </section>
+            </main>
+            <footer class="statusline"><div><strong>NAVIGATE</strong><span>budget / income</span><span>focus 11 of 18</span></div><div><span><kbd>n</kbd> new</span><span><kbd>r</kbd> rename</span><span><kbd>d</kbd> delete</span><span><kbd>x</kbd> move</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span><span><kbd>:</kbd> command</span></div></footer>
+          </div>
+        </div>
+      </section>
+
+      <section id="profile" class="review-frame">
+        <header class="review-frame__head">
+          <div><span class="review-frame__id">06</span><h2>Profile popover</h2></div>
+          <p class="review-frame__note">The open account menu shows the live local identity D / dev / dev@example.test. Because the popover controls are not part of the semantic budget map, the status line falls back to the default copy.</p>
+        </header>
+        <div class="frame-screen">
+          <div class="authenticated-app terminal-app command-closed theme-dark">
+            <header class="titlebar">
+              <button class="brand" type="button"><span class="brand-mark">pb</span><span>perfectly-balanced</span></button>
+              <p>August 2026 &middot; Personal budget</p>
+              <div class="theme-switcher" role="group" aria-label="Theme">
+                <input checked id="theme-dark-06" name="theme-06" type="radio" />
+                <label for="theme-dark-06">Dark</label>
+                <input id="theme-light-06" name="theme-06" type="radio" />
+                <label for="theme-light-06">Light</label>
+              </div>
+              <details class="profile" open><summary><span>D</span>dev</summary><div class="account-popover"><strong>dev@example.test</strong><button class="button button--secondary" type="button">Sign out</button></div></details>
+            </header>
+            <aside class="sidebar" aria-label="Application navigation">
+              <nav class="main-nav">
+                <button aria-current="page" class="nav-item is-active" type="button"><span>Budget</span></button>
+                <button class="nav-item" type="button"><span>Transactions</span><strong>1</strong></button>
+                <button class="nav-item" type="button"><span>Reports</span></button>
+              </nav>
+              <section class="sidebar-section"><h2>Months</h2><button type="button">July 2026</button><button class="is-current" type="button">August 2026</button><button type="button">September 2026</button></section>
+            </aside>
+            <main class="workspace">
+              <header class="workspace-head">
+                <div><p class="eyebrow">Budget / 2026 / 08</p><h1>August 2026</h1><p class="subtitle">Plan with the keyboard. Review with a glance.</p></div>
+                <div class="month-controls"><button type="button">&larr; Previous</button><button type="button">Next &rarr;</button></div>
+              </header>
+              <section class="summary"><div><span>Available</span><strong class="available">$557.50</strong></div><div><span>Planned</span><strong>$725</strong></div><div><span>Spent</span><strong class="spent">$167.50</strong></div><div><span>Uncategorized</span><strong class="warning">1 transaction</strong></div></section>
+              <section class="budget-table">
+                <div class="table-head"><div><p class="eyebrow">Monthly plan</p><h2>Categories</h2></div><button class="new-category" type="button"><span>+</span> Add category</button></div>
+                <div class="column-head"><span>Category</span><span>Planned</span><span>Spent</span><span>Remaining</span></div>
+                <div class="budget-group budget-group--root"><div class="budget-row"><span class="category-name">Internet <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$60</button><span class="spent">$0</span><span class="available">$60</span></div></div>
+                <section class="budget-group"><header class="budget-subsection-head"><h3><span>&#8964;</span> Income</h3><strong>$7,200</strong></header><div class="budget-row budget-row--sectioned"><span class="category-name">Katie Pay <button class="direction-tag" type="button">Income</button></span><button class="amount-cell" type="button">$200</button><span class="spent">$0</span><span class="available">$200</span></div><div class="budget-row budget-row--sectioned"><span class="category-name">Ben Pay <button class="direction-tag" type="button">Income</button></span><button class="amount-cell" type="button">$7,000</button><span class="spent">$7,000</span><span class="available">$0</span></div></section>
+                <section class="budget-group"><header class="budget-subsection-head"><h3><span>&#8964;</span> Food</h3><strong>$650</strong></header><div class="budget-row budget-row--sectioned"><span class="category-name">Groceries <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$400</button><span class="spent">$125.50</span><span class="available">$274.50</span></div><div class="budget-row budget-row--sectioned"><span class="category-name">Restaurants <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$250</button><span class="spent">$42</span><span class="available">$208</span></div></section>
+                <section class="budget-group"><header class="budget-subsection-head"><h3><span>&#8964;</span> Subscriptions</h3><strong>$15</strong></header><div class="budget-row budget-row--sectioned"><span class="category-name">YouTube Premium <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$15</button><span class="spent">$0</span><span class="available">$15</span></div></section>
+              </section>
+            </main>
+            <footer class="statusline"><div><strong>NAVIGATE</strong><span>budget</span><span>focus 1 of 18</span></div><div><span><kbd>Enter</kbd> activate</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span><span><kbd>:</kbd> command</span></div></footer>
+          </div>
+        </div>
+      </section>
+
+      <section id="command" class="review-frame">
+        <header class="review-frame__head">
+          <div><span class="review-frame__id">07</span><h2>Command palette</h2></div>
+          <p class="review-frame__note">The overlay focuses the command input, so the status line again falls back to the default non-semantic copy instead of preserving the previous row selection.</p>
+        </header>
+        <div class="frame-screen">
+          <div class="authenticated-app terminal-app theme-dark">
+            <header class="titlebar">
+              <button class="brand" type="button"><span class="brand-mark">pb</span><span>perfectly-balanced</span></button>
+              <p>August 2026 &middot; Personal budget</p>
+              <div class="theme-switcher" role="group" aria-label="Theme">
+                <input checked id="theme-dark-07" name="theme-07" type="radio" />
+                <label for="theme-dark-07">Dark</label>
+                <input id="theme-light-07" name="theme-07" type="radio" />
+                <label for="theme-light-07">Light</label>
+              </div>
+              <details class="profile"><summary><span>D</span>dev</summary></details>
+            </header>
+            <aside class="sidebar" aria-label="Application navigation">
+              <nav class="main-nav">
+                <button aria-current="page" class="nav-item is-active" type="button"><span>Budget</span></button>
+                <button class="nav-item" type="button"><span>Transactions</span><strong>1</strong></button>
+                <button class="nav-item" type="button"><span>Reports</span></button>
+              </nav>
+              <section class="sidebar-section"><h2>Months</h2><button type="button">July 2026</button><button class="is-current" type="button">August 2026</button><button type="button">September 2026</button></section>
+            </aside>
+            <main class="workspace">
+              <header class="workspace-head">
+                <div><p class="eyebrow">Budget / 2026 / 08</p><h1>August 2026</h1><p class="subtitle">Plan with the keyboard. Review with a glance.</p></div>
+                <div class="month-controls"><button type="button">&larr; Previous</button><button type="button">Next &rarr;</button></div>
+              </header>
+              <section class="summary"><div><span>Available</span><strong class="available">$557.50</strong></div><div><span>Planned</span><strong>$725</strong></div><div><span>Spent</span><strong class="spent">$167.50</strong></div><div><span>Uncategorized</span><strong class="warning">1 transaction</strong></div></section>
+              <section class="budget-table">
+                <div class="table-head"><div><p class="eyebrow">Monthly plan</p><h2>Categories</h2></div><button class="new-category" type="button"><span>+</span> Add category</button></div>
+                <div class="column-head"><span>Category</span><span>Planned</span><span>Spent</span><span>Remaining</span></div>
+                <div class="budget-group budget-group--root"><div class="budget-row"><span class="category-name">Internet <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$60</button><span class="spent">$0</span><span class="available">$60</span></div></div>
+                <section class="budget-group"><header class="budget-subsection-head"><h3><span>&#8964;</span> Income</h3><strong>$7,200</strong></header><div class="budget-row budget-row--sectioned"><span class="category-name">Katie Pay <button class="direction-tag" type="button">Income</button></span><button class="amount-cell" type="button">$200</button><span class="spent">$0</span><span class="available">$200</span></div><div class="budget-row budget-row--sectioned"><span class="category-name">Ben Pay <button class="direction-tag" type="button">Income</button></span><button class="amount-cell" type="button">$7,000</button><span class="spent">$7,000</span><span class="available">$0</span></div></section>
+                <section class="budget-group"><header class="budget-subsection-head"><h3><span>&#8964;</span> Food</h3><strong>$650</strong></header><div class="budget-row budget-row--sectioned"><span class="category-name">Groceries <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$400</button><span class="spent">$125.50</span><span class="available">$274.50</span></div><div class="budget-row budget-row--sectioned"><span class="category-name">Restaurants <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$250</button><span class="spent">$42</span><span class="available">$208</span></div></section>
+                <section class="budget-group"><header class="budget-subsection-head"><h3><span>&#8964;</span> Subscriptions</h3><strong>$15</strong></header><div class="budget-row budget-row--sectioned"><span class="category-name">YouTube Premium <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$15</button><span class="spent">$0</span><span class="available">$15</span></div></section>
+              </section>
+            </main>
+            <aside class="command-panel" aria-label="Command"><div class="command-panel__head"><h2>Command</h2></div><label class="command-input"><span>:</span><input aria-label="Command" value="go" /></label><ul class="command-list"><li class="is-highlighted"><button type="button">Go to transactions</button></li><li><button type="button">Go to reports</button></li><li><button type="button">Go to category</button></li></ul></aside>
+            <footer class="statusline"><div><strong>NAVIGATE</strong><span>budget</span><span>focus 1 of 18</span></div><div><span><kbd>Enter</kbd> activate</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span><span><kbd>:</kbd> command</span></div></footer>
+          </div>
+        </div>
+      </section>
+
+      <section id="errors" class="review-frame">
+        <header class="review-frame__head">
+          <div><span class="review-frame__id">08</span><h2>Month-switch load error</h2></div>
+          <p class="review-frame__note">Source-derived stale state: after moving from August to September, the header and month selector update immediately, but a failed reload leaves the last successful August data rendered beneath the error banner. The alert text shown here is an example runtime error message.</p>
+        </header>
+        <div class="frame-screen">
+          <div class="authenticated-app terminal-app command-closed theme-dark">
+            <header class="titlebar">
+              <button class="brand" type="button"><span class="brand-mark">pb</span><span>perfectly-balanced</span></button>
+              <p>September 2026 &middot; Personal budget</p>
+              <div class="theme-switcher" role="group" aria-label="Theme">
+                <input checked id="theme-dark-08" name="theme-08" type="radio" />
+                <label for="theme-dark-08">Dark</label>
+                <input id="theme-light-08" name="theme-08" type="radio" />
+                <label for="theme-light-08">Light</label>
+              </div>
+              <details class="profile"><summary><span>D</span>dev</summary></details>
+            </header>
+            <aside class="sidebar" aria-label="Application navigation">
+              <nav class="main-nav">
+                <button aria-current="page" class="nav-item is-active is-focused" type="button"><span>Budget</span></button>
+                <button class="nav-item" type="button"><span>Transactions</span><strong>1</strong></button>
+                <button class="nav-item" type="button"><span>Reports</span></button>
+              </nav>
+              <section class="sidebar-section"><h2>Months</h2><button type="button">August 2026</button><button class="is-current" type="button">September 2026</button><button type="button">October 2026</button></section>
+            </aside>
+            <main class="workspace">
+              <header class="workspace-head">
+                <div><p class="eyebrow">Budget / 2026 / 09</p><h1>September 2026</h1><p class="subtitle">Plan with the keyboard. Review with a glance.</p></div>
+                <div class="month-controls"><button type="button">&larr; Previous</button><button type="button">Next &rarr;</button></div>
+              </header>
+              <p class="form-message form-message--error" role="alert">Failed to fetch</p>
+              <section class="summary"><div><span>Available</span><strong class="available">$557.50</strong></div><div><span>Planned</span><strong>$725</strong></div><div><span>Spent</span><strong class="spent">$167.50</strong></div><div><span>Uncategorized</span><strong class="warning">1 transaction</strong></div></section>
+              <section class="budget-table">
+                <div class="table-head"><div><p class="eyebrow">Monthly plan</p><h2>Categories</h2></div><button class="new-category" type="button"><span>+</span> Add category</button></div>
+                <div class="column-head"><span>Category</span><span>Planned</span><span>Spent</span><span>Remaining</span></div>
+                <div class="budget-group budget-group--root"><div class="budget-row"><span class="category-name">Internet <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$60</button><span class="spent">$0</span><span class="available">$60</span></div></div>
+                <section class="budget-group"><header class="budget-subsection-head"><h3><span>&#8964;</span> Income</h3><strong>$7,200</strong></header><div class="budget-row budget-row--sectioned"><span class="category-name">Katie Pay <button class="direction-tag" type="button">Income</button></span><button class="amount-cell" type="button">$200</button><span class="spent">$0</span><span class="available">$200</span></div><div class="budget-row budget-row--sectioned"><span class="category-name">Ben Pay <button class="direction-tag" type="button">Income</button></span><button class="amount-cell" type="button">$7,000</button><span class="spent">$7,000</span><span class="available">$0</span></div></section>
+                <section class="budget-group"><header class="budget-subsection-head"><h3><span>&#8964;</span> Food</h3><strong>$650</strong></header><div class="budget-row budget-row--sectioned"><span class="category-name">Groceries <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$400</button><span class="spent">$125.50</span><span class="available">$274.50</span></div><div class="budget-row budget-row--sectioned"><span class="category-name">Restaurants <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$250</button><span class="spent">$42</span><span class="available">$208</span></div></section>
+                <section class="budget-group"><header class="budget-subsection-head"><h3><span>&#8964;</span> Subscriptions</h3><strong>$15</strong></header><div class="budget-row budget-row--sectioned"><span class="category-name">YouTube Premium <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$15</button><span class="spent">$0</span><span class="available">$15</span></div></section>
+              </section>
+            </main>
+            <footer class="statusline"><div><strong>NAVIGATE</strong><span>budget / budget</span><span>focus 1 of 18</span></div><div><span><kbd>Enter</kbd> select</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span><span><kbd>:</kbd> command</span></div></footer>
+          </div>
+        </div>
+      </section>
+
+      <section id="category" class="review-frame">
+        <header class="review-frame__head">
+          <div><span class="review-frame__id">09</span><h2>Add or create category</h2></div>
+          <p class="review-frame__note">The August budget already uses every seeded category, so matching allocated categories are excluded. Typing Pay only leaves the create-new option.</p>
+        </header>
+        <div class="frame-screen">
+          <div class="authenticated-app terminal-app command-closed theme-dark">
+            <header class="titlebar">
+              <button class="brand" type="button"><span class="brand-mark">pb</span><span>perfectly-balanced</span></button>
+              <p>August 2026 &middot; Personal budget</p>
+              <div class="theme-switcher" role="group" aria-label="Theme">
+                <input checked id="theme-dark-09" name="theme-09" type="radio" />
+                <label for="theme-dark-09">Dark</label>
+                <input id="theme-light-09" name="theme-09" type="radio" />
+                <label for="theme-light-09">Light</label>
+              </div>
+              <details class="profile"><summary><span>D</span>dev</summary></details>
+            </header>
+            <aside class="sidebar" aria-label="Application navigation">
+              <nav class="main-nav">
+                <button aria-current="page" class="nav-item is-active" type="button"><span>Budget</span></button>
+                <button class="nav-item" type="button"><span>Transactions</span><strong>1</strong></button>
+                <button class="nav-item" type="button"><span>Reports</span></button>
+              </nav>
+              <section class="sidebar-section"><h2>Months</h2><button type="button">July 2026</button><button class="is-current" type="button">August 2026</button><button type="button">September 2026</button></section>
+            </aside>
+            <main class="workspace">
+              <header class="workspace-head">
+                <div><p class="eyebrow">Budget / 2026 / 08</p><h1>August 2026</h1><p class="subtitle">Plan with the keyboard. Review with a glance.</p></div>
+                <div class="month-controls"><button type="button">&larr; Previous</button><button type="button">Next &rarr;</button></div>
+              </header>
+              <section class="summary"><div><span>Available</span><strong class="available">$557.50</strong></div><div><span>Planned</span><strong>$725</strong></div><div><span>Spent</span><strong class="spent">$167.50</strong></div><div><span>Uncategorized</span><strong class="warning">1 transaction</strong></div></section>
+              <section class="budget-table">
+                <div class="table-head"><div><p class="eyebrow">Monthly plan</p><h2>Categories</h2></div><button class="new-category" type="button"><span>+</span> Add category</button></div>
+                <div class="category-create"><div class="category-combobox"><label class="sr-only">Add or create a category</label><input aria-activedescendant="category-create" aria-autocomplete="list" aria-controls="category-listbox" aria-expanded="true" aria-label="Add or create a category" role="combobox" type="search" value="Pay" /><div class="combo-menu" id="category-listbox" role="listbox"><button aria-selected="true" class="combo-option combo-option--create highlighted" id="category-create" role="option" type="button">+ Create &ldquo;Pay&rdquo;</button></div></div></div>
+                <div class="column-head"><span>Category</span><span>Planned</span><span>Spent</span><span>Remaining</span></div>
+                <div class="budget-group budget-group--root"><div class="budget-row"><span class="category-name">Internet <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$60</button><span class="spent">$0</span><span class="available">$60</span></div></div>
+                <section class="budget-group"><header class="budget-subsection-head"><h3><span>&#8964;</span> Income</h3><strong>$7,200</strong></header><div class="budget-row budget-row--sectioned"><span class="category-name">Katie Pay <button class="direction-tag" type="button">Income</button></span><button class="amount-cell" type="button">$200</button><span class="spent">$0</span><span class="available">$200</span></div><div class="budget-row budget-row--sectioned"><span class="category-name">Ben Pay <button class="direction-tag" type="button">Income</button></span><button class="amount-cell" type="button">$7,000</button><span class="spent">$7,000</span><span class="available">$0</span></div></section>
+                <section class="budget-group"><header class="budget-subsection-head"><h3><span>&#8964;</span> Food</h3><strong>$650</strong></header><div class="budget-row budget-row--sectioned"><span class="category-name">Groceries <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$400</button><span class="spent">$125.50</span><span class="available">$274.50</span></div><div class="budget-row budget-row--sectioned"><span class="category-name">Restaurants <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$250</button><span class="spent">$42</span><span class="available">$208</span></div></section>
+                <section class="budget-group"><header class="budget-subsection-head"><h3><span>&#8964;</span> Subscriptions</h3><strong>$15</strong></header><div class="budget-row budget-row--sectioned"><span class="category-name">YouTube Premium <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$15</button><span class="spent">$0</span><span class="available">$15</span></div></section>
+              </section>
+            </main>
+            <footer class="statusline"><div><strong>NAVIGATE</strong><span>budget</span><span>focus 1 of 18</span></div><div><span><kbd>Enter</kbd> activate</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span><span><kbd>:</kbd> command</span></div></footer>
+          </div>
+        </div>
+      </section>
+
+      <section id="amount" class="review-frame">
+        <header class="review-frame__head">
+          <div><span class="review-frame__id">10</span><h2>Valid amount editor</h2></div>
+          <p class="review-frame__note">The inline editor keeps Groceries selected because the focused text input sits inside the same semantic row. The footer shows the app&rsquo;s actual save-amount status copy.</p>
+        </header>
+        <div class="frame-screen">
+          <div class="authenticated-app terminal-app command-closed theme-dark">
+            <header class="titlebar">
+              <button class="brand" type="button"><span class="brand-mark">pb</span><span>perfectly-balanced</span></button>
+              <p>August 2026 &middot; Personal budget</p>
+              <div class="theme-switcher" role="group" aria-label="Theme">
+                <input checked id="theme-dark-10" name="theme-10" type="radio" />
+                <label for="theme-dark-10">Dark</label>
+                <input id="theme-light-10" name="theme-10" type="radio" />
+                <label for="theme-light-10">Light</label>
+              </div>
+              <details class="profile"><summary><span>D</span>dev</summary></details>
+            </header>
+            <aside class="sidebar" aria-label="Application navigation">
+              <nav class="main-nav">
+                <button aria-current="page" class="nav-item is-active" type="button"><span>Budget</span></button>
+                <button class="nav-item" type="button"><span>Transactions</span><strong>1</strong></button>
+                <button class="nav-item" type="button"><span>Reports</span></button>
+              </nav>
+              <section class="sidebar-section"><h2>Months</h2><button type="button">July 2026</button><button class="is-current" type="button">August 2026</button><button type="button">September 2026</button></section>
+            </aside>
+            <main class="workspace">
+              <header class="workspace-head">
+                <div><p class="eyebrow">Budget / 2026 / 08</p><h1>August 2026</h1><p class="subtitle">Plan with the keyboard. Review with a glance.</p></div>
+                <div class="month-controls"><button type="button">&larr; Previous</button><button type="button">Next &rarr;</button></div>
+              </header>
+              <section class="summary"><div><span>Available</span><strong class="available">$557.50</strong></div><div><span>Planned</span><strong>$725</strong></div><div><span>Spent</span><strong class="spent">$167.50</strong></div><div><span>Uncategorized</span><strong class="warning">1 transaction</strong></div></section>
+              <section class="budget-table">
+                <div class="table-head"><div><p class="eyebrow">Monthly plan</p><h2>Categories</h2></div><button class="new-category" type="button"><span>+</span> Add category</button></div>
+                <div class="column-head"><span>Category</span><span>Planned</span><span>Spent</span><span>Remaining</span></div>
+                <div class="budget-group budget-group--root"><div class="budget-row"><span class="category-name">Internet <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$60</button><span class="spent">$0</span><span class="available">$60</span></div></div>
+                <section class="budget-group"><header class="budget-subsection-head"><h3><span>&#8964;</span> Income</h3><strong>$7,200</strong></header><div class="budget-row budget-row--sectioned"><span class="category-name">Katie Pay <button class="direction-tag" type="button">Income</button></span><button class="amount-cell" type="button">$200</button><span class="spent">$0</span><span class="available">$200</span></div><div class="budget-row budget-row--sectioned"><span class="category-name">Ben Pay <button class="direction-tag" type="button">Income</button></span><button class="amount-cell" type="button">$7,000</button><span class="spent">$7,000</span><span class="available">$0</span></div></section>
+                <section class="budget-group"><header class="budget-subsection-head"><h3><span>&#8964;</span> Food</h3><strong>$650</strong></header><div class="budget-row budget-row--sectioned is-selected"><span class="category-name"><i class="selection-caret">&rsaquo;</i>Groceries <button class="direction-tag" type="button">Spending</button></span><div class="inline-amount-editor"><input class="amount-cell amount-cell--editing" aria-label="Groceries planned amount" inputmode="decimal" type="text" value="450" /></div><span class="spent">$125.50</span><span class="available">$274.50</span></div><div class="budget-row budget-row--sectioned"><span class="category-name">Restaurants <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$250</button><span class="spent">$42</span><span class="available">$208</span></div></section>
+                <section class="budget-group"><header class="budget-subsection-head"><h3><span>&#8964;</span> Subscriptions</h3><strong>$15</strong></header><div class="budget-row budget-row--sectioned"><span class="category-name">YouTube Premium <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$15</button><span class="spent">$0</span><span class="available">$15</span></div></section>
+              </section>
+            </main>
+            <footer class="statusline"><div><strong>NAVIGATE</strong><span>budget / groceries</span><span>focus 1 of 18</span></div><div><span><kbd>Enter</kbd> save amount</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span><span><kbd>:</kbd> command</span></div></footer>
+          </div>
+        </div>
+      </section>
+
+      <section class="review-frame">
+        <header class="review-frame__head">
+          <div><span class="review-frame__id">11</span><h2>Invalid amount editor</h2></div>
+          <p class="review-frame__note">Validation stays attached to the inline field and uses the same footer text as the valid editor state.</p>
+        </header>
+        <div class="frame-screen">
+          <div class="authenticated-app terminal-app command-closed theme-dark">
+            <header class="titlebar">
+              <button class="brand" type="button"><span class="brand-mark">pb</span><span>perfectly-balanced</span></button>
+              <p>August 2026 &middot; Personal budget</p>
+              <div class="theme-switcher" role="group" aria-label="Theme">
+                <input checked id="theme-dark-11" name="theme-11" type="radio" />
+                <label for="theme-dark-11">Dark</label>
+                <input id="theme-light-11" name="theme-11" type="radio" />
+                <label for="theme-light-11">Light</label>
+              </div>
+              <details class="profile"><summary><span>D</span>dev</summary></details>
+            </header>
+            <aside class="sidebar" aria-label="Application navigation">
+              <nav class="main-nav">
+                <button aria-current="page" class="nav-item is-active" type="button"><span>Budget</span></button>
+                <button class="nav-item" type="button"><span>Transactions</span><strong>1</strong></button>
+                <button class="nav-item" type="button"><span>Reports</span></button>
+              </nav>
+              <section class="sidebar-section"><h2>Months</h2><button type="button">July 2026</button><button class="is-current" type="button">August 2026</button><button type="button">September 2026</button></section>
+            </aside>
+            <main class="workspace">
+              <header class="workspace-head">
+                <div><p class="eyebrow">Budget / 2026 / 08</p><h1>August 2026</h1><p class="subtitle">Plan with the keyboard. Review with a glance.</p></div>
+                <div class="month-controls"><button type="button">&larr; Previous</button><button type="button">Next &rarr;</button></div>
+              </header>
+              <section class="summary"><div><span>Available</span><strong class="available">$557.50</strong></div><div><span>Planned</span><strong>$725</strong></div><div><span>Spent</span><strong class="spent">$167.50</strong></div><div><span>Uncategorized</span><strong class="warning">1 transaction</strong></div></section>
+              <section class="budget-table">
+                <div class="table-head"><div><p class="eyebrow">Monthly plan</p><h2>Categories</h2></div><button class="new-category" type="button"><span>+</span> Add category</button></div>
+                <div class="column-head"><span>Category</span><span>Planned</span><span>Spent</span><span>Remaining</span></div>
+                <div class="budget-group budget-group--root"><div class="budget-row"><span class="category-name">Internet <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$60</button><span class="spent">$0</span><span class="available">$60</span></div></div>
+                <section class="budget-group"><header class="budget-subsection-head"><h3><span>&#8964;</span> Income</h3><strong>$7,200</strong></header><div class="budget-row budget-row--sectioned"><span class="category-name">Katie Pay <button class="direction-tag" type="button">Income</button></span><button class="amount-cell" type="button">$200</button><span class="spent">$0</span><span class="available">$200</span></div><div class="budget-row budget-row--sectioned"><span class="category-name">Ben Pay <button class="direction-tag" type="button">Income</button></span><button class="amount-cell" type="button">$7,000</button><span class="spent">$7,000</span><span class="available">$0</span></div></section>
+                <section class="budget-group"><header class="budget-subsection-head"><h3><span>&#8964;</span> Food</h3><strong>$650</strong></header><div class="budget-row budget-row--sectioned is-selected"><span class="category-name"><i class="selection-caret">&rsaquo;</i>Groceries <button class="direction-tag" type="button">Spending</button></span><div class="inline-amount-editor"><input aria-invalid="true" class="amount-cell amount-cell--editing" aria-label="Groceries planned amount" inputmode="decimal" type="text" value="450.999" /><span class="inline-error" role="alert">Enter an amount with no more than two decimal places.</span></div><span class="spent">$125.50</span><span class="available">$274.50</span></div><div class="budget-row budget-row--sectioned"><span class="category-name">Restaurants <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$250</button><span class="spent">$42</span><span class="available">$208</span></div></section>
+                <section class="budget-group"><header class="budget-subsection-head"><h3><span>&#8964;</span> Subscriptions</h3><strong>$15</strong></header><div class="budget-row budget-row--sectioned"><span class="category-name">YouTube Premium <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$15</button><span class="spent">$0</span><span class="available">$15</span></div></section>
+              </section>
+            </main>
+            <footer class="statusline"><div><strong>NAVIGATE</strong><span>budget / groceries</span><span>focus 1 of 18</span></div><div><span><kbd>Enter</kbd> save amount</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span><span><kbd>:</kbd> command</span></div></footer>
+          </div>
+        </div>
+      </section>
+
+      <section class="review-frame">
+        <header class="review-frame__head">
+          <div><span class="review-frame__id">12</span><h2>Saving amount</h2></div>
+          <p class="review-frame__note">Saving closes the editor immediately, applies the optimistic $450 value, updates the spending totals, and disables the in-panel action buttons while the mutation is in flight.</p>
+        </header>
+        <div class="frame-screen">
+          <div class="authenticated-app terminal-app command-closed theme-dark">
+            <header class="titlebar">
+              <button class="brand" type="button"><span class="brand-mark">pb</span><span>perfectly-balanced</span></button>
+              <p>August 2026 &middot; Personal budget</p>
+              <div class="theme-switcher" role="group" aria-label="Theme">
+                <input checked id="theme-dark-12" name="theme-12" type="radio" />
+                <label for="theme-dark-12">Dark</label>
+                <input id="theme-light-12" name="theme-12" type="radio" />
+                <label for="theme-light-12">Light</label>
+              </div>
+              <details class="profile"><summary><span>D</span>dev</summary></details>
+            </header>
+            <aside class="sidebar" aria-label="Application navigation">
+              <nav class="main-nav">
+                <button aria-current="page" class="nav-item is-active" type="button"><span>Budget</span></button>
+                <button class="nav-item" type="button"><span>Transactions</span><strong>1</strong></button>
+                <button class="nav-item" type="button"><span>Reports</span></button>
+              </nav>
+              <section class="sidebar-section"><h2>Months</h2><button type="button">July 2026</button><button class="is-current" type="button">August 2026</button><button type="button">September 2026</button></section>
+            </aside>
+            <main class="workspace">
+              <header class="workspace-head">
+                <div><p class="eyebrow">Budget / 2026 / 08</p><h1>August 2026</h1><p class="subtitle">Plan with the keyboard. Review with a glance.</p></div>
+                <div class="month-controls"><button disabled type="button">&larr; Previous</button><button disabled type="button">Next &rarr;</button></div>
+              </header>
+              <section class="summary"><div><span>Available</span><strong class="available">$607.50</strong></div><div><span>Planned</span><strong>$775</strong></div><div><span>Spent</span><strong class="spent">$167.50</strong></div><div><span>Uncategorized</span><strong class="warning">1 transaction</strong></div></section>
+              <section class="budget-table">
+                <div class="table-head"><div><p class="eyebrow">Monthly plan</p><h2>Categories</h2></div><button class="new-category" disabled type="button"><span>+</span> Add category</button></div>
+                <div class="column-head"><span>Category</span><span>Planned</span><span>Spent</span><span>Remaining</span></div>
+                <div class="budget-group budget-group--root"><div class="budget-row"><span class="category-name">Internet <button class="direction-tag" disabled type="button">Spending</button></span><button class="amount-cell" disabled type="button">$60</button><span class="spent">$0</span><span class="available">$60</span></div></div>
+                <section class="budget-group"><header class="budget-subsection-head"><h3><span>&#8964;</span> Income</h3><strong>$7,200</strong></header><div class="budget-row budget-row--sectioned"><span class="category-name">Katie Pay <button class="direction-tag" disabled type="button">Income</button></span><button class="amount-cell" disabled type="button">$200</button><span class="spent">$0</span><span class="available">$200</span></div><div class="budget-row budget-row--sectioned"><span class="category-name">Ben Pay <button class="direction-tag" disabled type="button">Income</button></span><button class="amount-cell" disabled type="button">$7,000</button><span class="spent">$7,000</span><span class="available">$0</span></div></section>
+                <section class="budget-group"><header class="budget-subsection-head"><h3><span>&#8964;</span> Food</h3><strong>$700</strong></header><div class="budget-row budget-row--sectioned is-selected"><span class="category-name"><i class="selection-caret">&rsaquo;</i>Groceries <button class="direction-tag" disabled type="button">Spending</button></span><button class="amount-cell" disabled type="button">$450</button><span class="spent">$125.50</span><span class="available">$324.50</span></div><div class="budget-row budget-row--sectioned"><span class="category-name">Restaurants <button class="direction-tag" disabled type="button">Spending</button></span><button class="amount-cell" disabled type="button">$250</button><span class="spent">$42</span><span class="available">$208</span></div></section>
+                <section class="budget-group"><header class="budget-subsection-head"><h3><span>&#8964;</span> Subscriptions</h3><strong>$15</strong></header><div class="budget-row budget-row--sectioned"><span class="category-name">YouTube Premium <button class="direction-tag" disabled type="button">Spending</button></span><button class="amount-cell" disabled type="button">$15</button><span class="spent">$0</span><span class="available">$15</span></div></section>
+              </section>
+            </main>
+            <footer class="statusline"><div><strong>NAVIGATE</strong><span>budget / groceries</span><span>focus 15 of 18</span></div><div><span><kbd>a</kbd> amount</span><span><kbd>t</kbd> direction</span><span><kbd>n</kbd> new</span><span><kbd>r</kbd> rename</span><span><kbd>d</kbd> delete</span><span><kbd>x</kbd> move</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span><span><kbd>:</kbd> command</span></div></footer>
+          </div>
+        </div>
+      </section>
+
+      <section id="direction" class="review-frame">
+        <header class="review-frame__head">
+          <div><span class="review-frame__id">13</span><h2>Direction toggle result</h2></div>
+          <p class="review-frame__note">Changing Internet from spending to income updates the spending-only summary immediately while leaving the rest of August unchanged.</p>
+        </header>
+        <div class="frame-screen">
+          <div class="authenticated-app terminal-app command-closed theme-dark">
+            <header class="titlebar">
+              <button class="brand" type="button"><span class="brand-mark">pb</span><span>perfectly-balanced</span></button>
+              <p>August 2026 &middot; Personal budget</p>
+              <div class="theme-switcher" role="group" aria-label="Theme">
+                <input checked id="theme-dark-13" name="theme-13" type="radio" />
+                <label for="theme-dark-13">Dark</label>
+                <input id="theme-light-13" name="theme-13" type="radio" />
+                <label for="theme-light-13">Light</label>
+              </div>
+              <details class="profile"><summary><span>D</span>dev</summary></details>
+            </header>
+            <aside class="sidebar" aria-label="Application navigation">
+              <nav class="main-nav">
+                <button aria-current="page" class="nav-item is-active" type="button"><span>Budget</span></button>
+                <button class="nav-item" type="button"><span>Transactions</span><strong>1</strong></button>
+                <button class="nav-item" type="button"><span>Reports</span></button>
+              </nav>
+              <section class="sidebar-section"><h2>Months</h2><button type="button">July 2026</button><button class="is-current" type="button">August 2026</button><button type="button">September 2026</button></section>
+            </aside>
+            <main class="workspace">
+              <header class="workspace-head">
+                <div><p class="eyebrow">Budget / 2026 / 08</p><h1>August 2026</h1><p class="subtitle">Plan with the keyboard. Review with a glance.</p></div>
+                <div class="month-controls"><button type="button">&larr; Previous</button><button type="button">Next &rarr;</button></div>
+              </header>
+              <section class="summary"><div><span>Available</span><strong class="available">$497.50</strong></div><div><span>Planned</span><strong>$665</strong></div><div><span>Spent</span><strong class="spent">$167.50</strong></div><div><span>Uncategorized</span><strong class="warning">1 transaction</strong></div></section>
+              <section class="budget-table">
+                <div class="table-head"><div><p class="eyebrow">Monthly plan</p><h2>Categories</h2></div><button class="new-category" type="button"><span>+</span> Add category</button></div>
+                <div class="column-head"><span>Category</span><span>Planned</span><span>Spent</span><span>Remaining</span></div>
+                <div class="budget-group budget-group--root"><div class="budget-row is-selected"><span class="category-name"><i class="selection-caret">&rsaquo;</i>Internet <button class="direction-tag" type="button">Income</button></span><button class="amount-cell" type="button">$60</button><span class="spent">$0</span><span class="available">$60</span></div></div>
+                <section class="budget-group"><header class="budget-subsection-head"><h3><span>&#8964;</span> Income</h3><strong>$7,200</strong></header><div class="budget-row budget-row--sectioned"><span class="category-name">Katie Pay <button class="direction-tag" type="button">Income</button></span><button class="amount-cell" type="button">$200</button><span class="spent">$0</span><span class="available">$200</span></div><div class="budget-row budget-row--sectioned"><span class="category-name">Ben Pay <button class="direction-tag" type="button">Income</button></span><button class="amount-cell" type="button">$7,000</button><span class="spent">$7,000</span><span class="available">$0</span></div></section>
+                <section class="budget-group"><header class="budget-subsection-head"><h3><span>&#8964;</span> Food</h3><strong>$650</strong></header><div class="budget-row budget-row--sectioned"><span class="category-name">Groceries <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$400</button><span class="spent">$125.50</span><span class="available">$274.50</span></div><div class="budget-row budget-row--sectioned"><span class="category-name">Restaurants <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$250</button><span class="spent">$42</span><span class="available">$208</span></div></section>
+                <section class="budget-group"><header class="budget-subsection-head"><h3><span>&#8964;</span> Subscriptions</h3><strong>$15</strong></header><div class="budget-row budget-row--sectioned"><span class="category-name">YouTube Premium <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$15</button><span class="spent">$0</span><span class="available">$15</span></div></section>
+              </section>
+            </main>
+            <footer class="statusline"><div><strong>NAVIGATE</strong><span>budget / internet</span><span>focus 10 of 18</span></div><div><span><kbd>a</kbd> amount</span><span><kbd>t</kbd> direction</span><span><kbd>n</kbd> new</span><span><kbd>r</kbd> rename</span><span><kbd>d</kbd> delete</span><span><kbd>x</kbd> move</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span><span><kbd>:</kbd> command</span></div></footer>
+          </div>
+        </div>
+      </section>
+
+      <section id="create" class="review-frame">
+        <header class="review-frame__head">
+          <div><span class="review-frame__id">14</span><h2>Create-kind dialog</h2></div>
+          <p class="review-frame__note">The dialog owns focus, so the originating Groceries row is no longer highlighted beneath it.</p>
+        </header>
+        <div class="frame-screen">
+          <div class="authenticated-app terminal-app command-closed theme-dark">
+            <header class="titlebar">
+              <button class="brand" type="button"><span class="brand-mark">pb</span><span>perfectly-balanced</span></button>
+              <p>August 2026 &middot; Personal budget</p>
+              <div class="theme-switcher" role="group" aria-label="Theme">
+                <input checked id="theme-dark-14" name="theme-14" type="radio" />
+                <label for="theme-dark-14">Dark</label>
+                <input id="theme-light-14" name="theme-14" type="radio" />
+                <label for="theme-light-14">Light</label>
+              </div>
+              <details class="profile"><summary><span>D</span>dev</summary></details>
+            </header>
+            <aside class="sidebar"><nav class="main-nav"><button class="nav-item is-active" type="button"><span>Budget</span></button><button class="nav-item" type="button"><span>Transactions</span><strong>1</strong></button><button class="nav-item" type="button"><span>Reports</span></button></nav><section class="sidebar-section"><h2>Months</h2><button type="button">July 2026</button><button class="is-current" type="button">August 2026</button><button type="button">September 2026</button></section></aside>
+            <main class="workspace">
+              <header class="workspace-head"><div><p class="eyebrow">Budget / 2026 / 08</p><h1>August 2026</h1><p class="subtitle">Plan with the keyboard. Review with a glance.</p></div><div class="month-controls"><button type="button">&larr; Previous</button><button type="button">Next &rarr;</button></div></header>
+              <section class="summary"><div><span>Available</span><strong class="available">$557.50</strong></div><div><span>Planned</span><strong>$725</strong></div><div><span>Spent</span><strong class="spent">$167.50</strong></div><div><span>Uncategorized</span><strong class="warning">1 transaction</strong></div></section>
+              <section class="budget-table">
+                <div class="table-head"><div><p class="eyebrow">Monthly plan</p><h2>Categories</h2></div><button class="new-category" type="button"><span>+</span> Add category</button></div>
+                <div class="column-head"><span>Category</span><span>Planned</span><span>Spent</span><span>Remaining</span></div>
+                <section class="budget-group"><header class="budget-subsection-head"><h3><span>&#8964;</span> Income</h3><strong>$7,200</strong></header><div class="budget-row budget-row--sectioned"><span class="category-name">Katie Pay <button class="direction-tag" type="button">Income</button></span><button class="amount-cell" type="button">$200</button><span class="spent">$0</span><span class="available">$200</span></div><div class="budget-row budget-row--sectioned"><span class="category-name">Ben Pay <button class="direction-tag" type="button">Income</button></span><button class="amount-cell" type="button">$7,000</button><span class="spent">$7,000</span><span class="available">$0</span></div></section>
+                <section class="budget-group"><header class="budget-subsection-head"><h3><span>&#8964;</span> Food</h3><strong>$650</strong></header><div class="budget-row budget-row--sectioned"><span class="category-name">Groceries <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$400</button><span class="spent">$125.50</span><span class="available">$274.50</span></div><div class="budget-row budget-row--sectioned"><span class="category-name">Restaurants <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$250</button><span class="spent">$42</span><span class="available">$208</span></div></section>
+              </section>
+              <div class="budget-action-layer"><section class="budget-action-dialog" role="dialog" aria-modal="true"><p class="eyebrow">Create below Groceries</p><h2>What would you like to create?</h2><div class="budget-action-choices"><button class="budget-action-choice is-selected" type="button">Budget line item</button><button class="budget-action-choice" type="button">Subsection</button></div></section></div>
+            </main>
+            <footer class="statusline"><div><strong>CREATE</strong><span>create below groceries</span></div><div><span><kbd>j</kbd><kbd>k</kbd> choose</span><span><kbd>Enter</kbd> confirm</span><span><kbd>Esc</kbd> cancel</span></div></footer>
+          </div>
+        </div>
+      </section>
+
+      <section class="review-frame">
+        <header class="review-frame__head">
+          <div><span class="review-frame__id">15</span><h2>Allocation naming</h2></div>
+          <p class="review-frame__note">A new line item is inserted directly below Groceries inside Food, not at the top of the list or in a separate overlay.</p>
+        </header>
+        <div class="frame-screen">
+          <div class="authenticated-app terminal-app command-closed theme-dark">
+            <header class="titlebar">
+              <button class="brand" type="button"><span class="brand-mark">pb</span><span>perfectly-balanced</span></button>
+              <p>August 2026 &middot; Personal budget</p>
+              <div class="theme-switcher" role="group" aria-label="Theme">
+                <input checked id="theme-dark-15" name="theme-15" type="radio" />
+                <label for="theme-dark-15">Dark</label>
+                <input id="theme-light-15" name="theme-15" type="radio" />
+                <label for="theme-light-15">Light</label>
+              </div>
+              <details class="profile"><summary><span>D</span>dev</summary></details>
+            </header>
+            <aside class="sidebar"><nav class="main-nav"><button class="nav-item is-active" type="button"><span>Budget</span></button><button class="nav-item" type="button"><span>Transactions</span><strong>1</strong></button><button class="nav-item" type="button"><span>Reports</span></button></nav><section class="sidebar-section"><h2>Months</h2><button type="button">July 2026</button><button class="is-current" type="button">August 2026</button><button type="button">September 2026</button></section></aside>
+            <main class="workspace">
+              <header class="workspace-head"><div><p class="eyebrow">Budget / 2026 / 08</p><h1>August 2026</h1><p class="subtitle">Plan with the keyboard. Review with a glance.</p></div><div class="month-controls"><button type="button">&larr; Previous</button><button type="button">Next &rarr;</button></div></header>
+              <section class="summary"><div><span>Available</span><strong class="available">$557.50</strong></div><div><span>Planned</span><strong>$725</strong></div><div><span>Spent</span><strong class="spent">$167.50</strong></div><div><span>Uncategorized</span><strong class="warning">1 transaction</strong></div></section>
+              <section class="budget-table">
+                <div class="table-head"><div><p class="eyebrow">Monthly plan</p><h2>Categories</h2></div><button class="new-category" type="button"><span>+</span> Add category</button></div>
+                <div class="column-head"><span>Category</span><span>Planned</span><span>Spent</span><span>Remaining</span></div>
+                <section class="budget-group"><header class="budget-subsection-head"><h3><span>&#8964;</span> Income</h3><strong>$7,200</strong></header><div class="budget-row budget-row--sectioned"><span class="category-name">Katie Pay <button class="direction-tag" type="button">Income</button></span><button class="amount-cell" type="button">$200</button><span class="spent">$0</span><span class="available">$200</span></div><div class="budget-row budget-row--sectioned"><span class="category-name">Ben Pay <button class="direction-tag" type="button">Income</button></span><button class="amount-cell" type="button">$7,000</button><span class="spent">$7,000</span><span class="available">$0</span></div></section>
+                <section class="budget-group"><header class="budget-subsection-head"><h3><span>&#8964;</span> Food</h3><strong>$650</strong></header><div class="budget-row budget-row--sectioned"><span class="category-name">Groceries <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$400</button><span class="spent">$125.50</span><span class="available">$274.50</span></div><div class="budget-row budget-row--sectioned is-selected pending-budget-entry"><span class="category-name"><i class="selection-caret">&rsaquo;</i><input class="pending-budget-name-input" aria-label="New budget line item name" placeholder="Name this budget line item" type="text" /><button class="direction-tag" disabled type="button">Spending</button></span><span class="amount-cell">$0</span><span class="spent">$0</span><span class="available">$0</span></div><div class="budget-row budget-row--sectioned"><span class="category-name">Restaurants <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$250</button><span class="spent">$42</span><span class="available">$208</span></div></section>
+              </section>
+            </main>
+            <footer class="statusline"><div><strong>NAME</strong><span>name budget line item</span></div><div><span><kbd>Enter</kbd> save</span><span><kbd>Esc</kbd> cancel</span></div></footer>
+          </div>
+        </div>
+      </section>
+
+      <section class="review-frame">
+        <header class="review-frame__head">
+          <div><span class="review-frame__id">16</span><h2>Subsection naming</h2></div>
+          <p class="review-frame__note">Creating a subsection below a Food allocation inserts the pending subsection after Food in the top-level order: Internet, Income, Food, new subsection, then Subscriptions.</p>
+        </header>
+        <div class="frame-screen">
+          <div class="authenticated-app terminal-app command-closed theme-dark">
+            <header class="titlebar">
+              <button class="brand" type="button"><span class="brand-mark">pb</span><span>perfectly-balanced</span></button>
+              <p>August 2026 &middot; Personal budget</p>
+              <div class="theme-switcher" role="group" aria-label="Theme">
+                <input checked id="theme-dark-16" name="theme-16" type="radio" />
+                <label for="theme-dark-16">Dark</label>
+                <input id="theme-light-16" name="theme-16" type="radio" />
+                <label for="theme-light-16">Light</label>
+              </div>
+              <details class="profile"><summary><span>D</span>dev</summary></details>
+            </header>
+            <aside class="sidebar"><nav class="main-nav"><button class="nav-item is-active" type="button"><span>Budget</span></button><button class="nav-item" type="button"><span>Transactions</span><strong>1</strong></button><button class="nav-item" type="button"><span>Reports</span></button></nav><section class="sidebar-section"><h2>Months</h2><button type="button">July 2026</button><button class="is-current" type="button">August 2026</button><button type="button">September 2026</button></section></aside>
+            <main class="workspace">
+              <header class="workspace-head"><div><p class="eyebrow">Budget / 2026 / 08</p><h1>August 2026</h1><p class="subtitle">Plan with the keyboard. Review with a glance.</p></div><div class="month-controls"><button type="button">&larr; Previous</button><button type="button">Next &rarr;</button></div></header>
+              <section class="summary"><div><span>Available</span><strong class="available">$557.50</strong></div><div><span>Planned</span><strong>$725</strong></div><div><span>Spent</span><strong class="spent">$167.50</strong></div><div><span>Uncategorized</span><strong class="warning">1 transaction</strong></div></section>
+              <section class="budget-table">
+                <div class="table-head"><div><p class="eyebrow">Monthly plan</p><h2>Categories</h2></div><button class="new-category" type="button"><span>+</span> Add category</button></div>
+                <div class="column-head"><span>Category</span><span>Planned</span><span>Spent</span><span>Remaining</span></div>
+                <div class="budget-group budget-group--root"><div class="budget-row"><span class="category-name">Internet <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$60</button><span class="spent">$0</span><span class="available">$60</span></div></div>
+                <section class="budget-group"><header class="budget-subsection-head"><h3><span>&#8964;</span> Income</h3><strong>$7,200</strong></header><div class="budget-row budget-row--sectioned"><span class="category-name">Katie Pay <button class="direction-tag" type="button">Income</button></span><button class="amount-cell" type="button">$200</button><span class="spent">$0</span><span class="available">$200</span></div><div class="budget-row budget-row--sectioned"><span class="category-name">Ben Pay <button class="direction-tag" type="button">Income</button></span><button class="amount-cell" type="button">$7,000</button><span class="spent">$7,000</span><span class="available">$0</span></div></section>
+                <section class="budget-group"><header class="budget-subsection-head"><h3><span>&#8964;</span> Food</h3><strong>$650</strong></header><div class="budget-row budget-row--sectioned"><span class="category-name">Groceries <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$400</button><span class="spent">$125.50</span><span class="available">$274.50</span></div><div class="budget-row budget-row--sectioned"><span class="category-name">Restaurants <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$250</button><span class="spent">$42</span><span class="available">$208</span></div></section>
+                <section class="budget-group pending-budget-subsection"><header class="budget-subsection-head is-selected"><h3><i class="selection-caret">&rsaquo;</i><input class="pending-budget-name-input" aria-label="New subsection name" placeholder="Name this subsection" type="text" /></h3><strong>$0</strong></header></section>
+                <section class="budget-group"><header class="budget-subsection-head"><h3><span>&#8964;</span> Subscriptions</h3><strong>$15</strong></header><div class="budget-row budget-row--sectioned"><span class="category-name">YouTube Premium <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$15</button><span class="spent">$0</span><span class="available">$15</span></div></section>
+              </section>
+            </main>
+            <footer class="statusline"><div><strong>NAME</strong><span>name subsection</span></div><div><span><kbd>Enter</kbd> save</span><span><kbd>Esc</kbd> cancel</span></div></footer>
+          </div>
+        </div>
+      </section>
+
+      <section id="rename" class="review-frame">
+        <header class="review-frame__head">
+          <div><span class="review-frame__id">17</span><h2>Allocation rename</h2></div>
+          <p class="review-frame__note">Category rename edits the existing row in place and keeps the Income subtotal at $7,200.</p>
+        </header>
+        <div class="frame-screen">
+          <div class="authenticated-app terminal-app command-closed theme-dark">
+            <header class="titlebar">
+              <button class="brand" type="button"><span class="brand-mark">pb</span><span>perfectly-balanced</span></button>
+              <p>August 2026 &middot; Personal budget</p>
+              <div class="theme-switcher" role="group" aria-label="Theme">
+                <input checked id="theme-dark-17" name="theme-17" type="radio" />
+                <label for="theme-dark-17">Dark</label>
+                <input id="theme-light-17" name="theme-17" type="radio" />
+                <label for="theme-light-17">Light</label>
+              </div>
+              <details class="profile"><summary><span>D</span>dev</summary></details>
+            </header>
+            <aside class="sidebar"><nav class="main-nav"><button class="nav-item is-active" type="button"><span>Budget</span></button><button class="nav-item" type="button"><span>Transactions</span><strong>1</strong></button><button class="nav-item" type="button"><span>Reports</span></button></nav><section class="sidebar-section"><h2>Months</h2><button type="button">July 2026</button><button class="is-current" type="button">August 2026</button><button type="button">September 2026</button></section></aside>
+            <main class="workspace">
+              <header class="workspace-head"><div><p class="eyebrow">Budget / 2026 / 08</p><h1>August 2026</h1><p class="subtitle">Plan with the keyboard. Review with a glance.</p></div><div class="month-controls"><button type="button">&larr; Previous</button><button type="button">Next &rarr;</button></div></header>
+              <section class="summary"><div><span>Available</span><strong class="available">$557.50</strong></div><div><span>Planned</span><strong>$725</strong></div><div><span>Spent</span><strong class="spent">$167.50</strong></div><div><span>Uncategorized</span><strong class="warning">1 transaction</strong></div></section>
+              <section class="budget-table">
+                <div class="table-head"><div><p class="eyebrow">Monthly plan</p><h2>Categories</h2></div><button class="new-category" type="button"><span>+</span> Add category</button></div>
+                <div class="column-head"><span>Category</span><span>Planned</span><span>Spent</span><span>Remaining</span></div>
+                <section class="budget-group"><header class="budget-subsection-head"><h3><span>&#8964;</span> Income</h3><strong>$7,200</strong></header><div class="budget-row budget-row--sectioned is-selected"><span class="category-name"><i class="selection-caret">&rsaquo;</i><input class="pending-budget-name-input" aria-label="Budget line item name" type="text" value="Katie Pay" /><button class="direction-tag" type="button">Income</button></span><button class="amount-cell" type="button">$200</button><span class="spent">$0</span><span class="available">$200</span></div><div class="budget-row budget-row--sectioned"><span class="category-name">Ben Pay <button class="direction-tag" type="button">Income</button></span><button class="amount-cell" type="button">$7,000</button><span class="spent">$7,000</span><span class="available">$0</span></div></section>
+              </section>
+            </main>
+            <footer class="statusline"><div><strong>RENAME</strong><span>rename katie pay</span></div><div><span><kbd>Enter</kbd> save</span><span><kbd>Esc</kbd> cancel</span></div></footer>
+          </div>
+        </div>
+      </section>
+
+      <section class="review-frame">
+        <header class="review-frame__head">
+          <div><span class="review-frame__id">18</span><h2>Subsection rename</h2></div>
+          <p class="review-frame__note">Subsection rename replaces the heading text inline and leaves the section contents in place.</p>
+        </header>
+        <div class="frame-screen">
+          <div class="authenticated-app terminal-app command-closed theme-dark">
+            <header class="titlebar">
+              <button class="brand" type="button"><span class="brand-mark">pb</span><span>perfectly-balanced</span></button>
+              <p>August 2026 &middot; Personal budget</p>
+              <div class="theme-switcher" role="group" aria-label="Theme">
+                <input checked id="theme-dark-18" name="theme-18" type="radio" />
+                <label for="theme-dark-18">Dark</label>
+                <input id="theme-light-18" name="theme-18" type="radio" />
+                <label for="theme-light-18">Light</label>
+              </div>
+              <details class="profile"><summary><span>D</span>dev</summary></details>
+            </header>
+            <aside class="sidebar"><nav class="main-nav"><button class="nav-item is-active" type="button"><span>Budget</span></button><button class="nav-item" type="button"><span>Transactions</span><strong>1</strong></button><button class="nav-item" type="button"><span>Reports</span></button></nav><section class="sidebar-section"><h2>Months</h2><button type="button">July 2026</button><button class="is-current" type="button">August 2026</button><button type="button">September 2026</button></section></aside>
+            <main class="workspace">
+              <header class="workspace-head"><div><p class="eyebrow">Budget / 2026 / 08</p><h1>August 2026</h1><p class="subtitle">Plan with the keyboard. Review with a glance.</p></div><div class="month-controls"><button type="button">&larr; Previous</button><button type="button">Next &rarr;</button></div></header>
+              <section class="summary"><div><span>Available</span><strong class="available">$557.50</strong></div><div><span>Planned</span><strong>$725</strong></div><div><span>Spent</span><strong class="spent">$167.50</strong></div><div><span>Uncategorized</span><strong class="warning">1 transaction</strong></div></section>
+              <section class="budget-table">
+                <div class="table-head"><div><p class="eyebrow">Monthly plan</p><h2>Categories</h2></div><button class="new-category" type="button"><span>+</span> Add category</button></div>
+                <div class="column-head"><span>Category</span><span>Planned</span><span>Spent</span><span>Remaining</span></div>
+                <section class="budget-group"><header class="budget-subsection-head is-selected"><h3><i class="selection-caret">&rsaquo;</i><input class="pending-budget-name-input" aria-label="Subsection name" type="text" value="Income" /></h3><strong>$7,200</strong></header><div class="budget-row budget-row--sectioned"><span class="category-name">Katie Pay <button class="direction-tag" type="button">Income</button></span><button class="amount-cell" type="button">$200</button><span class="spent">$0</span><span class="available">$200</span></div><div class="budget-row budget-row--sectioned"><span class="category-name">Ben Pay <button class="direction-tag" type="button">Income</button></span><button class="amount-cell" type="button">$7,000</button><span class="spent">$7,000</span><span class="available">$0</span></div></section>
+              </section>
+            </main>
+            <footer class="statusline"><div><strong>RENAME</strong><span>rename income</span></div><div><span><kbd>Enter</kbd> save</span><span><kbd>Esc</kbd> cancel</span></div></footer>
+          </div>
+        </div>
+      </section>
+
+      <section id="delete" class="review-frame">
+        <header class="review-frame__head">
+          <div><span class="review-frame__id">19</span><h2>Allocation delete confirmation</h2></div>
+          <p class="review-frame__note">Confirmation focus belongs to the dialog, so the Katie Pay row is not still highlighted behind it.</p>
+        </header>
+        <div class="frame-screen">
+          <div class="authenticated-app terminal-app command-closed theme-dark">
+            <header class="titlebar">
+              <button class="brand" type="button"><span class="brand-mark">pb</span><span>perfectly-balanced</span></button>
+              <p>August 2026 &middot; Personal budget</p>
+              <div class="theme-switcher" role="group" aria-label="Theme">
+                <input checked id="theme-dark-19" name="theme-19" type="radio" />
+                <label for="theme-dark-19">Dark</label>
+                <input id="theme-light-19" name="theme-19" type="radio" />
+                <label for="theme-light-19">Light</label>
+              </div>
+              <details class="profile"><summary><span>D</span>dev</summary></details>
+            </header>
+            <aside class="sidebar"><nav class="main-nav"><button class="nav-item is-active" type="button"><span>Budget</span></button><button class="nav-item" type="button"><span>Transactions</span><strong>1</strong></button><button class="nav-item" type="button"><span>Reports</span></button></nav><section class="sidebar-section"><h2>Months</h2><button type="button">July 2026</button><button class="is-current" type="button">August 2026</button><button type="button">September 2026</button></section></aside>
+            <main class="workspace">
+              <header class="workspace-head"><div><p class="eyebrow">Budget / 2026 / 08</p><h1>August 2026</h1><p class="subtitle">Plan with the keyboard. Review with a glance.</p></div><div class="month-controls"><button type="button">&larr; Previous</button><button type="button">Next &rarr;</button></div></header>
+              <section class="summary"><div><span>Available</span><strong class="available">$557.50</strong></div><div><span>Planned</span><strong>$725</strong></div><div><span>Spent</span><strong class="spent">$167.50</strong></div><div><span>Uncategorized</span><strong class="warning">1 transaction</strong></div></section>
+              <section class="budget-table">
+                <div class="table-head"><div><p class="eyebrow">Monthly plan</p><h2>Categories</h2></div><button class="new-category" type="button"><span>+</span> Add category</button></div>
+                <div class="column-head"><span>Category</span><span>Planned</span><span>Spent</span><span>Remaining</span></div>
+                <section class="budget-group"><header class="budget-subsection-head"><h3><span>&#8964;</span> Income</h3><strong>$7,200</strong></header><div class="budget-row budget-row--sectioned"><span class="category-name">Katie Pay <button class="direction-tag" type="button">Income</button></span><button class="amount-cell" type="button">$200</button><span class="spent">$0</span><span class="available">$200</span></div><div class="budget-row budget-row--sectioned"><span class="category-name">Ben Pay <button class="direction-tag" type="button">Income</button></span><button class="amount-cell" type="button">$7,000</button><span class="spent">$7,000</span><span class="available">$0</span></div></section>
+              </section>
+              <div class="budget-action-layer"><section class="budget-action-dialog" role="dialog" aria-modal="true"><p class="eyebrow">Delete budget line item</p><h2>Delete Katie Pay?</h2><p>This removes it from this budget.</p><div class="budget-action-choices"><button class="budget-action-choice budget-action-choice--danger" type="button">Yes, delete</button><button class="budget-action-choice is-selected" type="button">No, keep it</button></div></section></div>
+            </main>
+            <footer class="statusline"><div><strong>CONFIRM</strong><span>delete katie pay</span></div><div><span><kbd>j</kbd><kbd>k</kbd> choose</span><span><kbd>Enter</kbd> confirm</span><span><kbd>Esc</kbd> cancel</span></div></footer>
+          </div>
+        </div>
+      </section>
+
+      <section class="review-frame">
+        <header class="review-frame__head">
+          <div><span class="review-frame__id">20</span><h2>Subsection delete confirmation</h2></div>
+          <p class="review-frame__note">Deleting Income warns that both nested budget line items will be removed.</p>
+        </header>
+        <div class="frame-screen">
+          <div class="authenticated-app terminal-app command-closed theme-dark">
+            <header class="titlebar">
+              <button class="brand" type="button"><span class="brand-mark">pb</span><span>perfectly-balanced</span></button>
+              <p>August 2026 &middot; Personal budget</p>
+              <div class="theme-switcher" role="group" aria-label="Theme">
+                <input checked id="theme-dark-20" name="theme-20" type="radio" />
+                <label for="theme-dark-20">Dark</label>
+                <input id="theme-light-20" name="theme-20" type="radio" />
+                <label for="theme-light-20">Light</label>
+              </div>
+              <details class="profile"><summary><span>D</span>dev</summary></details>
+            </header>
+            <aside class="sidebar"><nav class="main-nav"><button class="nav-item is-active" type="button"><span>Budget</span></button><button class="nav-item" type="button"><span>Transactions</span><strong>1</strong></button><button class="nav-item" type="button"><span>Reports</span></button></nav><section class="sidebar-section"><h2>Months</h2><button type="button">July 2026</button><button class="is-current" type="button">August 2026</button><button type="button">September 2026</button></section></aside>
+            <main class="workspace">
+              <header class="workspace-head"><div><p class="eyebrow">Budget / 2026 / 08</p><h1>August 2026</h1><p class="subtitle">Plan with the keyboard. Review with a glance.</p></div><div class="month-controls"><button type="button">&larr; Previous</button><button type="button">Next &rarr;</button></div></header>
+              <section class="summary"><div><span>Available</span><strong class="available">$557.50</strong></div><div><span>Planned</span><strong>$725</strong></div><div><span>Spent</span><strong class="spent">$167.50</strong></div><div><span>Uncategorized</span><strong class="warning">1 transaction</strong></div></section>
+              <section class="budget-table">
+                <div class="table-head"><div><p class="eyebrow">Monthly plan</p><h2>Categories</h2></div><button class="new-category" type="button"><span>+</span> Add category</button></div>
+                <div class="column-head"><span>Category</span><span>Planned</span><span>Spent</span><span>Remaining</span></div>
+                <section class="budget-group"><header class="budget-subsection-head"><h3><span>&#8964;</span> Income</h3><strong>$7,200</strong></header><div class="budget-row budget-row--sectioned"><span class="category-name">Katie Pay <button class="direction-tag" type="button">Income</button></span><button class="amount-cell" type="button">$200</button><span class="spent">$0</span><span class="available">$200</span></div><div class="budget-row budget-row--sectioned"><span class="category-name">Ben Pay <button class="direction-tag" type="button">Income</button></span><button class="amount-cell" type="button">$7,000</button><span class="spent">$7,000</span><span class="available">$0</span></div></section>
+              </section>
+              <div class="budget-action-layer"><section class="budget-action-dialog" role="dialog" aria-modal="true"><p class="eyebrow">Delete subsection</p><h2>Delete Income?</h2><p>Its 2 budget line items will also be deleted.</p><div class="budget-action-choices"><button class="budget-action-choice budget-action-choice--danger" type="button">Yes, delete</button><button class="budget-action-choice is-selected" type="button">No, keep it</button></div></section></div>
+            </main>
+            <footer class="statusline"><div><strong>CONFIRM</strong><span>delete income</span></div><div><span><kbd>j</kbd><kbd>k</kbd> choose</span><span><kbd>Enter</kbd> confirm</span><span><kbd>Esc</kbd> cancel</span></div></footer>
+          </div>
+        </div>
+      </section>
+
+      <section id="move" class="review-frame">
+        <header class="review-frame__head">
+          <div><span class="review-frame__id">21</span><h2>Moving placement</h2></div>
+          <p class="review-frame__note">Previewing a move physically reorders the list. After picking up Internet and previewing it inside Food, the top-level order becomes Income, Food, then Subscriptions.</p>
+        </header>
+        <div class="frame-screen">
+          <div class="authenticated-app terminal-app command-closed theme-dark">
+            <header class="titlebar">
+              <button class="brand" type="button"><span class="brand-mark">pb</span><span>perfectly-balanced</span></button>
+              <p>August 2026 &middot; Personal budget</p>
+              <div class="theme-switcher" role="group" aria-label="Theme">
+                <input checked id="theme-dark-21" name="theme-21" type="radio" />
+                <label for="theme-dark-21">Dark</label>
+                <input id="theme-light-21" name="theme-21" type="radio" />
+                <label for="theme-light-21">Light</label>
+              </div>
+              <details class="profile"><summary><span>D</span>dev</summary></details>
+            </header>
+            <aside class="sidebar"><nav class="main-nav"><button class="nav-item is-active" type="button"><span>Budget</span></button><button class="nav-item" type="button"><span>Transactions</span><strong>1</strong></button><button class="nav-item" type="button"><span>Reports</span></button></nav><section class="sidebar-section"><h2>Months</h2><button type="button">July 2026</button><button class="is-current" type="button">August 2026</button><button type="button">September 2026</button></section></aside>
+            <main class="workspace">
+              <header class="workspace-head"><div><p class="eyebrow">Budget / 2026 / 08</p><h1>August 2026</h1><p class="subtitle">Plan with the keyboard. Review with a glance.</p></div><div class="month-controls"><button type="button">&larr; Previous</button><button type="button">Next &rarr;</button></div></header>
+              <section class="summary"><div><span>Available</span><strong class="available">$557.50</strong></div><div><span>Planned</span><strong>$725</strong></div><div><span>Spent</span><strong class="spent">$167.50</strong></div><div><span>Uncategorized</span><strong class="warning">1 transaction</strong></div></section>
+              <section class="budget-table">
+                <div class="table-head"><div><p class="eyebrow">Monthly plan</p><h2>Categories</h2></div><button class="new-category" type="button"><span>+</span> Add category</button></div>
+                <div class="column-head"><span>Category</span><span>Planned</span><span>Spent</span><span>Remaining</span></div>
+                <section class="budget-group"><header class="budget-subsection-head"><h3><span>&#8964;</span> Income</h3><strong>$7,200</strong></header><div class="budget-row budget-row--sectioned"><span class="category-name">Katie Pay <button class="direction-tag" type="button">Income</button></span><button class="amount-cell" type="button">$200</button><span class="spent">$0</span><span class="available">$200</span></div><div class="budget-row budget-row--sectioned"><span class="category-name">Ben Pay <button class="direction-tag" type="button">Income</button></span><button class="amount-cell" type="button">$7,000</button><span class="spent">$7,000</span><span class="available">$0</span></div></section>
+                <section class="budget-group"><header class="budget-subsection-head"><h3><span>&#8964;</span> Food</h3><strong>$710</strong></header><div class="budget-row budget-row--sectioned is-selected is-picked-up"><span class="category-name"><i class="selection-caret">&rsaquo;</i>Internet <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$60</button><span class="spent">$0</span><span class="available">$60</span></div><div class="budget-row budget-row--sectioned"><span class="category-name">Groceries <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$400</button><span class="spent">$125.50</span><span class="available">$274.50</span></div><div class="budget-row budget-row--sectioned"><span class="category-name">Restaurants <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$250</button><span class="spent">$42</span><span class="available">$208</span></div></section>
+                <section class="budget-group"><header class="budget-subsection-head"><h3><span>&#8964;</span> Subscriptions</h3><strong>$15</strong></header><div class="budget-row budget-row--sectioned"><span class="category-name">YouTube Premium <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$15</button><span class="spent">$0</span><span class="available">$15</span></div></section>
+              </section>
+            </main>
+            <footer class="statusline"><div><strong>MOVE</strong><span>move internet</span></div><div><span><kbd>j</kbd><kbd>k</kbd> position</span><span><kbd>p</kbd> place</span><span><kbd>Esc</kbd> cancel</span></div></footer>
+          </div>
+        </div>
+      </section>
+
+      <section class="review-frame">
+        <header class="review-frame__head">
+          <div><span class="review-frame__id">22</span><h2>Move saving</h2></div>
+          <p class="review-frame__note">After placement is confirmed, the previewed order remains onscreen, Internet stays selected in Food, and the footer switches to the saving state.</p>
+        </header>
+        <div class="frame-screen">
+          <div class="authenticated-app terminal-app command-closed theme-dark">
+            <header class="titlebar">
+              <button class="brand" type="button"><span class="brand-mark">pb</span><span>perfectly-balanced</span></button>
+              <p>August 2026 &middot; Personal budget</p>
+              <div class="theme-switcher" role="group" aria-label="Theme">
+                <input checked id="theme-dark-22" name="theme-22" type="radio" />
+                <label for="theme-dark-22">Dark</label>
+                <input id="theme-light-22" name="theme-22" type="radio" />
+                <label for="theme-light-22">Light</label>
+              </div>
+              <details class="profile"><summary><span>D</span>dev</summary></details>
+            </header>
+            <aside class="sidebar"><nav class="main-nav"><button class="nav-item is-active" type="button"><span>Budget</span></button><button class="nav-item" type="button"><span>Transactions</span><strong>1</strong></button><button class="nav-item" type="button"><span>Reports</span></button></nav><section class="sidebar-section"><h2>Months</h2><button type="button">July 2026</button><button class="is-current" type="button">August 2026</button><button type="button">September 2026</button></section></aside>
+            <main class="workspace">
+              <header class="workspace-head"><div><p class="eyebrow">Budget / 2026 / 08</p><h1>August 2026</h1><p class="subtitle">Plan with the keyboard. Review with a glance.</p></div><div class="month-controls"><button disabled type="button">&larr; Previous</button><button disabled type="button">Next &rarr;</button></div></header>
+              <section class="summary"><div><span>Available</span><strong class="available">$557.50</strong></div><div><span>Planned</span><strong>$725</strong></div><div><span>Spent</span><strong class="spent">$167.50</strong></div><div><span>Uncategorized</span><strong class="warning">1 transaction</strong></div></section>
+              <section class="budget-table">
+                <div class="table-head"><div><p class="eyebrow">Monthly plan</p><h2>Categories</h2></div><button class="new-category" disabled type="button"><span>+</span> Add category</button></div>
+                <div class="column-head"><span>Category</span><span>Planned</span><span>Spent</span><span>Remaining</span></div>
+                <section class="budget-group"><header class="budget-subsection-head"><h3><span>&#8964;</span> Income</h3><strong>$7,200</strong></header><div class="budget-row budget-row--sectioned"><span class="category-name">Katie Pay <button class="direction-tag" disabled type="button">Income</button></span><button class="amount-cell" disabled type="button">$200</button><span class="spent">$0</span><span class="available">$200</span></div><div class="budget-row budget-row--sectioned"><span class="category-name">Ben Pay <button class="direction-tag" disabled type="button">Income</button></span><button class="amount-cell" disabled type="button">$7,000</button><span class="spent">$7,000</span><span class="available">$0</span></div></section>
+                <section class="budget-group"><header class="budget-subsection-head"><h3><span>&#8964;</span> Food</h3><strong>$710</strong></header><div class="budget-row budget-row--sectioned is-selected"><span class="category-name"><i class="selection-caret">&rsaquo;</i>Internet <button class="direction-tag" disabled type="button">Spending</button></span><button class="amount-cell" disabled type="button">$60</button><span class="spent">$0</span><span class="available">$60</span></div><div class="budget-row budget-row--sectioned"><span class="category-name">Groceries <button class="direction-tag" disabled type="button">Spending</button></span><button class="amount-cell" disabled type="button">$400</button><span class="spent">$125.50</span><span class="available">$274.50</span></div><div class="budget-row budget-row--sectioned"><span class="category-name">Restaurants <button class="direction-tag" disabled type="button">Spending</button></span><button class="amount-cell" disabled type="button">$250</button><span class="spent">$42</span><span class="available">$208</span></div></section>
+                <section class="budget-group"><header class="budget-subsection-head"><h3><span>&#8964;</span> Subscriptions</h3><strong>$15</strong></header><div class="budget-row budget-row--sectioned"><span class="category-name">YouTube Premium <button class="direction-tag" disabled type="button">Spending</button></span><button class="amount-cell" disabled type="button">$15</button><span class="spent">$0</span><span class="available">$15</span></div></section>
+              </section>
+            </main>
+            <footer class="statusline"><div><strong>SAVING</strong><span>move internet</span></div><div><span>Saving placement...</span></div></footer>
+          </div>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

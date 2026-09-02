@@ -3,67 +3,410 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Sign in - Invite Only App mockup</title>
-    <link rel="stylesheet" href="styles.css" />
+    <title>Perfectly Balanced - Authentication review</title>
+    <link rel="stylesheet" href="neovim-tokyonight.css" />
   </head>
-  <body>
-    <nav class="mockup-nav" aria-label="Mockup screens">
-      <a href="hybrid-budget.html">MVP hybrid</a>
-      <a aria-current="page" href="index.html">Sign in</a>
-      <a href="dashboard.html">Dashboard</a>
-      <a href="budget-empty.html">Empty budget state</a>
-      <a href="configuration-error.html">Configuration error</a>
+  <body class="review-page">
+    <nav class="review-nav" aria-label="Mockup review navigation">
+      <div class="review-nav__pages">
+        <a aria-current="page" href="index.html">Authentication</a>
+        <a href="configuration-error.html">Configuration error</a>
+        <a href="budget.html">Budget</a>
+        <a href="transactions.html">Transactions</a>
+        <a href="reports.html">Reports</a>
+      </div>
+      <div class="review-nav__states" aria-label="Authentication states">
+        <a href="#local-development">Local demo default</a>
+        <a href="#hosted-sign-in">Hosted only</a>
+        <a href="#magic-link-submitting">Sending link</a>
+        <a href="#magic-link-success">Link sent</a>
+        <a href="#required-email-error">Browser validation</a>
+        <a href="#provider-error">Provider error</a>
+        <a href="#local-sign-in-busy">Local busy</a>
+        <a href="#local-sign-in-error">Local error</a>
+        <a href="#session-loading">Session loading</a>
+        <a href="#session-initialization-error">Session error</a>
+      </div>
     </nav>
 
-    <main class="auth-page">
-      <section class="auth-card" aria-labelledby="sign-in-title">
-        <p class="eyebrow">Invite Only App</p>
-        <h1 id="sign-in-title">Sign in with email</h1>
-        <p class="auth-card__copy">
-          Enter the email address associated with your invitation. We will send
-          you a one-time sign-in link.
-        </p>
-        <form class="sign-in-form">
-          <label for="email">Email address</label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            autocomplete="email"
-            placeholder="you@example.com"
-          />
-          <button class="button" type="button">Email me a sign-in link</button>
-        </form>
-        <div class="auth-divider" aria-hidden="true"><span>or</span></div>
-        <section class="local-sign-in" aria-labelledby="local-sign-in-title">
-          <div>
-            <p class="eyebrow">Local development</p>
-            <h2 id="local-sign-in-title">Test account</h2>
+    <main class="review-sections">
+      <section class="review-section" id="local-development" aria-labelledby="local-development-label">
+        <header class="review-section__label">
+          <p>Canonical local launch</p>
+          <h1 id="local-development-label">Local demo default</h1>
+        </header>
+        <div class="review-frame">
+          <div class="review-frame__viewport auth-page">
+            <section class="auth-terminal" aria-labelledby="local-development-title">
+              <header class="auth-terminal__head">
+                <span class="brand">
+                  <span class="brand-mark" aria-hidden="true">pb</span>
+                  <span>perfectly-balanced</span>
+                </span>
+                <span>secure session</span>
+              </header>
+              <div class="auth-terminal__body">
+                <p class="eyebrow">Welcome back</p>
+                <h1 id="local-development-title">Sign in with email</h1>
+                <p>Your invitation is tied to your email address. We will send a single-use sign-in link.</p>
+                <form class="auth-form">
+                  <label for="local-demo-hosted-email">Email address</label>
+                  <input id="local-demo-hosted-email" name="email" type="email" autocomplete="email" required />
+                  <button class="terminal-button terminal-button--primary" type="submit">Send sign-in link</button>
+                </form>
+                <div class="auth-divider" aria-hidden="true">local development</div>
+                <section class="local-access" aria-labelledby="local-demo-account-title">
+                  <h2 id="local-demo-account-title">Use the seeded local account</h2>
+                  <p>Only shown in the local environment.</p>
+                  <form class="auth-form">
+                    <label for="local-demo-email">Email address</label>
+                    <input id="local-demo-email" name="local-email" type="email" autocomplete="username" value="dev@example.test" required />
+                    <label for="local-demo-password">Password</label>
+                    <input id="local-demo-password" name="local-password" type="password" autocomplete="current-password" value="dev" required />
+                    <button class="terminal-button" type="submit">Sign in locally</button>
+                  </form>
+                </section>
+              </div>
+            </section>
           </div>
-          <p>Use the seeded local account to test budgets and migrations.</p>
-          <form class="sign-in-form sign-in-form--compact">
-            <label for="local-email">Email address</label>
-            <input
-              id="local-email"
-              name="local-email"
-              type="email"
-              autocomplete="username"
-              value="dev@example.test"
-            />
-            <label for="local-password">Password</label>
-            <input
-              id="local-password"
-              name="local-password"
-              type="password"
-              autocomplete="current-password"
-              value="local-dev-password"
-            />
-            <button class="button" type="button">Sign in locally</button>
-          </form>
-        </section>
-        <p class="auth-card__hint">
-          Static mockup: neither sign-in method is active.
-        </p>
+        </div>
+      </section>
+
+      <section class="review-section" id="hosted-sign-in" aria-labelledby="hosted-sign-in-label">
+        <header class="review-section__label">
+          <p>Hosted configuration</p>
+          <h2 id="hosted-sign-in-label">Hosted-only sign-in</h2>
+        </header>
+        <div class="review-frame">
+          <div class="review-frame__viewport auth-page">
+            <section class="auth-terminal" aria-labelledby="hosted-title">
+              <header class="auth-terminal__head">
+                <span class="brand">
+                  <span class="brand-mark" aria-hidden="true">pb</span>
+                  <span>perfectly-balanced</span>
+                </span>
+                <span>secure session</span>
+              </header>
+              <div class="auth-terminal__body">
+                <p class="eyebrow">Welcome back</p>
+                <h1 id="hosted-title">Sign in with email</h1>
+                <p>Your invitation is tied to your email address. We will send a single-use sign-in link.</p>
+                <form class="auth-form">
+                  <label for="hosted-email">Email address</label>
+                  <input id="hosted-email" name="email" type="email" autocomplete="email" required />
+                  <button class="terminal-button terminal-button--primary" type="submit">Send sign-in link</button>
+                </form>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <section class="review-section" id="magic-link-submitting" aria-labelledby="magic-link-submitting-label">
+        <header class="review-section__label">
+          <p>In progress</p>
+          <h2 id="magic-link-submitting-label">Magic Link submitting</h2>
+        </header>
+        <div class="review-frame">
+          <div class="review-frame__viewport auth-page">
+            <section class="auth-terminal" aria-labelledby="submitting-title">
+              <header class="auth-terminal__head">
+                <span class="brand">
+                  <span class="brand-mark" aria-hidden="true">pb</span>
+                  <span>perfectly-balanced</span>
+                </span>
+                <span>secure session</span>
+              </header>
+              <div class="auth-terminal__body">
+                <p class="eyebrow">Welcome back</p>
+                <h1 id="submitting-title">Sign in with email</h1>
+                <p>Your invitation is tied to your email address. We will send a single-use sign-in link.</p>
+                <form class="auth-form">
+                  <label for="submitting-email">Email address</label>
+                  <input id="submitting-email" name="email" type="email" autocomplete="email" value="dev@example.test" disabled required />
+                  <button class="terminal-button terminal-button--primary" type="submit" disabled>Sending sign-in link...</button>
+                </form>
+                <div class="auth-divider" aria-hidden="true">local development</div>
+                <section class="local-access" aria-labelledby="submitting-local-title">
+                  <h2 id="submitting-local-title">Use the seeded local account</h2>
+                  <p>Only shown in the local environment.</p>
+                  <form class="auth-form">
+                    <label for="submitting-local-email">Email address</label>
+                    <input id="submitting-local-email" name="local-email" type="email" autocomplete="username" value="dev@example.test" required />
+                    <label for="submitting-local-password">Password</label>
+                    <input id="submitting-local-password" name="local-password" type="password" autocomplete="current-password" value="dev" required />
+                    <button class="terminal-button" type="submit">Sign in locally</button>
+                  </form>
+                </section>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <section class="review-section" id="magic-link-success" aria-labelledby="magic-link-success-label">
+        <header class="review-section__label">
+          <p>Confirmation</p>
+          <h2 id="magic-link-success-label">Magic Link success</h2>
+        </header>
+        <div class="review-frame">
+          <div class="review-frame__viewport auth-page">
+            <section class="auth-terminal" aria-labelledby="success-title">
+              <header class="auth-terminal__head">
+                <span class="brand">
+                  <span class="brand-mark" aria-hidden="true">pb</span>
+                  <span>perfectly-balanced</span>
+                </span>
+                <span>secure session</span>
+              </header>
+              <div class="auth-terminal__body">
+                <p class="eyebrow">Welcome back</p>
+                <h1 id="success-title">Sign in with email</h1>
+                <p>Your invitation is tied to your email address. We will send a single-use sign-in link.</p>
+                <form class="auth-form">
+                  <label for="success-email">Email address</label>
+                  <input id="success-email" name="email" type="email" autocomplete="email" value="dev@example.test" required />
+                  <button class="terminal-button terminal-button--primary" type="submit">Send sign-in link</button>
+                </form>
+                <div class="auth-divider" aria-hidden="true">local development</div>
+                <section class="local-access" aria-labelledby="success-local-title">
+                  <h2 id="success-local-title">Use the seeded local account</h2>
+                  <p>Only shown in the local environment.</p>
+                  <form class="auth-form">
+                    <label for="success-local-email">Email address</label>
+                    <input id="success-local-email" name="local-email" type="email" autocomplete="username" value="dev@example.test" required />
+                    <label for="success-local-password">Password</label>
+                    <input id="success-local-password" name="local-password" type="password" autocomplete="current-password" value="dev" required />
+                    <button class="terminal-button" type="submit">Sign in locally</button>
+                  </form>
+                </section>
+                <p class="form-message form-message--success" aria-live="polite">We sent a secure sign-in link to dev@example.test.</p>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <section class="review-section" id="required-email-error" aria-labelledby="required-email-error-label">
+        <header class="review-section__label">
+          <p>Browser validation prevents submit before React renders a form message.</p>
+          <h2 id="required-email-error-label">Required email uses native browser validation</h2>
+        </header>
+        <div class="review-frame">
+          <div class="review-frame__viewport auth-page">
+            <section class="auth-terminal" aria-labelledby="required-title">
+              <header class="auth-terminal__head">
+                <span class="brand">
+                  <span class="brand-mark" aria-hidden="true">pb</span>
+                  <span>perfectly-balanced</span>
+                </span>
+                <span>secure session</span>
+              </header>
+              <div class="auth-terminal__body">
+                <p class="eyebrow">Welcome back</p>
+                <h1 id="required-title">Sign in with email</h1>
+                <p>Your invitation is tied to your email address. We will send a single-use sign-in link.</p>
+                <form class="auth-form">
+                  <label for="required-email">Email address</label>
+                  <input id="required-email" name="email" type="email" autocomplete="email" required />
+                  <button class="terminal-button terminal-button--primary" type="submit">Send sign-in link</button>
+                </form>
+                <div class="auth-divider" aria-hidden="true">local development</div>
+                <section class="local-access" aria-labelledby="required-local-title">
+                  <h2 id="required-local-title">Use the seeded local account</h2>
+                  <p>Only shown in the local environment.</p>
+                  <form class="auth-form">
+                    <label for="required-local-email">Email address</label>
+                    <input id="required-local-email" name="local-email" type="email" autocomplete="username" value="dev@example.test" required />
+                    <label for="required-local-password">Password</label>
+                    <input id="required-local-password" name="local-password" type="password" autocomplete="current-password" value="dev" required />
+                    <button class="terminal-button" type="submit">Sign in locally</button>
+                  </form>
+                </section>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <section class="review-section" id="provider-error" aria-labelledby="provider-error-label">
+        <header class="review-section__label">
+          <p>Provider response</p>
+          <h2 id="provider-error-label">Provider/auth error</h2>
+        </header>
+        <div class="review-frame">
+          <div class="review-frame__viewport auth-page">
+            <section class="auth-terminal" aria-labelledby="provider-title">
+              <header class="auth-terminal__head">
+                <span class="brand">
+                  <span class="brand-mark" aria-hidden="true">pb</span>
+                  <span>perfectly-balanced</span>
+                </span>
+                <span>secure session</span>
+              </header>
+              <div class="auth-terminal__body">
+                <p class="eyebrow">Welcome back</p>
+                <h1 id="provider-title">Sign in with email</h1>
+                <p>Your invitation is tied to your email address. We will send a single-use sign-in link.</p>
+                <form class="auth-form">
+                  <label for="provider-email">Email address</label>
+                  <input id="provider-email" name="email" type="email" autocomplete="email" value="dev@example.test" required />
+                  <button class="terminal-button terminal-button--primary" type="submit">Send sign-in link</button>
+                </form>
+                <div class="auth-divider" aria-hidden="true">local development</div>
+                <section class="local-access" aria-labelledby="provider-local-title">
+                  <h2 id="provider-local-title">Use the seeded local account</h2>
+                  <p>Only shown in the local environment.</p>
+                  <form class="auth-form">
+                    <label for="provider-local-email">Email address</label>
+                    <input id="provider-local-email" name="local-email" type="email" autocomplete="username" value="dev@example.test" required />
+                    <label for="provider-local-password">Password</label>
+                    <input id="provider-local-password" name="local-password" type="password" autocomplete="current-password" value="dev" required />
+                    <button class="terminal-button" type="submit">Sign in locally</button>
+                  </form>
+                </section>
+                <p class="form-message form-message--error" role="alert">Error sending magic link email</p>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <section class="review-section" id="local-sign-in-busy" aria-labelledby="local-sign-in-busy-label">
+        <header class="review-section__label">
+          <p>In progress</p>
+          <h2 id="local-sign-in-busy-label">Local sign-in busy</h2>
+        </header>
+        <div class="review-frame">
+          <div class="review-frame__viewport auth-page">
+            <section class="auth-terminal" aria-labelledby="local-busy-title">
+              <header class="auth-terminal__head">
+                <span class="brand">
+                  <span class="brand-mark" aria-hidden="true">pb</span>
+                  <span>perfectly-balanced</span>
+                </span>
+                <span>secure session</span>
+              </header>
+              <div class="auth-terminal__body">
+                <p class="eyebrow">Welcome back</p>
+                <h1 id="local-busy-title">Sign in with email</h1>
+                <p>Your invitation is tied to your email address. We will send a single-use sign-in link.</p>
+                <form class="auth-form">
+                  <label for="busy-hosted-email">Email address</label>
+                  <input id="busy-hosted-email" name="email" type="email" autocomplete="email" required />
+                  <button class="terminal-button terminal-button--primary" type="submit">Send sign-in link</button>
+                </form>
+                <div class="auth-divider" aria-hidden="true">local development</div>
+                <section class="local-access" aria-labelledby="local-busy-account-title">
+                  <h2 id="local-busy-account-title">Use the seeded local account</h2>
+                  <p>Only shown in the local environment.</p>
+                  <form class="auth-form">
+                    <label for="busy-local-email">Email address</label>
+                    <input id="busy-local-email" name="local-email" type="email" autocomplete="username" value="dev@example.test" disabled required />
+                    <label for="busy-local-password">Password</label>
+                    <input id="busy-local-password" name="local-password" type="password" autocomplete="current-password" value="dev" disabled required />
+                    <button class="terminal-button" type="submit" disabled>Signing in locally...</button>
+                  </form>
+                </section>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <section class="review-section" id="local-sign-in-error" aria-labelledby="local-sign-in-error-label">
+        <header class="review-section__label">
+          <p>Provider response</p>
+          <h2 id="local-sign-in-error-label">Local sign-in error</h2>
+        </header>
+        <div class="review-frame">
+          <div class="review-frame__viewport auth-page">
+            <section class="auth-terminal" aria-labelledby="local-error-title">
+              <header class="auth-terminal__head">
+                <span class="brand">
+                  <span class="brand-mark" aria-hidden="true">pb</span>
+                  <span>perfectly-balanced</span>
+                </span>
+                <span>secure session</span>
+              </header>
+              <div class="auth-terminal__body">
+                <p class="eyebrow">Welcome back</p>
+                <h1 id="local-error-title">Sign in with email</h1>
+                <p>Your invitation is tied to your email address. We will send a single-use sign-in link.</p>
+                <form class="auth-form">
+                  <label for="error-hosted-email">Email address</label>
+                  <input id="error-hosted-email" name="email" type="email" autocomplete="email" required />
+                  <button class="terminal-button terminal-button--primary" type="submit">Send sign-in link</button>
+                </form>
+                <div class="auth-divider" aria-hidden="true">local development</div>
+                <section class="local-access" aria-labelledby="local-error-account-title">
+                  <h2 id="local-error-account-title">Use the seeded local account</h2>
+                  <p>Only shown in the local environment.</p>
+                  <form class="auth-form">
+                    <label for="error-local-email">Email address</label>
+                    <input id="error-local-email" name="local-email" type="email" autocomplete="username" value="dev@example.test" required />
+                    <label for="error-local-password">Password</label>
+                    <input id="error-local-password" name="local-password" type="password" autocomplete="current-password" value="dev" required />
+                    <button class="terminal-button" type="submit">Sign in locally</button>
+                  </form>
+                </section>
+                <p class="form-message form-message--error" role="alert">Invalid login credentials</p>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <section class="review-section" id="session-loading" aria-labelledby="session-loading-label">
+        <header class="review-section__label">
+          <p>Application startup</p>
+          <h2 id="session-loading-label">Session loading</h2>
+        </header>
+        <div class="review-frame">
+          <div class="review-frame__viewport auth-page">
+            <section class="auth-terminal" aria-live="polite">
+              <header class="auth-terminal__head">
+                <span class="brand">
+                  <span class="brand-mark" aria-hidden="true">pb</span>
+                  <span>perfectly-balanced</span>
+                </span>
+                <span>secure session</span>
+              </header>
+              <div class="auth-terminal__body">
+                <p class="eyebrow">Authentication</p>
+                <h1>Checking your session</h1>
+                <p>One moment while we securely sign you in.</p>
+                <span class="terminal-pill">Working...</span>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <section class="review-section" id="session-initialization-error" aria-labelledby="session-initialization-error-label">
+        <header class="review-section__label">
+          <p>Application startup</p>
+          <h2 id="session-initialization-error-label">Session initialization error</h2>
+        </header>
+        <div class="review-frame">
+          <div class="review-frame__viewport auth-page">
+            <section class="auth-terminal" aria-labelledby="session-error-title">
+              <header class="auth-terminal__head">
+                <span class="brand">
+                  <span class="brand-mark" aria-hidden="true">pb</span>
+                  <span>perfectly-balanced</span>
+                </span>
+                <span class="spent">session unavailable</span>
+              </header>
+              <div class="auth-terminal__body">
+                <p class="eyebrow">Authentication</p>
+                <h1 id="session-error-title">We could not verify your session</h1>
+                <p>Failed to fetch</p>
+                <p class="auth-footnote">Refresh the page to try again.</p>
+              </div>
+            </section>
+          </div>
+        </div>
       </section>
     </main>
   </body>

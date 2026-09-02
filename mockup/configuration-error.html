@@ -3,32 +3,61 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Configuration error - Invite Only App mockup</title>
-    <link rel="stylesheet" href="styles.css" />
+    <title>Perfectly Balanced - Configuration error review</title>
+    <link rel="stylesheet" href="neovim-tokyonight.css" />
   </head>
-  <body>
-    <nav class="mockup-nav" aria-label="Mockup screens">
-      <a href="hybrid-budget.html">MVP hybrid</a>
-      <a href="index.html">Sign in</a>
-      <a href="dashboard.html">Dashboard</a>
-      <a href="budget-empty.html">Empty budget state</a>
-      <a aria-current="page" href="configuration-error.html"
-        >Configuration error</a
-      >
+  <body class="review-page">
+    <nav class="review-nav" aria-label="Mockup review navigation">
+      <div class="review-nav__pages">
+        <a href="index.html">Authentication</a>
+        <a aria-current="page" href="configuration-error.html">Configuration error</a>
+        <a href="budget.html">Budget</a>
+        <a href="transactions.html">Transactions</a>
+        <a href="reports.html">Reports</a>
+      </div>
+      <div class="review-nav__states" aria-label="Authentication states">
+        <a href="index.html#local-development">Local demo default</a>
+        <a href="index.html#hosted-sign-in">Hosted only</a>
+        <a href="index.html#magic-link-submitting">Sending link</a>
+        <a href="index.html#magic-link-success">Link sent</a>
+        <a href="index.html#required-email-error">Browser validation</a>
+        <a href="index.html#provider-error">Provider error</a>
+        <a href="index.html#local-sign-in-busy">Local busy</a>
+        <a href="index.html#local-sign-in-error">Local error</a>
+        <a href="index.html#session-loading">Session loading</a>
+        <a href="index.html#session-initialization-error">Session error</a>
+      </div>
     </nav>
 
-    <main class="configuration-error">
-      <section class="configuration-error__panel" aria-labelledby="error-title">
-        <p class="eyebrow">Configuration required</p>
-        <h1 id="error-title">Set up your local environment</h1>
-        <p>
-          Copy <code>.env.example</code> to <code>.env</code>, then provide the
-          required Vite environment variables before starting the app.
-        </p>
-        <p class="form-message form-message--error">
-          Missing required environment variables:
-          <code>VITE_SUPABASE_URL</code>.
-        </p>
+    <main class="review-sections">
+      <section class="review-section" aria-labelledby="configuration-error-label">
+        <header class="review-section__label">
+          <p>Canonical setup failure</p>
+          <h1 id="configuration-error-label">Configuration error</h1>
+        </header>
+        <div class="review-frame">
+          <div class="review-frame__viewport setup-page">
+            <section class="setup-terminal" aria-labelledby="setup-error-title">
+              <header class="setup-terminal__head">
+                <span class="brand">
+                  <span class="brand-mark" aria-hidden="true">pb</span>
+                  <span>perfectly-balanced</span>
+                </span>
+                <span class="spent">configuration error</span>
+              </header>
+              <div class="setup-terminal__body">
+                <p class="eyebrow">Environment required</p>
+                <h1 id="setup-error-title">The workspace cannot start yet.</h1>
+                <p>Copy <code>.env.example</code> to <code>.env</code>, then provide the required local environment values.</p>
+                <div class="config-command">
+                  <span aria-hidden="true">$</span>
+                  <code>cp .env.example .env</code>
+                </div>
+                <p class="config-error">Missing required environment variables: VITE_APP_NAME, VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_SITE_URL.</p>
+              </div>
+            </section>
+          </div>
+        </div>
       </section>
     </main>
   </body>
