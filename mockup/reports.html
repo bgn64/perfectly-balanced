@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Perfectly Balanced - Reports review</title>
+    <link rel="stylesheet" href="neovim-tokyonight.css" />
+  </head>
+  <body class="review-page">
+    <nav class="review-nav" aria-label="Mockup review navigation">
+      <strong>Perfectly Balanced review</strong>
+      <span class="review-nav__group">
+        <a href="index.html">Sign in</a>
+        <a href="configuration-error.html">Configuration error</a>
+        <a href="budget.html">Budget</a>
+        <a href="transactions.html">Transactions</a>
+        <a aria-current="page" href="reports.html">Reports</a>
+      </span>
+      <span class="review-nav__group">
+        <a href="#populated">Populated</a>
+        <a href="#alternate-month">Alternate month</a>
+        <a href="#focused-action">Focused action</a>
+        <a href="#loading">Loading</a>
+        <a href="#data-error">Data error</a>
+        <a href="#no-activity">No activity</a>
+      </span>
+    </nav>
+
+    <section id="populated" class="review-frame" aria-labelledby="populated-label">
+      <header class="review-frame__head">
+        <div>
+          <p class="eyebrow">Canonical frame</p>
+          <h2 id="populated-label">Populated report · August 2026</h2>
+        </div>
+        <p>Default desktop state with the current local August plan: $7,200 income, $7,000 received, 97% progress.</p>
+      </header>
+      <div class="terminal-app command-closed screen-app theme-dark">
+        <header class="titlebar">
+          <button class="brand" type="button">
+            <span class="brand-mark" aria-hidden="true">pb</span>
+            <span>perfectly-balanced</span>
+          </button>
+          <p>August 2026 · Personal budget</p>
+          <div class="theme-switcher" role="group" aria-label="Theme">
+            <input checked id="theme-dark-populated" name="theme-populated" type="radio" />
+            <label for="theme-dark-populated">Dark</label>
+            <input id="theme-light-populated" name="theme-populated" type="radio" />
+            <label for="theme-light-populated">Light</label>
+          </div>
+          <details class="profile">
+            <summary><span>D</span>dev</summary>
+            <div class="account-popover"><strong>dev@example.test</strong><button class="terminal-button" type="button">Sign out</button></div>
+          </details>
+        </header>
+
+        <aside class="sidebar" aria-label="Application navigation">
+          <nav class="main-nav">
+            <button class="nav-item" type="button"><span>Budget</span></button>
+            <button class="nav-item" type="button"><span>Transactions</span><strong>1</strong></button>
+            <button class="nav-item is-active" aria-current="page" type="button"><span>Reports</span></button>
+          </nav>
+          <section class="sidebar-section" aria-labelledby="populated-range-title">
+            <h2 id="populated-range-title">Report range</h2>
+            <button class="is-current" type="button">August 2026</button>
+            <button type="button">July 2026</button>
+            <span>2026 year to date</span>
+          </section>
+        </aside>
+
+        <main class="workspace">
+          <section class="page insights-page insights-page--terminal">
+            <header class="workspace-head workspace-head--compact">
+              <div>
+                <p class="eyebrow">Reports / 2026 / 08</p>
+                <h1>August 2026 at a glance</h1>
+                <p class="subtitle">A compact readout of how this month is tracking against your plan.</p>
+              </div>
+              <div class="month-controls" aria-label="Month navigation">
+                <button class="terminal-button" type="button">← Previous</button>
+                <button type="button">Next →</button>
+              </div>
+            </header>
+
+            <section class="summary" aria-label="August 2026 report summary">
+              <div><span>Received</span><strong class="available">$7,000</strong></div>
+              <div><span>Spent</span><strong class="spent">$186.25</strong></div>
+              <div><span>Still available</span><strong class="available">$538.75</strong></div>
+              <div><span>Needs review</span><strong class="warning">1 transaction</strong></div>
+            </section>
+
+            <section class="report-grid" aria-label="August 2026 reports">
+              <section class="report-card report-card--wide">
+                <header class="report-card__head">
+                  <div><p class="eyebrow">Spending breakdown</p><h2>Where the $186.25 went</h2></div>
+                  <strong>$186.25</strong>
+                </header>
+                <div class="report-card__body donut-report">
+                  <div class="donut-chart" role="img" aria-label="Total $186.25" style="background: conic-gradient(#7aa2f7 0% 89.93%, #bb9af7 89.93% 100%)"><span>$186.25</span></div>
+                  <ul class="bar-list">
+                    <li><span>Food</span><span class="bar-track"><i style="background: #7aa2f7; width: 100%"></i></span><strong>$167.50</strong></li>
+                    <li><span>Uncategorized</span><span class="bar-track"><i style="background: #bb9af7; width: 11.19%"></i></span><strong>$18.75</strong></li>
+                  </ul>
+                </div>
+              </section>
+
+              <section class="report-card">
+                <header class="report-card__head">
+                  <div><p class="eyebrow">Income</p><h2>Progress to plan</h2></div>
+                  <strong class="available">97%</strong>
+                </header>
+                <div class="report-card__body">
+                  <ul class="bar-list">
+                    <li><span>Income</span><span class="bar-track"><i style="background: #7aa2f7; width: 100%"></i></span><strong>$7,000</strong></li>
+                  </ul>
+                </div>
+              </section>
+
+              <section class="report-card">
+                <header class="report-card__head">
+                  <div><p class="eyebrow">Plan variance</p><h2>Over budget</h2></div>
+                  <span class="terminal-pill terminal-pill--danger">0 items</span>
+                </header>
+                <div class="report-card__body">
+                  <p class="detail-note">No over-budget spending items.</p>
+                </div>
+              </section>
+
+              <section class="report-card">
+                <header class="report-card__head">
+                  <div><p class="eyebrow">Plan variance</p><h2>Under budget</h2></div>
+                  <span class="terminal-pill terminal-pill--ok">4 items</span>
+                </header>
+                <div class="report-card__body">
+                  <ol class="variance-list">
+                    <li><span>Groceries<small>$125.50 spent · $400 planned</small></span><strong class="is-under">$274.50</strong></li>
+                    <li><span>Restaurants<small>$42 spent · $250 planned</small></span><strong class="is-under">$208</strong></li>
+                    <li><span>Internet<small>$0 spent · $60 planned</small></span><strong class="is-under">$60</strong></li>
+                  </ol>
+                </div>
+              </section>
+
+              <section class="report-card report-card--review">
+                <header class="report-card__head">
+                  <div><p class="eyebrow">Review queue</p><h2>Uncategorized activity</h2></div>
+                  <strong class="warning">1</strong>
+                </header>
+                <div class="report-card__body">
+                  <p class="detail-note">Uncategorized spending remains visible in every total so reports never conceal it.</p>
+                  <button class="terminal-button" type="button">Open transaction queue</button>
+                </div>
+              </section>
+            </section>
+          </section>
+        </main>
+
+        <footer class="statusline">
+          <div><strong>REPORT</strong><span>August 2026 / all accounts</span></div>
+          <div><span><kbd>h</kbd><kbd>l</kbd> change month</span><span><kbd>tab</kbd> focus card</span><span><kbd>enter</kbd> drill down</span></div>
+        </footer>
+      </div>
+    </section>
+
+    <section id="alternate-month" class="review-frame" aria-labelledby="alternate-label">
+      <header class="review-frame__head">
+        <div><p class="eyebrow">Navigation result</p><h2 id="alternate-label">Alternate month · July 2026</h2></div>
+        <p>Month changes update the report surfaces together while the Transactions badge can remain stale from the last Transactions view.</p>
+      </header>
+      <div class="terminal-app command-closed screen-app theme-dark">
+        <header class="titlebar">
+          <button class="brand" type="button"><span class="brand-mark" aria-hidden="true">pb</span><span>perfectly-balanced</span></button>
+          <p>July 2026 · Personal budget</p>
+          <div class="theme-switcher" role="group" aria-label="Theme">
+            <input checked id="theme-dark-alternate" name="theme-alternate" type="radio" />
+            <label for="theme-dark-alternate">Dark</label>
+            <input id="theme-light-alternate" name="theme-alternate" type="radio" />
+            <label for="theme-light-alternate">Light</label>
+          </div>
+          <details class="profile"><summary><span>D</span>dev</summary><div class="account-popover"><strong>dev@example.test</strong><button class="terminal-button" type="button">Sign out</button></div></details>
+        </header>
+        <aside class="sidebar" aria-label="Application navigation">
+          <nav class="main-nav"><button class="nav-item" type="button"><span>Budget</span></button><button class="nav-item" type="button"><span>Transactions</span><strong>1</strong></button><button class="nav-item is-active" aria-current="page" type="button"><span>Reports</span></button></nav>
+          <section class="sidebar-section" aria-labelledby="alternate-range-title"><h2 id="alternate-range-title">Report range</h2><button class="is-current" type="button">July 2026</button><button type="button">June 2026</button><span>2026 year to date</span></section>
+        </aside>
+        <main class="workspace">
+          <section class="page insights-page insights-page--terminal">
+            <header class="workspace-head workspace-head--compact">
+              <div><p class="eyebrow">Reports / 2026 / 07</p><h1>July 2026 at a glance</h1><p class="subtitle">A compact readout of how this month is tracking against your plan.</p></div>
+              <div class="month-controls" aria-label="Month navigation"><button class="terminal-button" type="button">← Previous</button><button type="button">Next →</button></div>
+            </header>
+            <section class="summary" aria-label="July 2026 report summary">
+              <div><span>Received</span><strong class="available">$0</strong></div><div><span>Spent</span><strong class="spent">$0</strong></div><div><span>Still available</span><strong class="available">$0</strong></div><div><span>Needs review</span><strong class="warning">0 transactions</strong></div>
+            </section>
+            <section class="report-grid" aria-label="July 2026 reports">
+              <section class="report-card report-card--wide">
+                <header class="report-card__head"><div><p class="eyebrow">Spending breakdown</p><h2>Where the $0 went</h2></div><strong>$0</strong></header>
+                <div class="report-card__body donut-report"><p class="detail-note">No activity for this month.</p></div>
+              </section>
+              <section class="report-card">
+                <header class="report-card__head"><div><p class="eyebrow">Income</p><h2>Progress to plan</h2></div><strong class="available">0%</strong></header>
+                <div class="report-card__body"><p class="detail-note">No income activity for this month.</p></div>
+              </section>
+              <section class="report-card"><header class="report-card__head"><div><p class="eyebrow">Plan variance</p><h2>Over budget</h2></div><span class="terminal-pill terminal-pill--danger">0 items</span></header><div class="report-card__body"><p class="detail-note">No over-budget spending items.</p></div></section>
+              <section class="report-card"><header class="report-card__head"><div><p class="eyebrow">Plan variance</p><h2>Under budget</h2></div><span class="terminal-pill terminal-pill--ok">0 items</span></header><div class="report-card__body"><p class="detail-note">No under-budget spending items.</p></div></section>
+              <section class="report-card report-card--review"><header class="report-card__head"><div><p class="eyebrow">Review queue</p><h2>Uncategorized activity</h2></div><strong class="warning">0</strong></header><div class="report-card__body"><p class="detail-note">Uncategorized spending remains visible in every total so reports never conceal it.</p><button class="terminal-button" type="button">Open transaction queue</button></div></section>
+            </section>
+          </section>
+        </main>
+        <footer class="statusline"><div><strong>REPORT</strong><span>July 2026 / all accounts</span></div><div><span><kbd>h</kbd><kbd>l</kbd> change month</span><span><kbd>tab</kbd> focus card</span><span><kbd>enter</kbd> drill down</span></div></footer>
+      </div>
+    </section>
+
+    <section id="focused-action" class="review-frame" aria-labelledby="focused-label">
+      <header class="review-frame__head"><div><p class="eyebrow">Keyboard state</p><h2 id="focused-label">Review queue action focused</h2></div><p>The queue button can be focused without changing the REPORT footer context.</p></header>
+      <div class="terminal-app command-closed screen-app theme-dark">
+        <header class="titlebar"><button class="brand" type="button"><span class="brand-mark" aria-hidden="true">pb</span><span>perfectly-balanced</span></button><p>August 2026 · Personal budget</p><div class="theme-switcher" role="group" aria-label="Theme"><input checked id="theme-dark-focused" name="theme-focused" type="radio" /><label for="theme-dark-focused">Dark</label><input id="theme-light-focused" name="theme-focused" type="radio" /><label for="theme-light-focused">Light</label></div><details class="profile"><summary><span>D</span>dev</summary><div class="account-popover"><strong>dev@example.test</strong><button class="terminal-button" type="button">Sign out</button></div></details></header>
+        <aside class="sidebar" aria-label="Application navigation"><nav class="main-nav"><button class="nav-item" type="button"><span>Budget</span></button><button class="nav-item" type="button"><span>Transactions</span><strong>1</strong></button><button class="nav-item is-active" aria-current="page" type="button"><span>Reports</span></button></nav><section class="sidebar-section" aria-labelledby="focused-range-title"><h2 id="focused-range-title">Report range</h2><button class="is-current" type="button">August 2026</button><button type="button">July 2026</button><span>2026 year to date</span></section></aside>
+        <main class="workspace">
+          <section class="page insights-page insights-page--terminal">
+            <header class="workspace-head workspace-head--compact"><div><p class="eyebrow">Reports / 2026 / 08</p><h1>August 2026 at a glance</h1><p class="subtitle">A compact readout of how this month is tracking against your plan.</p></div><div class="month-controls" aria-label="Month navigation"><button class="terminal-button" type="button">← Previous</button><button type="button">Next →</button></div></header>
+            <section class="summary" aria-label="August 2026 report summary"><div><span>Received</span><strong class="available">$7,000</strong></div><div><span>Spent</span><strong class="spent">$186.25</strong></div><div><span>Still available</span><strong class="available">$538.75</strong></div><div><span>Needs review</span><strong class="warning">1 transaction</strong></div></section>
+            <section class="report-grid" aria-label="August 2026 reports">
+              <section class="report-card report-card--wide"><header class="report-card__head"><div><p class="eyebrow">Spending breakdown</p><h2>Where the $186.25 went</h2></div><strong>$186.25</strong></header><div class="report-card__body donut-report"><div class="donut-chart" role="img" aria-label="Total $186.25" style="background: conic-gradient(#7aa2f7 0% 89.93%, #bb9af7 89.93% 100%)"><span>$186.25</span></div><ul class="bar-list"><li><span>Food</span><span class="bar-track"><i style="background: #7aa2f7; width: 100%"></i></span><strong>$167.50</strong></li><li><span>Uncategorized</span><span class="bar-track"><i style="background: #bb9af7; width: 11.19%"></i></span><strong>$18.75</strong></li></ul></div></section>
+              <section class="report-card"><header class="report-card__head"><div><p class="eyebrow">Income</p><h2>Progress to plan</h2></div><strong class="available">97%</strong></header><div class="report-card__body"><ul class="bar-list"><li><span>Income</span><span class="bar-track"><i style="background: #7aa2f7; width: 100%"></i></span><strong>$7,000</strong></li></ul></div></section>
+              <section class="report-card"><header class="report-card__head"><div><p class="eyebrow">Plan variance</p><h2>Over budget</h2></div><span class="terminal-pill terminal-pill--danger">0 items</span></header><div class="report-card__body"><p class="detail-note">No over-budget spending items.</p></div></section>
+              <section class="report-card"><header class="report-card__head"><div><p class="eyebrow">Plan variance</p><h2>Under budget</h2></div><span class="terminal-pill terminal-pill--ok">4 items</span></header><div class="report-card__body"><ol class="variance-list"><li><span>Groceries<small>$125.50 spent · $400 planned</small></span><strong class="is-under">$274.50</strong></li><li><span>Restaurants<small>$42 spent · $250 planned</small></span><strong class="is-under">$208</strong></li><li><span>Internet<small>$0 spent · $60 planned</small></span><strong class="is-under">$60</strong></li></ol></div></section>
+              <section class="report-card report-card--review"><header class="report-card__head"><div><p class="eyebrow">Review queue</p><h2>Uncategorized activity</h2></div><strong class="warning">1</strong></header><div class="report-card__body"><p class="detail-note">Uncategorized spending remains visible in every total so reports never conceal it.</p><button class="terminal-button is-focused review-action--focused" type="button">Open transaction queue</button></div></section>
+            </section>
+          </section>
+        </main>
+        <footer class="statusline"><div><strong>REPORT</strong><span>August 2026 / all accounts</span></div><div><span><kbd>h</kbd><kbd>l</kbd> change month</span><span><kbd>tab</kbd> focus card</span><span><kbd>enter</kbd> drill down</span></div></footer>
+      </div>
+    </section>
+
+    <section id="loading" class="review-frame" aria-labelledby="loading-label">
+      <header class="review-frame__head"><div><p class="eyebrow">Async state</p><h2 id="loading-label">Loading reports</h2></div><p>Loading is only shown on the initial InsightsPanel mount, using the same empty-state panel geometry as the live screen.</p></header>
+      <div class="terminal-app command-closed screen-app theme-dark">
+        <header class="titlebar"><button class="brand" type="button"><span class="brand-mark" aria-hidden="true">pb</span><span>perfectly-balanced</span></button><p>August 2026 · Personal budget</p><div class="theme-switcher" role="group" aria-label="Theme"><input checked id="theme-dark-loading" name="theme-loading" type="radio" /><label for="theme-dark-loading">Dark</label><input id="theme-light-loading" name="theme-loading" type="radio" /><label for="theme-light-loading">Light</label></div><details class="profile"><summary><span>D</span>dev</summary><div class="account-popover"><strong>dev@example.test</strong><button class="terminal-button" type="button">Sign out</button></div></details></header>
+        <aside class="sidebar" aria-label="Application navigation"><nav class="main-nav"><button class="nav-item" type="button"><span>Budget</span></button><button class="nav-item" type="button"><span>Transactions</span><strong>1</strong></button><button class="nav-item is-active" aria-current="page" type="button"><span>Reports</span></button></nav><section class="sidebar-section" aria-labelledby="loading-range-title"><h2 id="loading-range-title">Report range</h2><button class="is-current" type="button">August 2026</button><button type="button">July 2026</button><span>2026 year to date</span></section></aside>
+        <main class="workspace">
+          <section class="page insights-page insights-page--terminal">
+            <header class="workspace-head workspace-head--compact"><div><p class="eyebrow">Reports / 2026 / 08</p><h1>August 2026 at a glance</h1><p class="subtitle">A compact readout of how this month is tracking against your plan.</p></div><div class="month-controls" aria-label="Month navigation"><button class="terminal-button" type="button">← Previous</button><button type="button">Next →</button></div></header>
+            <section class="screen-panel empty-state" aria-live="polite">Loading insights...</section>
+          </section>
+        </main>
+        <footer class="statusline"><div><strong>REPORT</strong><span>August 2026 / all accounts</span></div><div><span><kbd>h</kbd><kbd>l</kbd> change month</span><span><kbd>tab</kbd> focus card</span><span><kbd>enter</kbd> drill down</span></div></footer>
+      </div>
+    </section>
+
+    <section id="data-error" class="review-frame" aria-labelledby="error-label">
+      <header class="review-frame__head"><div><p class="eyebrow">Failure state</p><h2 id="error-label">Monthly data error</h2></div><p>Initial-load failure shows the raw backend message above default empty cards; later refresh failures keep the last successful cards in place.</p></header>
+      <div class="terminal-app command-closed screen-app theme-dark">
+        <header class="titlebar"><button class="brand" type="button"><span class="brand-mark" aria-hidden="true">pb</span><span>perfectly-balanced</span></button><p>August 2026 · Personal budget</p><div class="theme-switcher" role="group" aria-label="Theme"><input checked id="theme-dark-error" name="theme-error" type="radio" /><label for="theme-dark-error">Dark</label><input id="theme-light-error" name="theme-error" type="radio" /><label for="theme-light-error">Light</label></div><details class="profile"><summary><span>D</span>dev</summary><div class="account-popover"><strong>dev@example.test</strong><button class="terminal-button" type="button">Sign out</button></div></details></header>
+        <aside class="sidebar" aria-label="Application navigation"><nav class="main-nav"><button class="nav-item" type="button"><span>Budget</span></button><button class="nav-item" type="button"><span>Transactions</span><strong>1</strong></button><button class="nav-item is-active" aria-current="page" type="button"><span>Reports</span></button></nav><section class="sidebar-section" aria-labelledby="error-range-title"><h2 id="error-range-title">Report range</h2><button class="is-current" type="button">August 2026</button><button type="button">July 2026</button><span>2026 year to date</span></section></aside>
+        <main class="workspace">
+          <section class="page insights-page insights-page--terminal">
+            <header class="workspace-head workspace-head--compact"><div><p class="eyebrow">Reports / 2026 / 08</p><h1>August 2026 at a glance</h1><p class="subtitle">A compact readout of how this month is tracking against your plan.</p></div><div class="month-controls" aria-label="Month navigation"><button class="terminal-button" type="button">← Previous</button><button type="button">Next →</button></div></header>
+            <p class="form-message form-message--error" role="alert">permission denied for table budgets</p>
+            <section class="summary" aria-label="August 2026 report summary"><div><span>Received</span><strong class="available">$0</strong></div><div><span>Spent</span><strong class="spent">$0</strong></div><div><span>Still available</span><strong class="available">$0</strong></div><div><span>Needs review</span><strong class="warning">0 transactions</strong></div></section>
+            <section class="report-grid" aria-label="August 2026 reports">
+              <section class="report-card report-card--wide"><header class="report-card__head"><div><p class="eyebrow">Spending breakdown</p><h2>Where the $0 went</h2></div><strong>$0</strong></header><div class="report-card__body donut-report"><p class="detail-note">No activity for this month.</p></div></section>
+              <section class="report-card"><header class="report-card__head"><div><p class="eyebrow">Income</p><h2>Progress to plan</h2></div><strong class="available">0%</strong></header><div class="report-card__body"><p class="detail-note">No income activity for this month.</p></div></section>
+              <section class="report-card"><header class="report-card__head"><div><p class="eyebrow">Plan variance</p><h2>Over budget</h2></div><span class="terminal-pill terminal-pill--danger">0 items</span></header><div class="report-card__body"><p class="detail-note">No over-budget spending items.</p></div></section>
+              <section class="report-card"><header class="report-card__head"><div><p class="eyebrow">Plan variance</p><h2>Under budget</h2></div><span class="terminal-pill terminal-pill--ok">0 items</span></header><div class="report-card__body"><p class="detail-note">No under-budget spending items.</p></div></section>
+              <section class="report-card report-card--review"><header class="report-card__head"><div><p class="eyebrow">Review queue</p><h2>Uncategorized activity</h2></div><strong class="warning">0</strong></header><div class="report-card__body"><p class="detail-note">Uncategorized spending remains visible in every total so reports never conceal it.</p><button class="terminal-button" type="button">Open transaction queue</button></div></section>
+            </section>
+          </section>
+        </main>
+        <footer class="statusline"><div><strong>REPORT</strong><span>August 2026 / all accounts</span></div><div><span><kbd>h</kbd><kbd>l</kbd> change month</span><span><kbd>tab</kbd> focus card</span><span><kbd>enter</kbd> drill down</span></div></footer>
+      </div>
+    </section>
+
+    <section id="no-activity" class="review-frame" aria-labelledby="empty-label">
+      <header class="review-frame__head"><div><p class="eyebrow">Successful empty state</p><h2 id="empty-label">No activity · June 2026</h2></div><p>A successful empty month keeps the full card layout and the live empty copy for both variance cards.</p></header>
+      <div class="terminal-app command-closed screen-app theme-dark">
+        <header class="titlebar"><button class="brand" type="button"><span class="brand-mark" aria-hidden="true">pb</span><span>perfectly-balanced</span></button><p>June 2026 · Personal budget</p><div class="theme-switcher" role="group" aria-label="Theme"><input checked id="theme-dark-empty" name="theme-empty" type="radio" /><label for="theme-dark-empty">Dark</label><input id="theme-light-empty" name="theme-empty" type="radio" /><label for="theme-light-empty">Light</label></div><details class="profile"><summary><span>D</span>dev</summary><div class="account-popover"><strong>dev@example.test</strong><button class="terminal-button" type="button">Sign out</button></div></details></header>
+        <aside class="sidebar" aria-label="Application navigation"><nav class="main-nav"><button class="nav-item" type="button"><span>Budget</span></button><button class="nav-item" type="button"><span>Transactions</span><strong>1</strong></button><button class="nav-item is-active" aria-current="page" type="button"><span>Reports</span></button></nav><section class="sidebar-section" aria-labelledby="empty-range-title"><h2 id="empty-range-title">Report range</h2><button class="is-current" type="button">June 2026</button><button type="button">May 2026</button><span>2026 year to date</span></section></aside>
+        <main class="workspace">
+          <section class="page insights-page insights-page--terminal">
+            <header class="workspace-head workspace-head--compact"><div><p class="eyebrow">Reports / 2026 / 06</p><h1>June 2026 at a glance</h1><p class="subtitle">A compact readout of how this month is tracking against your plan.</p></div><div class="month-controls" aria-label="Month navigation"><button class="terminal-button" type="button">← Previous</button><button type="button">Next →</button></div></header>
+            <section class="summary" aria-label="June 2026 report summary"><div><span>Received</span><strong class="available">$0</strong></div><div><span>Spent</span><strong class="spent">$0</strong></div><div><span>Still available</span><strong class="available">$0</strong></div><div><span>Needs review</span><strong class="warning">0 transactions</strong></div></section>
+            <section class="report-grid" aria-label="June 2026 reports">
+              <section class="report-card report-card--wide"><header class="report-card__head"><div><p class="eyebrow">Spending breakdown</p><h2>Where the $0 went</h2></div><strong>$0</strong></header><div class="report-card__body donut-report"><p class="detail-note">No activity for this month.</p></div></section>
+              <section class="report-card"><header class="report-card__head"><div><p class="eyebrow">Income</p><h2>Progress to plan</h2></div><strong class="available">0%</strong></header><div class="report-card__body"><p class="detail-note">No income activity for this month.</p></div></section>
+              <section class="report-card"><header class="report-card__head"><div><p class="eyebrow">Plan variance</p><h2>Over budget</h2></div><span class="terminal-pill terminal-pill--danger">0 items</span></header><div class="report-card__body"><p class="detail-note">No over-budget spending items.</p></div></section>
+              <section class="report-card"><header class="report-card__head"><div><p class="eyebrow">Plan variance</p><h2>Under budget</h2></div><span class="terminal-pill terminal-pill--ok">0 items</span></header><div class="report-card__body"><p class="detail-note">No under-budget spending items.</p></div></section>
+              <section class="report-card report-card--review"><header class="report-card__head"><div><p class="eyebrow">Review queue</p><h2>Uncategorized activity</h2></div><strong class="warning">0</strong></header><div class="report-card__body"><p class="detail-note">Uncategorized spending remains visible in every total so reports never conceal it.</p><button class="terminal-button" type="button">Open transaction queue</button></div></section>
+            </section>
+          </section>
+        </main>
+        <footer class="statusline"><div><strong>REPORT</strong><span>June 2026 / all accounts</span></div><div><span><kbd>h</kbd><kbd>l</kbd> change month</span><span><kbd>tab</kbd> focus card</span><span><kbd>enter</kbd> drill down</span></div></footer>
+      </div>
+    </section>
+  </body>
+</html>

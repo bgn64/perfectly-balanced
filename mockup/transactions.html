@@ -1,0 +1,789 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Perfectly Balanced - canonical transactions review</title>
+    <link rel="stylesheet" href="neovim-tokyonight.css" />
+  </head>
+  <body class="review-page">
+    <nav class="review-nav" aria-label="Canonical mockup pages">
+      <strong>Perfectly Balanced review</strong>
+      <a href="index.html">Sign in</a>
+      <a href="configuration-error.html">Configuration error</a>
+      <a href="budget.html">Budget</a>
+      <a aria-current="page" href="transactions.html">Transactions</a>
+      <a href="reports.html">Reports</a>
+    </nav>
+
+    <header class="review-heading">
+      <p class="eyebrow">Canonical desktop mockup / current runtime transaction states</p>
+      <h1>Transactions</h1>
+      <p>Static review sheet reconciled to the current React transactions shell, August 2026 seed fixture, and labeled source-derived transient/error behavior.</p>
+    </header>
+
+    <nav class="review-section-nav" aria-label="Transaction frame navigation">
+      <a href="#default">Default queue</a><a href="#selected">Selected row</a>
+      <a href="#search-open">Search open</a><a href="#search-results">Search results</a>
+      <a href="#search-empty">Search no match</a><a href="#filter-open">Filter open</a>
+      <a href="#filter-applied">Filters applied</a><a href="#sort-open">Filter + sort</a>
+      <a href="#loading">Loading</a><a href="#data-error">Data error</a>
+      <a href="#no-transactions">No transactions</a><a href="#category-all">Category picker</a>
+      <a href="#category-filtered">Category search/create</a><a href="#category-saving">Saving transient</a>
+      <a href="#category-error">Category error</a><a href="#category-complete">Category success</a>
+      <a href="#non-usd">Unsupported currency</a>
+    </nav>
+
+    <main class="review-frames">
+      <!-- Each frame intentionally repeats the complete application shell for independent review. -->
+      <section class="review-frame" id="default">
+        <header class="review-frame__head">
+          <div><p class="eyebrow">01 / canonical</p><h2>Default queue</h2></div>
+          <p class="review-frame__meta">Four seeded transactions · newest first · Contoso Payroll auto-selected even while rendered last</p>
+        </header>
+        <div class="review-frame__viewport">
+          <div class="authenticated-app terminal-app command-closed screen-app theme-dark">
+            <header class="titlebar">
+              <button class="brand" type="button"><span class="brand-mark">pb</span><span>perfectly-balanced</span></button>
+              <p>August 2026 · Personal budget</p>
+              <div class="theme-switcher" role="group" aria-label="Theme">
+                <input checked id="default-theme-dark" name="default-theme" type="radio" />
+                <label for="default-theme-dark">Dark</label>
+                <input id="default-theme-light" name="default-theme" type="radio" />
+                <label for="default-theme-light">Light</label>
+              </div>
+              <details class="profile">
+                <summary><span>D</span>dev</summary>
+                <div class="account-popover"><strong>dev@example.test</strong><button class="button button--secondary" type="button">Sign out</button></div>
+              </details>
+            </header>
+            <aside class="sidebar" aria-label="Application navigation">
+              <nav class="main-nav">
+                <button class="nav-item" type="button"><span>Budget</span></button>
+                <button class="nav-item is-active" aria-current="page" type="button"><span>Transactions</span><strong>1</strong></button>
+                <button class="nav-item" type="button"><span>Reports</span></button>
+              </nav>
+            </aside>
+            <main class="workspace">
+              <section class="page transactions-page transactions-page--terminal">
+                <header class="workspace-head workspace-head--compact">
+                  <div><p class="eyebrow">Transaction stream / all accounts</p><h1>Transactions</h1><p class="subtle">Search, filter, sort, and categorize every imported transaction from one simple queue.</p></div>
+                  <span class="terminal-pill terminal-pill--warning">1 uncategorized</span>
+                </header>
+                <section class="summary" aria-label="Transaction overview"><div><span>All activity</span><strong>4</strong></div><div><span>August 2026 activity</span><strong>4</strong></div><div><span>Categorized</span><strong class="available">3</strong></div><div><span>Needs review</span><strong class="warning">1</strong></div></section>
+                <section class="budget-table transaction-table" aria-labelledby="default-title">
+                  <div class="table-head"><div><p class="eyebrow">Imported activity</p><h2 id="default-title">Every account, one queue</h2></div></div>
+                  <div class="data-toolbar"><button class="terminal-button transaction-search-trigger" type="button"><kbd>/</kbd> Search transactions</button><div class="toolbar-group transaction-tools"><details class="filter-wrap"><summary class="terminal-button pill-button">Filter</summary></details><details class="filter-wrap"><summary class="terminal-button pill-button">Newest first</summary></details></div></div>
+                  <div class="transaction-column-head" aria-hidden="true"><span>Transaction</span><span>Category</span><span>Amount</span></div>
+                  <section class="transactions">
+                    <div class="transaction-row-simple"><button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Corner Shop</strong><span>Aug 10 · Local Checking</span></span></button><div class="transaction-category-cell"><button class="category-chip empty" type="button">+ Categorize</button></div><strong class="transaction-amount negative">-$18.75</strong></div>
+                    <div class="transaction-row-simple"><button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Cedar Cafe</strong><span>Aug 8 · Local Credit Card</span></span></button><div class="transaction-category-cell"><button class="category-chip" type="button"><span class="category-summary">Restaurants</span></button></div><strong class="transaction-amount negative">-$42</strong></div>
+                    <div class="transaction-row-simple"><button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Local Market</strong><span>Aug 5 · Local Checking</span></span></button><div class="transaction-category-cell"><button class="category-chip" type="button"><span class="category-summary">Groceries</span></button></div><strong class="transaction-amount negative">-$125.50</strong></div>
+                    <div class="transaction-row-simple is-selected"><button aria-pressed="true" class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Contoso Payroll</strong><span>Aug 1 · Local Checking</span></span></button><div class="transaction-category-cell"><button class="category-chip" type="button"><span class="category-summary">Ben Pay</span></button></div><strong class="transaction-amount positive">+$7,000</strong></div>
+                  </section>
+                </section>
+              </section>
+            </main>
+            <footer class="statusline"><div><strong>EDIT</strong><span>transaction / category</span></div><div><span><kbd>/</kbd> search</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span><span><kbd>c</kbd> category</span><span><kbd>enter</kbd> select</span><span><kbd>esc</kbd> cancel</span></div></footer>
+          </div>
+        </div>
+      </section>
+
+      <section class="review-frame" id="selected">
+        <header class="review-frame__head">
+          <div><p class="eyebrow">02 / focus</p><h2>Selected row</h2></div>
+          <p class="review-frame__meta">Cedar Cafe selected after an explicit row click · category picker closed</p>
+        </header>
+        <div class="review-frame__viewport">
+          <div class="authenticated-app terminal-app command-closed screen-app theme-dark">
+            <header class="titlebar">
+              <button class="brand" type="button"><span class="brand-mark">pb</span><span>perfectly-balanced</span></button>
+              <p>August 2026 · Personal budget</p>
+              <div class="theme-switcher" role="group" aria-label="Theme">
+                <input checked id="selected-theme-dark" name="selected-theme" type="radio" />
+                <label for="selected-theme-dark">Dark</label>
+                <input id="selected-theme-light" name="selected-theme" type="radio" />
+                <label for="selected-theme-light">Light</label>
+              </div>
+              <details class="profile">
+                <summary><span>D</span>dev</summary>
+                <div class="account-popover"><strong>dev@example.test</strong><button class="button button--secondary" type="button">Sign out</button></div>
+              </details>
+            </header>
+            <aside class="sidebar" aria-label="Application navigation">
+              <nav class="main-nav">
+                <button class="nav-item" type="button"><span>Budget</span></button>
+                <button class="nav-item is-active" aria-current="page" type="button"><span>Transactions</span><strong>1</strong></button>
+                <button class="nav-item" type="button"><span>Reports</span></button>
+              </nav>
+            </aside>
+            <main class="workspace">
+              <section class="page transactions-page transactions-page--terminal">
+                <header class="workspace-head workspace-head--compact"><div><p class="eyebrow">Transaction stream / all accounts</p><h1>Transactions</h1><p class="subtle">Search, filter, sort, and categorize every imported transaction from one simple queue.</p></div><span class="terminal-pill terminal-pill--warning">1 uncategorized</span></header>
+                <section class="summary"><div><span>All activity</span><strong>4</strong></div><div><span>August 2026 activity</span><strong>4</strong></div><div><span>Categorized</span><strong class="available">3</strong></div><div><span>Needs review</span><strong class="warning">1</strong></div></section>
+                <section class="budget-table transaction-table"><div class="table-head"><div><p class="eyebrow">Imported activity</p><h2>Every account, one queue</h2></div></div><div class="data-toolbar"><button class="terminal-button transaction-search-trigger" type="button"><kbd>/</kbd> Search transactions</button><div class="toolbar-group transaction-tools"><details class="filter-wrap"><summary class="terminal-button pill-button">Filter</summary></details><details class="filter-wrap"><summary class="terminal-button pill-button">Newest first</summary></details></div></div><div class="transaction-column-head" aria-hidden="true"><span>Transaction</span><span>Category</span><span>Amount</span></div><section class="transactions">
+                  <div class="transaction-row-simple"><button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Corner Shop</strong><span>Aug 10 · Local Checking</span></span></button><div class="transaction-category-cell"><button class="category-chip empty" type="button">+ Categorize</button></div><strong class="transaction-amount negative">-$18.75</strong></div>
+                  <div class="transaction-row-simple is-selected"><button aria-pressed="true" class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Cedar Cafe</strong><span>Aug 8 · Local Credit Card</span></span></button><div class="transaction-category-cell"><button class="category-chip" type="button"><span class="category-summary">Restaurants</span></button></div><strong class="transaction-amount negative">-$42</strong></div>
+                  <div class="transaction-row-simple"><button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Local Market</strong><span>Aug 5 · Local Checking</span></span></button><div class="transaction-category-cell"><button class="category-chip" type="button"><span class="category-summary">Groceries</span></button></div><strong class="transaction-amount negative">-$125.50</strong></div>
+                  <div class="transaction-row-simple"><button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Contoso Payroll</strong><span>Aug 1 · Local Checking</span></span></button><div class="transaction-category-cell"><button class="category-chip" type="button"><span class="category-summary">Ben Pay</span></button></div><strong class="transaction-amount positive">+$7,000</strong></div>
+                </section></section>
+              </section>
+            </main>
+            <footer class="statusline"><div><strong>EDIT</strong><span>transaction / category</span></div><div><span><kbd>/</kbd> search</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span><span><kbd>c</kbd> category</span><span><kbd>enter</kbd> select</span><span><kbd>esc</kbd> cancel</span></div></footer>
+          </div>
+        </div>
+      </section>
+
+      <section class="review-frame" id="search-open">
+        <header class="review-frame__head">
+          <div><p class="eyebrow">03 / search</p><h2>Search opened</h2></div>
+          <p class="review-frame__meta">Empty merchant query · footer flips to SEARCH while the default Contoso selection remains visible</p>
+        </header>
+        <div class="review-frame__viewport">
+          <div class="authenticated-app terminal-app command-closed screen-app theme-dark">
+            <header class="titlebar">
+              <button class="brand" type="button"><span class="brand-mark">pb</span><span>perfectly-balanced</span></button>
+              <p>August 2026 · Personal budget</p>
+              <div class="theme-switcher" role="group" aria-label="Theme">
+                <input checked id="search-open-theme-dark" name="search-open-theme" type="radio" />
+                <label for="search-open-theme-dark">Dark</label>
+                <input id="search-open-theme-light" name="search-open-theme" type="radio" />
+                <label for="search-open-theme-light">Light</label>
+              </div>
+              <details class="profile">
+                <summary><span>D</span>dev</summary>
+                <div class="account-popover"><strong>dev@example.test</strong><button class="button button--secondary" type="button">Sign out</button></div>
+              </details>
+            </header>
+            <aside class="sidebar" aria-label="Application navigation">
+              <nav class="main-nav">
+                <button class="nav-item" type="button"><span>Budget</span></button>
+                <button class="nav-item is-active" aria-current="page" type="button"><span>Transactions</span><strong>1</strong></button>
+                <button class="nav-item" type="button"><span>Reports</span></button>
+              </nav>
+            </aside>
+            <main class="workspace">
+              <section class="page transactions-page transactions-page--terminal">
+                <header class="workspace-head workspace-head--compact"><div><p class="eyebrow">Transaction stream / all accounts</p><h1>Transactions</h1><p class="subtle">Search, filter, sort, and categorize every imported transaction from one simple queue.</p></div><span class="terminal-pill terminal-pill--warning">1 uncategorized</span></header>
+                <section class="summary"><div><span>All activity</span><strong>4</strong></div><div><span>August 2026 activity</span><strong>4</strong></div><div><span>Categorized</span><strong class="available">3</strong></div><div><span>Needs review</span><strong class="warning">1</strong></div></section>
+                <section class="budget-table transaction-table"><div class="table-head"><div><p class="eyebrow">Imported activity</p><h2>Every account, one queue</h2></div></div><div class="data-toolbar"><label class="terminal-search" for="search-open-input"><span aria-hidden="true">/</span><span class="sr-only">Search merchant name</span><input id="search-open-input" type="search" placeholder="Search merchant name..." /></label><div class="toolbar-group transaction-tools"><details class="filter-wrap"><summary class="terminal-button pill-button">Filter</summary></details><details class="filter-wrap"><summary class="terminal-button pill-button">Newest first</summary></details></div></div><div class="transaction-column-head" aria-hidden="true"><span>Transaction</span><span>Category</span><span>Amount</span></div><section class="transactions">
+                  <div class="transaction-row-simple"><button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Corner Shop</strong><span>Aug 10 · Local Checking</span></span></button><div class="transaction-category-cell"><button class="category-chip empty" type="button">+ Categorize</button></div><strong class="transaction-amount negative">-$18.75</strong></div>
+                  <div class="transaction-row-simple"><button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Cedar Cafe</strong><span>Aug 8 · Local Credit Card</span></span></button><div class="transaction-category-cell"><button class="category-chip" type="button"><span class="category-summary">Restaurants</span></button></div><strong class="transaction-amount negative">-$42</strong></div>
+                  <div class="transaction-row-simple"><button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Local Market</strong><span>Aug 5 · Local Checking</span></span></button><div class="transaction-category-cell"><button class="category-chip" type="button"><span class="category-summary">Groceries</span></button></div><strong class="transaction-amount negative">-$125.50</strong></div>
+                  <div class="transaction-row-simple is-selected"><button aria-pressed="true" class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Contoso Payroll</strong><span>Aug 1 · Local Checking</span></span></button><div class="transaction-category-cell"><button class="category-chip" type="button"><span class="category-summary">Ben Pay</span></button></div><strong class="transaction-amount positive">+$7,000</strong></div>
+                </section></section>
+              </section>
+            </main>
+            <footer class="statusline"><div><strong>SEARCH</strong><span>search</span></div><div><span><kbd>esc</kbd> clear and return</span><span><kbd>enter</kbd> focus first result</span></div></footer>
+          </div>
+        </div>
+      </section>
+
+      <section class="review-frame" id="search-results">
+        <header class="review-frame__head">
+          <div><p class="eyebrow">04 / search</p><h2>Typed search with results</h2></div>
+          <p class="review-frame__meta">Query “cedar” · Contoso Payroll remains selected in state even though the filtered list hides it</p>
+        </header>
+        <div class="review-frame__viewport">
+          <div class="authenticated-app terminal-app command-closed screen-app theme-dark">
+            <header class="titlebar">
+              <button class="brand" type="button"><span class="brand-mark">pb</span><span>perfectly-balanced</span></button>
+              <p>August 2026 · Personal budget</p>
+              <div class="theme-switcher" role="group" aria-label="Theme">
+                <input checked id="search-results-theme-dark" name="search-results-theme" type="radio" />
+                <label for="search-results-theme-dark">Dark</label>
+                <input id="search-results-theme-light" name="search-results-theme" type="radio" />
+                <label for="search-results-theme-light">Light</label>
+              </div>
+              <details class="profile">
+                <summary><span>D</span>dev</summary>
+                <div class="account-popover"><strong>dev@example.test</strong><button class="button button--secondary" type="button">Sign out</button></div>
+              </details>
+            </header>
+            <aside class="sidebar" aria-label="Application navigation">
+              <nav class="main-nav">
+                <button class="nav-item" type="button"><span>Budget</span></button>
+                <button class="nav-item is-active" aria-current="page" type="button"><span>Transactions</span><strong>1</strong></button>
+                <button class="nav-item" type="button"><span>Reports</span></button>
+              </nav>
+            </aside>
+            <main class="workspace">
+              <section class="page transactions-page transactions-page--terminal">
+                <header class="workspace-head workspace-head--compact"><div><p class="eyebrow">Transaction stream / all accounts</p><h1>Transactions</h1><p class="subtle">Search, filter, sort, and categorize every imported transaction from one simple queue.</p></div><span class="terminal-pill terminal-pill--warning">1 uncategorized</span></header>
+                <section class="summary"><div><span>All activity</span><strong>4</strong></div><div><span>August 2026 activity</span><strong>4</strong></div><div><span>Categorized</span><strong class="available">3</strong></div><div><span>Needs review</span><strong class="warning">1</strong></div></section>
+                <section class="budget-table transaction-table"><div class="table-head"><div><p class="eyebrow">Imported activity</p><h2>Every account, one queue</h2></div></div><div class="data-toolbar"><label class="terminal-search" for="search-results-input"><span aria-hidden="true">/</span><span class="sr-only">Search merchant name</span><input id="search-results-input" type="search" placeholder="Search merchant name..." value="cedar" /></label><div class="toolbar-group transaction-tools"><details class="filter-wrap"><summary class="terminal-button pill-button">Filter</summary></details><details class="filter-wrap"><summary class="terminal-button pill-button">Newest first</summary></details></div></div><div class="transaction-column-head" aria-hidden="true"><span>Transaction</span><span>Category</span><span>Amount</span></div><section class="transactions"><div class="transaction-row-simple"><button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Cedar Cafe</strong><span>Aug 8 · Local Credit Card</span></span></button><div class="transaction-category-cell"><button class="category-chip" type="button"><span class="category-summary">Restaurants</span></button></div><strong class="transaction-amount negative">-$42</strong></div></section></section>
+              </section>
+            </main>
+            <footer class="statusline"><div><strong>SEARCH</strong><span>cedar</span></div><div><span><kbd>esc</kbd> clear and return</span><span><kbd>enter</kbd> focus first result</span></div></footer>
+          </div>
+        </div>
+      </section>
+
+      <section class="review-frame" id="search-empty">
+        <header class="review-frame__head">
+          <div><p class="eyebrow">05 / search</p><h2>Search with no match</h2></div>
+          <p class="review-frame__meta">Query “bookstore” · no visible rows while the hidden selection is still retained</p>
+        </header>
+        <div class="review-frame__viewport">
+          <div class="authenticated-app terminal-app command-closed screen-app theme-dark">
+            <header class="titlebar">
+              <button class="brand" type="button"><span class="brand-mark">pb</span><span>perfectly-balanced</span></button>
+              <p>August 2026 · Personal budget</p>
+              <div class="theme-switcher" role="group" aria-label="Theme">
+                <input checked id="search-empty-theme-dark" name="search-empty-theme" type="radio" />
+                <label for="search-empty-theme-dark">Dark</label>
+                <input id="search-empty-theme-light" name="search-empty-theme" type="radio" />
+                <label for="search-empty-theme-light">Light</label>
+              </div>
+              <details class="profile">
+                <summary><span>D</span>dev</summary>
+                <div class="account-popover"><strong>dev@example.test</strong><button class="button button--secondary" type="button">Sign out</button></div>
+              </details>
+            </header>
+            <aside class="sidebar" aria-label="Application navigation">
+              <nav class="main-nav">
+                <button class="nav-item" type="button"><span>Budget</span></button>
+                <button class="nav-item is-active" aria-current="page" type="button"><span>Transactions</span><strong>1</strong></button>
+                <button class="nav-item" type="button"><span>Reports</span></button>
+              </nav>
+            </aside>
+            <main class="workspace">
+              <section class="page transactions-page transactions-page--terminal">
+                <header class="workspace-head workspace-head--compact"><div><p class="eyebrow">Transaction stream / all accounts</p><h1>Transactions</h1><p class="subtle">Search, filter, sort, and categorize every imported transaction from one simple queue.</p></div><span class="terminal-pill terminal-pill--warning">1 uncategorized</span></header>
+                <section class="summary"><div><span>All activity</span><strong>4</strong></div><div><span>August 2026 activity</span><strong>4</strong></div><div><span>Categorized</span><strong class="available">3</strong></div><div><span>Needs review</span><strong class="warning">1</strong></div></section>
+                <section class="budget-table transaction-table"><div class="table-head"><div><p class="eyebrow">Imported activity</p><h2>Every account, one queue</h2></div></div><div class="data-toolbar"><label class="terminal-search" for="search-empty-input"><span aria-hidden="true">/</span><span class="sr-only">Search merchant name</span><input id="search-empty-input" type="search" placeholder="Search merchant name..." value="bookstore" /></label><div class="toolbar-group transaction-tools"><details class="filter-wrap"><summary class="terminal-button pill-button">Filter</summary></details><details class="filter-wrap"><summary class="terminal-button pill-button">Newest first</summary></details></div></div><div class="transaction-column-head" aria-hidden="true"><span>Transaction</span><span>Category</span><span>Amount</span></div><section class="transactions"><div class="empty-state">No transactions match the current search and filters.</div></section></section>
+              </section>
+            </main>
+            <footer class="statusline"><div><strong>SEARCH</strong><span>bookstore</span></div><div><span><kbd>esc</kbd> clear and return</span><span><kbd>enter</kbd> focus first result</span></div></footer>
+          </div>
+        </div>
+      </section>
+
+      <section class="review-frame" id="filter-open">
+        <header class="review-frame__head">
+          <div><p class="eyebrow">06 / filters</p><h2>Filter popover</h2></div>
+          <p class="review-frame__meta">Seeded month and category options · no filters applied yet</p>
+        </header>
+        <div class="review-frame__viewport">
+          <div class="authenticated-app terminal-app command-closed screen-app theme-dark">
+            <header class="titlebar">
+              <button class="brand" type="button"><span class="brand-mark">pb</span><span>perfectly-balanced</span></button>
+              <p>August 2026 · Personal budget</p>
+              <div class="theme-switcher" role="group" aria-label="Theme">
+                <input checked id="filter-open-theme-dark" name="filter-open-theme" type="radio" />
+                <label for="filter-open-theme-dark">Dark</label>
+                <input id="filter-open-theme-light" name="filter-open-theme" type="radio" />
+                <label for="filter-open-theme-light">Light</label>
+              </div>
+              <details class="profile">
+                <summary><span>D</span>dev</summary>
+                <div class="account-popover"><strong>dev@example.test</strong><button class="button button--secondary" type="button">Sign out</button></div>
+              </details>
+            </header>
+            <aside class="sidebar" aria-label="Application navigation">
+              <nav class="main-nav">
+                <button class="nav-item" type="button"><span>Budget</span></button>
+                <button class="nav-item is-active" aria-current="page" type="button"><span>Transactions</span><strong>1</strong></button>
+                <button class="nav-item" type="button"><span>Reports</span></button>
+              </nav>
+            </aside>
+            <main class="workspace">
+              <section class="page transactions-page transactions-page--terminal">
+                <header class="workspace-head workspace-head--compact"><div><p class="eyebrow">Transaction stream / all accounts</p><h1>Transactions</h1><p class="subtle">Search, filter, sort, and categorize every imported transaction from one simple queue.</p></div><span class="terminal-pill terminal-pill--warning">1 uncategorized</span></header>
+                <section class="summary"><div><span>All activity</span><strong>4</strong></div><div><span>August 2026 activity</span><strong>4</strong></div><div><span>Categorized</span><strong class="available">3</strong></div><div><span>Needs review</span><strong class="warning">1</strong></div></section>
+                <section class="budget-table transaction-table"><div class="table-head"><div><p class="eyebrow">Imported activity</p><h2>Every account, one queue</h2></div></div><div class="data-toolbar"><button class="terminal-button transaction-search-trigger" type="button"><kbd>/</kbd> Search transactions</button><div class="toolbar-group transaction-tools"><details class="filter-wrap" open><summary class="terminal-button pill-button">Filter</summary><div class="popover filter-popover"><h2>Budget or month</h2><label class="radio"><input name="filter-open-scope" type="radio" />August 2026 budget</label><label class="radio"><input name="filter-open-scope" type="radio" />August 2026</label><h2>Categories · match any</h2><label class="check"><input type="checkbox" />Uncategorized</label><label class="check"><input type="checkbox" />Ben Pay</label><label class="check"><input type="checkbox" />Groceries</label><label class="check"><input type="checkbox" />Internet</label><label class="check"><input type="checkbox" />Katie Pay</label><label class="check"><input type="checkbox" />Restaurants</label><label class="check"><input type="checkbox" />YouTube Premium</label></div></details><details class="filter-wrap"><summary class="terminal-button pill-button">Newest first</summary></details></div></div><div class="transaction-column-head" aria-hidden="true"><span>Transaction</span><span>Category</span><span>Amount</span></div><section class="transactions">
+                  <div class="transaction-row-simple"><button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Corner Shop</strong><span>Aug 10 · Local Checking</span></span></button><div class="transaction-category-cell"><button class="category-chip empty" type="button">+ Categorize</button></div><strong class="transaction-amount negative">-$18.75</strong></div>
+                  <div class="transaction-row-simple"><button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Cedar Cafe</strong><span>Aug 8 · Local Credit Card</span></span></button><div class="transaction-category-cell"><button class="category-chip" type="button"><span class="category-summary">Restaurants</span></button></div><strong class="transaction-amount negative">-$42</strong></div>
+                  <div class="transaction-row-simple"><button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Local Market</strong><span>Aug 5 · Local Checking</span></span></button><div class="transaction-category-cell"><button class="category-chip" type="button"><span class="category-summary">Groceries</span></button></div><strong class="transaction-amount negative">-$125.50</strong></div>
+                  <div class="transaction-row-simple is-selected"><button aria-pressed="true" class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Contoso Payroll</strong><span>Aug 1 · Local Checking</span></span></button><div class="transaction-category-cell"><button class="category-chip" type="button"><span class="category-summary">Ben Pay</span></button></div><strong class="transaction-amount positive">+$7,000</strong></div>
+                </section></section>
+              </section>
+            </main>
+            <footer class="statusline"><div><strong>EDIT</strong><span>transaction / category</span></div><div><span><kbd>/</kbd> search</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span><span><kbd>c</kbd> category</span><span><kbd>enter</kbd> select</span><span><kbd>esc</kbd> cancel</span></div></footer>
+          </div>
+        </div>
+      </section>
+
+      <section class="review-frame" id="filter-applied">
+        <header class="review-frame__head">
+          <div><p class="eyebrow">07 / filters</p><h2>Applied filter tokens</h2></div>
+          <p class="review-frame__meta">August 2026 budget + Uncategorized · visible list shrinks to Corner Shop while the hidden selection is preserved</p>
+        </header>
+        <div class="review-frame__viewport">
+          <div class="authenticated-app terminal-app command-closed screen-app theme-dark">
+            <header class="titlebar">
+              <button class="brand" type="button"><span class="brand-mark">pb</span><span>perfectly-balanced</span></button>
+              <p>August 2026 · Personal budget</p>
+              <div class="theme-switcher" role="group" aria-label="Theme">
+                <input checked id="filter-applied-theme-dark" name="filter-applied-theme" type="radio" />
+                <label for="filter-applied-theme-dark">Dark</label>
+                <input id="filter-applied-theme-light" name="filter-applied-theme" type="radio" />
+                <label for="filter-applied-theme-light">Light</label>
+              </div>
+              <details class="profile">
+                <summary><span>D</span>dev</summary>
+                <div class="account-popover"><strong>dev@example.test</strong><button class="button button--secondary" type="button">Sign out</button></div>
+              </details>
+            </header>
+            <aside class="sidebar" aria-label="Application navigation">
+              <nav class="main-nav">
+                <button class="nav-item" type="button"><span>Budget</span></button>
+                <button class="nav-item is-active" aria-current="page" type="button"><span>Transactions</span><strong>1</strong></button>
+                <button class="nav-item" type="button"><span>Reports</span></button>
+              </nav>
+            </aside>
+            <main class="workspace">
+              <section class="page transactions-page transactions-page--terminal">
+                <header class="workspace-head workspace-head--compact"><div><p class="eyebrow">Transaction stream / all accounts</p><h1>Transactions</h1><p class="subtle">Search, filter, sort, and categorize every imported transaction from one simple queue.</p></div><span class="terminal-pill terminal-pill--warning">1 uncategorized</span></header>
+                <section class="summary"><div><span>All activity</span><strong>4</strong></div><div><span>August 2026 activity</span><strong>4</strong></div><div><span>Categorized</span><strong class="available">3</strong></div><div><span>Needs review</span><strong class="warning">1</strong></div></section>
+                <section class="budget-table transaction-table"><div class="table-head"><div><p class="eyebrow">Imported activity</p><h2>Every account, one queue</h2></div></div><div class="data-toolbar"><button class="terminal-button transaction-search-trigger" type="button"><kbd>/</kbd> Search transactions</button><div class="active-filters toolbar-tokens" aria-label="Active filters"><span class="filter-token">August 2026 budget<button aria-label="Remove August 2026 budget filter" type="button">×</button></span><span class="filter-token">Uncategorized<button aria-label="Remove Uncategorized filter" type="button">×</button></span></div><div class="toolbar-group transaction-tools"><details class="filter-wrap"><summary class="terminal-button pill-button">Filter · 2</summary></details><details class="filter-wrap"><summary class="terminal-button pill-button">Newest first</summary></details></div></div><div class="transaction-column-head" aria-hidden="true"><span>Transaction</span><span>Category</span><span>Amount</span></div><section class="transactions"><div class="transaction-row-simple"><button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Corner Shop</strong><span>Aug 10 · Local Checking</span></span></button><div class="transaction-category-cell"><button class="category-chip empty" type="button">+ Categorize</button></div><strong class="transaction-amount negative">-$18.75</strong></div></section></section>
+              </section>
+            </main>
+            <footer class="statusline"><div><strong>EDIT</strong><span>transaction / category</span></div><div><span><kbd>/</kbd> search</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span><span><kbd>c</kbd> category</span><span><kbd>enter</kbd> select</span><span><kbd>esc</kbd> cancel</span></div></footer>
+          </div>
+        </div>
+      </section>
+
+      <section class="review-frame" id="sort-open">
+        <header class="review-frame__head">
+          <div><p class="eyebrow">08 / sorting</p><h2>Filter and sort details together</h2></div>
+          <p class="review-frame__meta">Both details elements may stay open together · amount sort uses absolute magnitude, so +$7,000 outranks -$125.50</p>
+        </header>
+        <div class="review-frame__viewport">
+          <div class="authenticated-app terminal-app command-closed screen-app theme-dark">
+            <header class="titlebar">
+              <button class="brand" type="button"><span class="brand-mark">pb</span><span>perfectly-balanced</span></button>
+              <p>August 2026 · Personal budget</p>
+              <div class="theme-switcher" role="group" aria-label="Theme">
+                <input checked id="sort-open-theme-dark" name="sort-open-theme" type="radio" />
+                <label for="sort-open-theme-dark">Dark</label>
+                <input id="sort-open-theme-light" name="sort-open-theme" type="radio" />
+                <label for="sort-open-theme-light">Light</label>
+              </div>
+              <details class="profile">
+                <summary><span>D</span>dev</summary>
+                <div class="account-popover"><strong>dev@example.test</strong><button class="button button--secondary" type="button">Sign out</button></div>
+              </details>
+            </header>
+            <aside class="sidebar" aria-label="Application navigation">
+              <nav class="main-nav">
+                <button class="nav-item" type="button"><span>Budget</span></button>
+                <button class="nav-item is-active" aria-current="page" type="button"><span>Transactions</span><strong>1</strong></button>
+                <button class="nav-item" type="button"><span>Reports</span></button>
+              </nav>
+            </aside>
+            <main class="workspace">
+              <section class="page transactions-page transactions-page--terminal">
+                <header class="workspace-head workspace-head--compact"><div><p class="eyebrow">Transaction stream / all accounts</p><h1>Transactions</h1><p class="subtle">Search, filter, sort, and categorize every imported transaction from one simple queue.</p></div><span class="terminal-pill terminal-pill--warning">1 uncategorized</span></header>
+                <section class="summary"><div><span>All activity</span><strong>4</strong></div><div><span>August 2026 activity</span><strong>4</strong></div><div><span>Categorized</span><strong class="available">3</strong></div><div><span>Needs review</span><strong class="warning">1</strong></div></section>
+                <section class="budget-table transaction-table"><div class="table-head"><div><p class="eyebrow">Imported activity</p><h2>Every account, one queue</h2></div></div><div class="data-toolbar"><button class="terminal-button transaction-search-trigger" type="button"><kbd>/</kbd> Search transactions</button><div class="toolbar-group transaction-tools"><details class="filter-wrap" open><summary class="terminal-button pill-button">Filter</summary><div class="popover filter-popover"><h2>Budget or month</h2><label class="radio"><input name="sort-open-scope" type="radio" />August 2026 budget</label><label class="radio"><input name="sort-open-scope" type="radio" />August 2026</label><h2>Categories · match any</h2><label class="check"><input type="checkbox" />Uncategorized</label><label class="check"><input type="checkbox" />Ben Pay</label><label class="check"><input type="checkbox" />Groceries</label><label class="check"><input type="checkbox" />Internet</label><label class="check"><input type="checkbox" />Katie Pay</label><label class="check"><input type="checkbox" />Restaurants</label><label class="check"><input type="checkbox" />YouTube Premium</label></div></details><details class="filter-wrap" open><summary class="terminal-button pill-button">Highest amount</summary><div class="popover sort-popover"><label class="radio"><input name="sort-open-order" type="radio" />Date · newest</label><label class="radio"><input name="sort-open-order" type="radio" />Merchant · A-Z</label><label class="radio"><input checked name="sort-open-order" type="radio" />Amount · highest</label></div></details></div></div><div class="transaction-column-head" aria-hidden="true"><span>Transaction</span><span>Category</span><span>Amount</span></div><section class="transactions">
+                  <div class="transaction-row-simple is-selected"><button aria-pressed="true" class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Contoso Payroll</strong><span>Aug 1 · Local Checking</span></span></button><div class="transaction-category-cell"><button class="category-chip" type="button"><span class="category-summary">Ben Pay</span></button></div><strong class="transaction-amount positive">+$7,000</strong></div>
+                  <div class="transaction-row-simple"><button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Local Market</strong><span>Aug 5 · Local Checking</span></span></button><div class="transaction-category-cell"><button class="category-chip" type="button"><span class="category-summary">Groceries</span></button></div><strong class="transaction-amount negative">-$125.50</strong></div>
+                  <div class="transaction-row-simple"><button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Cedar Cafe</strong><span>Aug 8 · Local Credit Card</span></span></button><div class="transaction-category-cell"><button class="category-chip" type="button"><span class="category-summary">Restaurants</span></button></div><strong class="transaction-amount negative">-$42</strong></div>
+                  <div class="transaction-row-simple"><button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Corner Shop</strong><span>Aug 10 · Local Checking</span></span></button><div class="transaction-category-cell"><button class="category-chip empty" type="button">+ Categorize</button></div><strong class="transaction-amount negative">-$18.75</strong></div>
+                </section></section>
+              </section>
+            </main>
+            <footer class="statusline"><div><strong>EDIT</strong><span>transaction / category</span></div><div><span><kbd>/</kbd> search</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span><span><kbd>c</kbd> category</span><span><kbd>enter</kbd> select</span><span><kbd>esc</kbd> cancel</span></div></footer>
+          </div>
+        </div>
+      </section>
+
+      <section class="review-frame" id="loading">
+        <header class="review-frame__head">
+          <div><p class="eyebrow">09 / system</p><h2>Loading transactions</h2></div>
+          <p class="review-frame__meta">Initial request in progress before any rows are available</p>
+        </header>
+        <div class="review-frame__viewport">
+          <div class="authenticated-app terminal-app command-closed screen-app theme-dark">
+            <header class="titlebar">
+              <button class="brand" type="button"><span class="brand-mark">pb</span><span>perfectly-balanced</span></button>
+              <p>August 2026 · Personal budget</p>
+              <div class="theme-switcher" role="group" aria-label="Theme">
+                <input checked id="loading-theme-dark" name="loading-theme" type="radio" />
+                <label for="loading-theme-dark">Dark</label>
+                <input id="loading-theme-light" name="loading-theme" type="radio" />
+                <label for="loading-theme-light">Light</label>
+              </div>
+              <details class="profile">
+                <summary><span>D</span>dev</summary>
+                <div class="account-popover"><strong>dev@example.test</strong><button class="button button--secondary" type="button">Sign out</button></div>
+              </details>
+            </header>
+            <aside class="sidebar" aria-label="Application navigation">
+              <nav class="main-nav">
+                <button class="nav-item" type="button"><span>Budget</span></button>
+                <button class="nav-item is-active" aria-current="page" type="button"><span>Transactions</span><strong>0</strong></button>
+                <button class="nav-item" type="button"><span>Reports</span></button>
+              </nav>
+            </aside>
+            <main class="workspace">
+              <section class="page transactions-page transactions-page--terminal">
+                <header class="workspace-head workspace-head--compact"><div><p class="eyebrow">Transaction stream / all accounts</p><h1>Transactions</h1><p class="subtle">Search, filter, sort, and categorize every imported transaction from one simple queue.</p></div><span class="terminal-pill terminal-pill--warning">0 uncategorized</span></header>
+                <section class="summary"><div><span>All activity</span><strong>0</strong></div><div><span>August 2026 activity</span><strong>0</strong></div><div><span>Categorized</span><strong class="available">0</strong></div><div><span>Needs review</span><strong class="warning">0</strong></div></section>
+                <section aria-busy="true" class="budget-table transaction-table"><div class="table-head"><div><p class="eyebrow">Imported activity</p><h2>Every account, one queue</h2></div></div><div class="data-toolbar"><button class="terminal-button transaction-search-trigger" type="button"><kbd>/</kbd> Search transactions</button><div class="toolbar-group transaction-tools"><details class="filter-wrap"><summary class="terminal-button pill-button">Filter</summary></details><details class="filter-wrap"><summary class="terminal-button pill-button">Newest first</summary></details></div></div><div class="transaction-column-head" aria-hidden="true"><span>Transaction</span><span>Category</span><span>Amount</span></div><section class="transactions"><div class="empty-state" aria-live="polite">Loading transactions...</div></section></section>
+              </section>
+            </main>
+            <footer class="statusline"><div><strong>EDIT</strong><span>transaction / category</span></div><div><span><kbd>/</kbd> search</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span><span><kbd>c</kbd> category</span><span><kbd>enter</kbd> select</span><span><kbd>esc</kbd> cancel</span></div></footer>
+          </div>
+        </div>
+      </section>
+
+      <section class="review-frame" id="data-error">
+        <header class="review-frame__head">
+          <div><p class="eyebrow">10 / system</p><h2>Transaction data error</h2></div>
+          <p class="review-frame__meta">Representative raw backend/network text during refresh failure · previously loaded seed rows remain on screen</p>
+        </header>
+        <div class="review-frame__viewport">
+          <div class="authenticated-app terminal-app command-closed screen-app theme-dark">
+            <header class="titlebar">
+              <button class="brand" type="button"><span class="brand-mark">pb</span><span>perfectly-balanced</span></button>
+              <p>August 2026 · Personal budget</p>
+              <div class="theme-switcher" role="group" aria-label="Theme">
+                <input checked id="data-error-theme-dark" name="data-error-theme" type="radio" />
+                <label for="data-error-theme-dark">Dark</label>
+                <input id="data-error-theme-light" name="data-error-theme" type="radio" />
+                <label for="data-error-theme-light">Light</label>
+              </div>
+              <details class="profile">
+                <summary><span>D</span>dev</summary>
+                <div class="account-popover"><strong>dev@example.test</strong><button class="button button--secondary" type="button">Sign out</button></div>
+              </details>
+            </header>
+            <aside class="sidebar" aria-label="Application navigation">
+              <nav class="main-nav">
+                <button class="nav-item" type="button"><span>Budget</span></button>
+                <button class="nav-item is-active" aria-current="page" type="button"><span>Transactions</span><strong>1</strong></button>
+                <button class="nav-item" type="button"><span>Reports</span></button>
+              </nav>
+            </aside>
+            <main class="workspace">
+              <section class="page transactions-page transactions-page--terminal">
+                <header class="workspace-head workspace-head--compact"><div><p class="eyebrow">Transaction stream / all accounts</p><h1>Transactions</h1><p class="subtle">Search, filter, sort, and categorize every imported transaction from one simple queue.</p></div><span class="terminal-pill terminal-pill--warning">1 uncategorized</span></header>
+                <p class="form-message form-message--error" role="alert">Failed to fetch</p>
+                <section class="summary"><div><span>All activity</span><strong>4</strong></div><div><span>August 2026 activity</span><strong>4</strong></div><div><span>Categorized</span><strong class="available">3</strong></div><div><span>Needs review</span><strong class="warning">1</strong></div></section>
+                <section class="budget-table transaction-table"><div class="table-head"><div><p class="eyebrow">Imported activity</p><h2>Every account, one queue</h2></div></div><div class="data-toolbar"><button class="terminal-button transaction-search-trigger" type="button"><kbd>/</kbd> Search transactions</button><div class="toolbar-group transaction-tools"><details class="filter-wrap"><summary class="terminal-button pill-button">Filter</summary></details><details class="filter-wrap"><summary class="terminal-button pill-button">Newest first</summary></details></div></div><div class="transaction-column-head" aria-hidden="true"><span>Transaction</span><span>Category</span><span>Amount</span></div><section class="transactions">
+                  <div class="transaction-row-simple"><button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Corner Shop</strong><span>Aug 10 · Local Checking</span></span></button><div class="transaction-category-cell"><button class="category-chip empty" type="button">+ Categorize</button></div><strong class="transaction-amount negative">-$18.75</strong></div>
+                  <div class="transaction-row-simple"><button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Cedar Cafe</strong><span>Aug 8 · Local Credit Card</span></span></button><div class="transaction-category-cell"><button class="category-chip" type="button"><span class="category-summary">Restaurants</span></button></div><strong class="transaction-amount negative">-$42</strong></div>
+                  <div class="transaction-row-simple"><button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Local Market</strong><span>Aug 5 · Local Checking</span></span></button><div class="transaction-category-cell"><button class="category-chip" type="button"><span class="category-summary">Groceries</span></button></div><strong class="transaction-amount negative">-$125.50</strong></div>
+                  <div class="transaction-row-simple is-selected"><button aria-pressed="true" class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Contoso Payroll</strong><span>Aug 1 · Local Checking</span></span></button><div class="transaction-category-cell"><button class="category-chip" type="button"><span class="category-summary">Ben Pay</span></button></div><strong class="transaction-amount positive">+$7,000</strong></div>
+                </section></section>
+              </section>
+            </main>
+            <footer class="statusline"><div><strong>EDIT</strong><span>transaction / category</span></div><div><span><kbd>/</kbd> search</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span><span><kbd>c</kbd> category</span><span><kbd>enter</kbd> select</span><span><kbd>esc</kbd> cancel</span></div></footer>
+          </div>
+        </div>
+      </section>
+
+      <section class="review-frame" id="no-transactions">
+        <header class="review-frame__head">
+          <div><p class="eyebrow">11 / empty</p><h2>No transactions</h2></div>
+          <p class="review-frame__meta">Successful empty dataset · the current panel reuses the same no-match copy as search/filter empty states</p>
+        </header>
+        <div class="review-frame__viewport">
+          <div class="authenticated-app terminal-app command-closed screen-app theme-dark">
+            <header class="titlebar">
+              <button class="brand" type="button"><span class="brand-mark">pb</span><span>perfectly-balanced</span></button>
+              <p>August 2026 · Personal budget</p>
+              <div class="theme-switcher" role="group" aria-label="Theme">
+                <input checked id="no-transactions-theme-dark" name="no-transactions-theme" type="radio" />
+                <label for="no-transactions-theme-dark">Dark</label>
+                <input id="no-transactions-theme-light" name="no-transactions-theme" type="radio" />
+                <label for="no-transactions-theme-light">Light</label>
+              </div>
+              <details class="profile">
+                <summary><span>D</span>dev</summary>
+                <div class="account-popover"><strong>dev@example.test</strong><button class="button button--secondary" type="button">Sign out</button></div>
+              </details>
+            </header>
+            <aside class="sidebar" aria-label="Application navigation">
+              <nav class="main-nav">
+                <button class="nav-item" type="button"><span>Budget</span></button>
+                <button class="nav-item is-active" aria-current="page" type="button"><span>Transactions</span><strong>0</strong></button>
+                <button class="nav-item" type="button"><span>Reports</span></button>
+              </nav>
+            </aside>
+            <main class="workspace">
+              <section class="page transactions-page transactions-page--terminal">
+                <header class="workspace-head workspace-head--compact"><div><p class="eyebrow">Transaction stream / all accounts</p><h1>Transactions</h1><p class="subtle">Search, filter, sort, and categorize every imported transaction from one simple queue.</p></div><span class="terminal-pill terminal-pill--warning">0 uncategorized</span></header>
+                <section class="summary"><div><span>All activity</span><strong>0</strong></div><div><span>August 2026 activity</span><strong>0</strong></div><div><span>Categorized</span><strong class="available">0</strong></div><div><span>Needs review</span><strong class="warning">0</strong></div></section>
+                <section class="budget-table transaction-table"><div class="table-head"><div><p class="eyebrow">Imported activity</p><h2>Every account, one queue</h2></div></div><div class="data-toolbar"><button class="terminal-button transaction-search-trigger" type="button"><kbd>/</kbd> Search transactions</button><div class="toolbar-group transaction-tools"><details class="filter-wrap"><summary class="terminal-button pill-button">Filter</summary></details><details class="filter-wrap"><summary class="terminal-button pill-button">Newest first</summary></details></div></div><div class="transaction-column-head" aria-hidden="true"><span>Transaction</span><span>Category</span><span>Amount</span></div><section class="transactions"><div class="empty-state">No transactions match the current search and filters.</div></section></section>
+              </section>
+            </main>
+            <footer class="statusline"><div><strong>EDIT</strong><span>transaction / category</span></div><div><span><kbd>/</kbd> search</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span><span><kbd>c</kbd> category</span><span><kbd>enter</kbd> select</span><span><kbd>esc</kbd> cancel</span></div></footer>
+          </div>
+        </div>
+      </section>
+
+      <section class="review-frame" id="category-all">
+        <header class="review-frame__head">
+          <div><p class="eyebrow">12 / category</p><h2>Picker with all categories</h2></div>
+          <p class="review-frame__meta">Cedar Cafe selected · empty query · alphabetized category options</p>
+        </header>
+        <div class="review-frame__viewport">
+          <div class="authenticated-app terminal-app command-closed screen-app theme-dark">
+            <header class="titlebar">
+              <button class="brand" type="button"><span class="brand-mark">pb</span><span>perfectly-balanced</span></button>
+              <p>August 2026 · Personal budget</p>
+              <div class="theme-switcher" role="group" aria-label="Theme">
+                <input checked id="category-all-theme-dark" name="category-all-theme" type="radio" />
+                <label for="category-all-theme-dark">Dark</label>
+                <input id="category-all-theme-light" name="category-all-theme" type="radio" />
+                <label for="category-all-theme-light">Light</label>
+              </div>
+              <details class="profile">
+                <summary><span>D</span>dev</summary>
+                <div class="account-popover"><strong>dev@example.test</strong><button class="button button--secondary" type="button">Sign out</button></div>
+              </details>
+            </header>
+            <aside class="sidebar" aria-label="Application navigation">
+              <nav class="main-nav">
+                <button class="nav-item" type="button"><span>Budget</span></button>
+                <button class="nav-item is-active" aria-current="page" type="button"><span>Transactions</span><strong>1</strong></button>
+                <button class="nav-item" type="button"><span>Reports</span></button>
+              </nav>
+            </aside>
+            <main class="workspace">
+              <section class="page transactions-page transactions-page--terminal">
+                <header class="workspace-head workspace-head--compact"><div><p class="eyebrow">Transaction stream / all accounts</p><h1>Transactions</h1><p class="subtle">Search, filter, sort, and categorize every imported transaction from one simple queue.</p></div><span class="terminal-pill terminal-pill--warning">1 uncategorized</span></header>
+                <section class="summary"><div><span>All activity</span><strong>4</strong></div><div><span>August 2026 activity</span><strong>4</strong></div><div><span>Categorized</span><strong class="available">3</strong></div><div><span>Needs review</span><strong class="warning">1</strong></div></section>
+                <section class="budget-table transaction-table"><div class="table-head"><div><p class="eyebrow">Imported activity</p><h2>Every account, one queue</h2></div></div><div class="data-toolbar"><button class="terminal-button transaction-search-trigger" type="button"><kbd>/</kbd> Search transactions</button><div class="toolbar-group transaction-tools"><details class="filter-wrap"><summary class="terminal-button pill-button">Filter</summary></details><details class="filter-wrap"><summary class="terminal-button pill-button">Newest first</summary></details></div></div><div class="transaction-column-head" aria-hidden="true"><span>Transaction</span><span>Category</span><span>Amount</span></div><section class="transactions">
+                  <div class="transaction-row-simple"><button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Corner Shop</strong><span>Aug 10 · Local Checking</span></span></button><div class="transaction-category-cell"><button class="category-chip empty" type="button">+ Categorize</button></div><strong class="transaction-amount negative">-$18.75</strong></div>
+                  <div class="transaction-row-simple is-selected"><button aria-pressed="true" class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Cedar Cafe</strong><span>Aug 8 · Local Credit Card</span></span></button><div class="transaction-category-editor"><input aria-label="Choose a category for Cedar Cafe" class="category-search-input" placeholder="Search categories" /><div aria-label="All categories" class="category-search-menu" role="listbox"><button class="is-highlighted" role="option" type="button">Ben Pay</button><button role="option" type="button">Groceries</button><button role="option" type="button">Internet</button><button role="option" type="button">Katie Pay</button><button role="option" type="button">Restaurants</button><button role="option" type="button">YouTube Premium</button></div></div><strong class="transaction-amount negative">-$42</strong></div>
+                  <div class="transaction-row-simple"><button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Local Market</strong><span>Aug 5 · Local Checking</span></span></button><div class="transaction-category-cell"><button class="category-chip" type="button"><span class="category-summary">Groceries</span></button></div><strong class="transaction-amount negative">-$125.50</strong></div>
+                  <div class="transaction-row-simple"><button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Contoso Payroll</strong><span>Aug 1 · Local Checking</span></span></button><div class="transaction-category-cell"><button class="category-chip" type="button"><span class="category-summary">Ben Pay</span></button></div><strong class="transaction-amount positive">+$7,000</strong></div>
+                </section></section>
+              </section>
+            </main>
+            <footer class="statusline"><div><strong>EDIT</strong><span>transaction / category</span></div><div><span><kbd>/</kbd> search</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span><span><kbd>c</kbd> category</span><span><kbd>enter</kbd> select</span><span><kbd>esc</kbd> cancel</span></div></footer>
+          </div>
+        </div>
+      </section>
+
+      <section class="review-frame" id="category-filtered">
+        <header class="review-frame__head">
+          <div><p class="eyebrow">13 / category</p><h2>Filtered picker with create option</h2></div>
+          <p class="review-frame__meta">Query “pay” · two matches plus create action</p>
+        </header>
+        <div class="review-frame__viewport">
+          <div class="authenticated-app terminal-app command-closed screen-app theme-dark">
+            <header class="titlebar">
+              <button class="brand" type="button"><span class="brand-mark">pb</span><span>perfectly-balanced</span></button>
+              <p>August 2026 · Personal budget</p>
+              <div class="theme-switcher" role="group" aria-label="Theme">
+                <input checked id="category-filtered-theme-dark" name="category-filtered-theme" type="radio" />
+                <label for="category-filtered-theme-dark">Dark</label>
+                <input id="category-filtered-theme-light" name="category-filtered-theme" type="radio" />
+                <label for="category-filtered-theme-light">Light</label>
+              </div>
+              <details class="profile">
+                <summary><span>D</span>dev</summary>
+                <div class="account-popover"><strong>dev@example.test</strong><button class="button button--secondary" type="button">Sign out</button></div>
+              </details>
+            </header>
+            <aside class="sidebar" aria-label="Application navigation">
+              <nav class="main-nav">
+                <button class="nav-item" type="button"><span>Budget</span></button>
+                <button class="nav-item is-active" aria-current="page" type="button"><span>Transactions</span><strong>1</strong></button>
+                <button class="nav-item" type="button"><span>Reports</span></button>
+              </nav>
+            </aside>
+            <main class="workspace">
+              <section class="page transactions-page transactions-page--terminal">
+                <header class="workspace-head workspace-head--compact"><div><p class="eyebrow">Transaction stream / all accounts</p><h1>Transactions</h1><p class="subtle">Search, filter, sort, and categorize every imported transaction from one simple queue.</p></div><span class="terminal-pill terminal-pill--warning">1 uncategorized</span></header>
+                <section class="summary"><div><span>All activity</span><strong>4</strong></div><div><span>August 2026 activity</span><strong>4</strong></div><div><span>Categorized</span><strong class="available">3</strong></div><div><span>Needs review</span><strong class="warning">1</strong></div></section>
+                <section class="budget-table transaction-table"><div class="table-head"><div><p class="eyebrow">Imported activity</p><h2>Every account, one queue</h2></div></div><div class="data-toolbar"><button class="terminal-button transaction-search-trigger" type="button"><kbd>/</kbd> Search transactions</button><div class="toolbar-group transaction-tools"><details class="filter-wrap"><summary class="terminal-button pill-button">Filter</summary></details><details class="filter-wrap"><summary class="terminal-button pill-button">Newest first</summary></details></div></div><div class="transaction-column-head" aria-hidden="true"><span>Transaction</span><span>Category</span><span>Amount</span></div><section class="transactions">
+                  <div class="transaction-row-simple"><button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Corner Shop</strong><span>Aug 10 · Local Checking</span></span></button><div class="transaction-category-cell"><button class="category-chip empty" type="button">+ Categorize</button></div><strong class="transaction-amount negative">-$18.75</strong></div>
+                  <div class="transaction-row-simple is-selected"><button aria-pressed="true" class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Cedar Cafe</strong><span>Aug 8 · Local Credit Card</span></span></button><div class="transaction-category-editor"><input aria-label="Choose a category for Cedar Cafe" class="category-search-input" value="pay" /><div aria-label="Categories matching pay" class="category-search-menu" role="listbox"><button class="is-highlighted" role="option" type="button">Ben Pay</button><button role="option" type="button">Katie Pay</button><button class="category-search-menu__create" role="option" type="button">+ Create “pay”</button></div></div><strong class="transaction-amount negative">-$42</strong></div>
+                  <div class="transaction-row-simple"><button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Local Market</strong><span>Aug 5 · Local Checking</span></span></button><div class="transaction-category-cell"><button class="category-chip" type="button"><span class="category-summary">Groceries</span></button></div><strong class="transaction-amount negative">-$125.50</strong></div>
+                  <div class="transaction-row-simple"><button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Contoso Payroll</strong><span>Aug 1 · Local Checking</span></span></button><div class="transaction-category-cell"><button class="category-chip" type="button"><span class="category-summary">Ben Pay</span></button></div><strong class="transaction-amount positive">+$7,000</strong></div>
+                </section></section>
+              </section>
+            </main>
+            <footer class="statusline"><div><strong>EDIT</strong><span>transaction / category</span></div><div><span><kbd>/</kbd> search</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span><span><kbd>c</kbd> category</span><span><kbd>enter</kbd> select</span><span><kbd>esc</kbd> cancel</span></div></footer>
+          </div>
+        </div>
+      </section>
+
+      <section class="review-frame" id="category-saving">
+        <header class="review-frame__head">
+          <div><p class="eyebrow">14 / category</p><h2>Saving transient</h2></div>
+          <p class="review-frame__meta">Source-derived in-flight state while “Create pay” disables the picker before the footer returns to the same EDIT context</p>
+        </header>
+        <div class="review-frame__viewport">
+          <div class="authenticated-app terminal-app command-closed screen-app theme-dark">
+            <header class="titlebar">
+              <button class="brand" type="button"><span class="brand-mark">pb</span><span>perfectly-balanced</span></button>
+              <p>August 2026 · Personal budget</p>
+              <div class="theme-switcher" role="group" aria-label="Theme">
+                <input checked id="category-saving-theme-dark" name="category-saving-theme" type="radio" />
+                <label for="category-saving-theme-dark">Dark</label>
+                <input id="category-saving-theme-light" name="category-saving-theme" type="radio" />
+                <label for="category-saving-theme-light">Light</label>
+              </div>
+              <details class="profile">
+                <summary><span>D</span>dev</summary>
+                <div class="account-popover"><strong>dev@example.test</strong><button class="button button--secondary" type="button">Sign out</button></div>
+              </details>
+            </header>
+            <aside class="sidebar" aria-label="Application navigation">
+              <nav class="main-nav">
+                <button class="nav-item" type="button"><span>Budget</span></button>
+                <button class="nav-item is-active" aria-current="page" type="button"><span>Transactions</span><strong>1</strong></button>
+                <button class="nav-item" type="button"><span>Reports</span></button>
+              </nav>
+            </aside>
+            <main class="workspace">
+              <section class="page transactions-page transactions-page--terminal">
+                <header class="workspace-head workspace-head--compact"><div><p class="eyebrow">Transaction stream / all accounts</p><h1>Transactions</h1><p class="subtle">Search, filter, sort, and categorize every imported transaction from one simple queue.</p></div><span class="terminal-pill terminal-pill--warning">1 uncategorized</span></header>
+                <section class="summary"><div><span>All activity</span><strong>4</strong></div><div><span>August 2026 activity</span><strong>4</strong></div><div><span>Categorized</span><strong class="available">3</strong></div><div><span>Needs review</span><strong class="warning">1</strong></div></section>
+                <section class="budget-table transaction-table"><div class="table-head"><div><p class="eyebrow">Imported activity</p><h2>Every account, one queue</h2></div></div><div class="data-toolbar"><button class="terminal-button transaction-search-trigger" type="button"><kbd>/</kbd> Search transactions</button><div class="toolbar-group transaction-tools"><details class="filter-wrap"><summary class="terminal-button pill-button">Filter</summary></details><details class="filter-wrap"><summary class="terminal-button pill-button">Newest first</summary></details></div></div><div class="transaction-column-head" aria-hidden="true"><span>Transaction</span><span>Category</span><span>Amount</span></div><section class="transactions">
+                  <div class="transaction-row-simple"><button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Corner Shop</strong><span>Aug 10 · Local Checking</span></span></button><div class="transaction-category-cell"><button class="category-chip empty" type="button">+ Categorize</button></div><strong class="transaction-amount negative">-$18.75</strong></div>
+                  <div class="transaction-row-simple is-selected"><button aria-pressed="true" class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Cedar Cafe</strong><span>Aug 8 · Local Credit Card</span></span></button><div class="transaction-category-editor"><input aria-label="Choose a category for Cedar Cafe" class="category-search-input" disabled value="pay" /><div aria-label="Categories matching pay" class="category-search-menu" role="listbox"><button disabled role="option" type="button">Ben Pay</button><button disabled role="option" type="button">Katie Pay</button><button class="category-search-menu__create is-highlighted" disabled role="option" type="button">+ Create “pay”</button></div></div><strong class="transaction-amount negative">-$42</strong></div>
+                  <div class="transaction-row-simple"><button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Local Market</strong><span>Aug 5 · Local Checking</span></span></button><div class="transaction-category-cell"><button class="category-chip" type="button"><span class="category-summary">Groceries</span></button></div><strong class="transaction-amount negative">-$125.50</strong></div>
+                  <div class="transaction-row-simple"><button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Contoso Payroll</strong><span>Aug 1 · Local Checking</span></span></button><div class="transaction-category-cell"><button class="category-chip" type="button"><span class="category-summary">Ben Pay</span></button></div><strong class="transaction-amount positive">+$7,000</strong></div>
+                </section></section>
+              </section>
+            </main>
+            <footer class="statusline"><div><strong>EDIT</strong><span>transaction / category</span></div><div><span><kbd>/</kbd> search</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span><span><kbd>c</kbd> category</span><span><kbd>enter</kbd> select</span><span><kbd>esc</kbd> cancel</span></div></footer>
+          </div>
+        </div>
+      </section>
+
+      <section class="review-frame" id="category-error">
+        <header class="review-frame__head">
+          <div><p class="eyebrow">15 / category</p><h2>Category save error</h2></div>
+          <p class="review-frame__meta">Representative raw backend/network text · picker stays open and the stale Restaurants assignment remains the persisted seed state underneath</p>
+        </header>
+        <div class="review-frame__viewport">
+          <div class="authenticated-app terminal-app command-closed screen-app theme-dark">
+            <header class="titlebar">
+              <button class="brand" type="button"><span class="brand-mark">pb</span><span>perfectly-balanced</span></button>
+              <p>August 2026 · Personal budget</p>
+              <div class="theme-switcher" role="group" aria-label="Theme">
+                <input checked id="category-error-theme-dark" name="category-error-theme" type="radio" />
+                <label for="category-error-theme-dark">Dark</label>
+                <input id="category-error-theme-light" name="category-error-theme" type="radio" />
+                <label for="category-error-theme-light">Light</label>
+              </div>
+              <details class="profile">
+                <summary><span>D</span>dev</summary>
+                <div class="account-popover"><strong>dev@example.test</strong><button class="button button--secondary" type="button">Sign out</button></div>
+              </details>
+            </header>
+            <aside class="sidebar" aria-label="Application navigation">
+              <nav class="main-nav">
+                <button class="nav-item" type="button"><span>Budget</span></button>
+                <button class="nav-item is-active" aria-current="page" type="button"><span>Transactions</span><strong>1</strong></button>
+                <button class="nav-item" type="button"><span>Reports</span></button>
+              </nav>
+            </aside>
+            <main class="workspace">
+              <section class="page transactions-page transactions-page--terminal">
+                <header class="workspace-head workspace-head--compact"><div><p class="eyebrow">Transaction stream / all accounts</p><h1>Transactions</h1><p class="subtle">Search, filter, sort, and categorize every imported transaction from one simple queue.</p></div><span class="terminal-pill terminal-pill--warning">1 uncategorized</span></header>
+                <section class="summary"><div><span>All activity</span><strong>4</strong></div><div><span>August 2026 activity</span><strong>4</strong></div><div><span>Categorized</span><strong class="available">3</strong></div><div><span>Needs review</span><strong class="warning">1</strong></div></section>
+                <section class="budget-table transaction-table"><div class="table-head"><div><p class="eyebrow">Imported activity</p><h2>Every account, one queue</h2></div></div><div class="data-toolbar"><button class="terminal-button transaction-search-trigger" type="button"><kbd>/</kbd> Search transactions</button><div class="toolbar-group transaction-tools"><details class="filter-wrap"><summary class="terminal-button pill-button">Filter</summary></details><details class="filter-wrap"><summary class="terminal-button pill-button">Newest first</summary></details></div></div><div class="transaction-column-head" aria-hidden="true"><span>Transaction</span><span>Category</span><span>Amount</span></div><section class="transactions">
+                  <div class="transaction-row-simple"><button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Corner Shop</strong><span>Aug 10 · Local Checking</span></span></button><div class="transaction-category-cell"><button class="category-chip empty" type="button">+ Categorize</button></div><strong class="transaction-amount negative">-$18.75</strong></div>
+                  <div class="transaction-row-simple is-selected"><button aria-pressed="true" class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Cedar Cafe</strong><span>Aug 8 · Local Credit Card</span></span></button><div class="transaction-category-editor"><input aria-label="Choose a category for Cedar Cafe" class="category-search-input" value="YouTube Premium" /><div aria-label="Categories matching YouTube Premium" class="category-search-menu" role="listbox"><button class="is-highlighted" role="option" type="button">YouTube Premium</button></div><p class="form-message form-message--error" role="alert">Failed to fetch</p></div><strong class="transaction-amount negative">-$42</strong></div>
+                  <div class="transaction-row-simple"><button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Local Market</strong><span>Aug 5 · Local Checking</span></span></button><div class="transaction-category-cell"><button class="category-chip" type="button"><span class="category-summary">Groceries</span></button></div><strong class="transaction-amount negative">-$125.50</strong></div>
+                  <div class="transaction-row-simple"><button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Contoso Payroll</strong><span>Aug 1 · Local Checking</span></span></button><div class="transaction-category-cell"><button class="category-chip" type="button"><span class="category-summary">Ben Pay</span></button></div><strong class="transaction-amount positive">+$7,000</strong></div>
+                </section></section>
+              </section>
+            </main>
+            <footer class="statusline"><div><strong>EDIT</strong><span>transaction / category</span></div><div><span><kbd>/</kbd> search</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span><span><kbd>c</kbd> category</span><span><kbd>enter</kbd> select</span><span><kbd>esc</kbd> cancel</span></div></footer>
+          </div>
+        </div>
+      </section>
+
+      <section class="review-frame" id="category-complete">
+        <header class="review-frame__head">
+          <div><p class="eyebrow">16 / category</p><h2>Successful categorization closes the picker</h2></div>
+          <p class="review-frame__meta">Corner Shop is the only seeded transaction whose success changes counts: categorized 4, needs review 0</p>
+        </header>
+        <div class="review-frame__viewport">
+          <div class="authenticated-app terminal-app command-closed screen-app theme-dark">
+            <header class="titlebar">
+              <button class="brand" type="button"><span class="brand-mark">pb</span><span>perfectly-balanced</span></button>
+              <p>August 2026 · Personal budget</p>
+              <div class="theme-switcher" role="group" aria-label="Theme">
+                <input checked id="category-complete-theme-dark" name="category-complete-theme" type="radio" />
+                <label for="category-complete-theme-dark">Dark</label>
+                <input id="category-complete-theme-light" name="category-complete-theme" type="radio" />
+                <label for="category-complete-theme-light">Light</label>
+              </div>
+              <details class="profile">
+                <summary><span>D</span>dev</summary>
+                <div class="account-popover"><strong>dev@example.test</strong><button class="button button--secondary" type="button">Sign out</button></div>
+              </details>
+            </header>
+            <aside class="sidebar" aria-label="Application navigation">
+              <nav class="main-nav">
+                <button class="nav-item" type="button"><span>Budget</span></button>
+                <button class="nav-item is-active" aria-current="page" type="button"><span>Transactions</span><strong>0</strong></button>
+                <button class="nav-item" type="button"><span>Reports</span></button>
+              </nav>
+            </aside>
+            <main class="workspace">
+              <section class="page transactions-page transactions-page--terminal">
+                <header class="workspace-head workspace-head--compact"><div><p class="eyebrow">Transaction stream / all accounts</p><h1>Transactions</h1><p class="subtle">Search, filter, sort, and categorize every imported transaction from one simple queue.</p></div><span class="terminal-pill terminal-pill--warning">0 uncategorized</span></header>
+                <section class="summary"><div><span>All activity</span><strong>4</strong></div><div><span>August 2026 activity</span><strong>4</strong></div><div><span>Categorized</span><strong class="available">4</strong></div><div><span>Needs review</span><strong class="warning">0</strong></div></section>
+                <section class="budget-table transaction-table"><div class="table-head"><div><p class="eyebrow">Imported activity</p><h2>Every account, one queue</h2></div></div><div class="data-toolbar"><button class="terminal-button transaction-search-trigger" type="button"><kbd>/</kbd> Search transactions</button><div class="toolbar-group transaction-tools"><details class="filter-wrap"><summary class="terminal-button pill-button">Filter</summary></details><details class="filter-wrap"><summary class="terminal-button pill-button">Newest first</summary></details></div></div><div class="transaction-column-head" aria-hidden="true"><span>Transaction</span><span>Category</span><span>Amount</span></div><section class="transactions">
+                  <div class="transaction-row-simple is-selected"><button aria-pressed="true" class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Corner Shop</strong><span>Aug 10 · Local Checking</span></span></button><div class="transaction-category-cell"><button class="category-chip" type="button"><span class="category-summary">Groceries</span></button></div><strong class="transaction-amount negative">-$18.75</strong></div>
+                  <div class="transaction-row-simple"><button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Cedar Cafe</strong><span>Aug 8 · Local Credit Card</span></span></button><div class="transaction-category-cell"><button class="category-chip" type="button"><span class="category-summary">Restaurants</span></button></div><strong class="transaction-amount negative">-$42</strong></div>
+                  <div class="transaction-row-simple"><button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Local Market</strong><span>Aug 5 · Local Checking</span></span></button><div class="transaction-category-cell"><button class="category-chip" type="button"><span class="category-summary">Groceries</span></button></div><strong class="transaction-amount negative">-$125.50</strong></div>
+                  <div class="transaction-row-simple"><button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Contoso Payroll</strong><span>Aug 1 · Local Checking</span></span></button><div class="transaction-category-cell"><button class="category-chip" type="button"><span class="category-summary">Ben Pay</span></button></div><strong class="transaction-amount positive">+$7,000</strong></div>
+                </section></section>
+              </section>
+            </main>
+            <footer class="statusline"><div><strong>EDIT</strong><span>transaction / category</span></div><div><span><kbd>/</kbd> search</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span><span><kbd>c</kbd> category</span><span><kbd>enter</kbd> select</span><span><kbd>esc</kbd> cancel</span></div></footer>
+          </div>
+        </div>
+      </section>
+
+      <section class="review-frame" id="non-usd">
+        <header class="review-frame__head">
+          <div><p class="eyebrow">17 / source-derived</p><h2>Unsupported-currency categorization</h2></div>
+          <p class="review-frame__meta">Source-derived non-USD demonstration only: the current August seed is USD-only, and this light-theme frame shows the live Dark/Light titlebar switcher</p>
+        </header>
+        <div class="review-frame__viewport">
+          <div class="authenticated-app terminal-app command-closed screen-app theme-light">
+            <header class="titlebar">
+              <button class="brand" type="button"><span class="brand-mark">pb</span><span>perfectly-balanced</span></button>
+              <p>August 2026 · Personal budget</p>
+              <div class="theme-switcher" role="group" aria-label="Theme">
+                <input id="non-usd-theme-dark" name="non-usd-theme" type="radio" />
+                <label for="non-usd-theme-dark">Dark</label>
+                <input checked id="non-usd-theme-light" name="non-usd-theme" type="radio" />
+                <label for="non-usd-theme-light">Light</label>
+              </div>
+              <details class="profile">
+                <summary><span>D</span>dev</summary>
+                <div class="account-popover"><strong>dev@example.test</strong><button class="button button--secondary" type="button">Sign out</button></div>
+              </details>
+            </header>
+            <aside class="sidebar" aria-label="Application navigation">
+              <nav class="main-nav">
+                <button class="nav-item" type="button"><span>Budget</span></button>
+                <button class="nav-item is-active" aria-current="page" type="button"><span>Transactions</span><strong>1</strong></button>
+                <button class="nav-item" type="button"><span>Reports</span></button>
+              </nav>
+            </aside>
+            <main class="workspace">
+              <section class="page transactions-page transactions-page--terminal">
+                <header class="workspace-head workspace-head--compact"><div><p class="eyebrow">Transaction stream / all accounts</p><h1>Transactions</h1><p class="subtle">Search, filter, sort, and categorize every imported transaction from one simple queue.</p></div><span class="terminal-pill terminal-pill--warning">1 uncategorized</span></header>
+                <section class="summary"><div><span>All activity</span><strong>4</strong></div><div><span>August 2026 activity</span><strong>4</strong></div><div><span>Categorized</span><strong class="available">3</strong></div><div><span>Needs review</span><strong class="warning">1</strong></div></section>
+                <section class="budget-table transaction-table"><div class="table-head"><div><p class="eyebrow">Imported activity</p><h2>Every account, one queue</h2></div></div><div class="data-toolbar"><button class="terminal-button transaction-search-trigger" type="button"><kbd>/</kbd> Search transactions</button><div class="toolbar-group transaction-tools"><details class="filter-wrap"><summary class="terminal-button pill-button">Filter</summary></details><details class="filter-wrap"><summary class="terminal-button pill-button">Newest first</summary></details></div></div><div class="transaction-column-head" aria-hidden="true"><span>Transaction</span><span>Category</span><span>Amount</span></div><section class="transactions">
+                  <div class="transaction-row-simple is-selected"><button aria-pressed="true" class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Toronto Rail</strong><span>Aug 10 · Travel Card</span></span></button><div class="transaction-category-cell"><button aria-label="Only USD transactions can be categorized." class="category-chip empty" disabled type="button">+ Categorize</button><span class="form-message form-message--error" role="status">Only USD transactions can be categorized.</span></div><strong class="transaction-amount negative">-CA$48.50</strong></div>
+                  <div class="transaction-row-simple"><button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Cedar Cafe</strong><span>Aug 8 · Local Credit Card</span></span></button><div class="transaction-category-cell"><button class="category-chip" type="button"><span class="category-summary">Restaurants</span></button></div><strong class="transaction-amount negative">-$42</strong></div>
+                  <div class="transaction-row-simple"><button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Local Market</strong><span>Aug 5 · Local Checking</span></span></button><div class="transaction-category-cell"><button class="category-chip" type="button"><span class="category-summary">Groceries</span></button></div><strong class="transaction-amount negative">-$125.50</strong></div>
+                  <div class="transaction-row-simple"><button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Contoso Payroll</strong><span>Aug 1 · Local Checking</span></span></button><div class="transaction-category-cell"><button class="category-chip" type="button"><span class="category-summary">Ben Pay</span></button></div><strong class="transaction-amount positive">+$7,000</strong></div>
+                </section></section>
+              </section>
+            </main>
+            <footer class="statusline"><div><strong>EDIT</strong><span>transaction / category</span></div><div><span><kbd>/</kbd> search</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span><span><kbd>c</kbd> category</span><span><kbd>enter</kbd> select</span><span><kbd>esc</kbd> cancel</span></div></footer>
+          </div>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
