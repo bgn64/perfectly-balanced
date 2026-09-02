@@ -7,10 +7,10 @@ import {
   type Dispatch,
   type FocusEvent as ReactFocusEvent,
   type KeyboardEvent as ReactKeyboardEvent,
-  type RefObject,
   type SetStateAction,
 } from 'react'
 import { useAuth } from '../auth/useAuth.ts'
+import { CategoryCombobox } from '../finance/CategoryCombobox.tsx'
 import type {
   Budget,
   Category,
@@ -124,7 +124,6 @@ export function TransactionsPanel({
   const [editingTransactionId, setEditingTransactionId] = useState<
     string | null
   >(null)
-  const [pickerError, setPickerError] = useState<string | null>(null)
   const [categoryNotice, setCategoryNotice] = useState<string | null>(null)
   const [isSavingCategories, setIsSavingCategories] = useState(false)
   const requestGeneration = useRef(0)
@@ -315,7 +314,6 @@ export function TransactionsPanel({
     selectedTransactionIdRef.current = transaction.id
     setSelectedTransactionId(transaction.id)
     setEditingTransactionId(null)
-    setPickerError(null)
     setCategoryNotice(
       transaction.currency_code === 'USD' ? null : nonUsdCategoryMessage,
     )
@@ -412,12 +410,10 @@ export function TransactionsPanel({
       if (transaction.currency_code !== 'USD') {
         setEditingTransactionId(null)
         setCategoryNotice(nonUsdCategoryMessage)
-        setPickerError(nonUsdCategoryMessage)
         return
       }
       if (editingTransactionId !== transaction.id) {
         setEditingTransactionId(transaction.id)
-        setPickerError(null)
       }
       focusPickerSearch()
     },
@@ -539,12 +535,10 @@ export function TransactionsPanel({
       return
     }
     if (transaction.currency_code !== 'USD') {
-      setPickerError(nonUsdCategoryMessage)
-      return
+      throw new Error(nonUsdCategoryMessage)
     }
 
     setIsSavingCategories(true)
-    setPickerError(null)
     try {
       const { error } = await getSupabaseClient().rpc(
         'replace_transaction_category_splits',
@@ -554,24 +548,16 @@ export function TransactionsPanel({
         },
       )
       if (error) {
-        setPickerError(error.message)
-        return
+        throw new Error(error.message)
       }
       const didRefresh = await refreshTransactions()
       if (!didRefresh) {
-        setPickerError(
+        throw new Error(
           'The category changes were saved, but transactions could not be refreshed.',
         )
-        return
       }
       onTransactionsChanged()
       setEditingTransactionId(null)
-    } catch (error) {
-      setPickerError(
-        error instanceof Error
-          ? error.message
-          : 'The category changes could not be saved.',
-      )
     } finally {
       setIsSavingCategories(false)
     }
@@ -579,7 +565,6 @@ export function TransactionsPanel({
 
   function cancelCategoryPicker(transactionId: string) {
     setEditingTransactionId(null)
-    setPickerError(null)
     window.requestAnimationFrame(() => {
       transactionButtonRefs.current.get(transactionId)?.focus({
         preventScroll: true,
@@ -892,15 +877,28 @@ export function TransactionsPanel({
                     </span>
                   </button>
                   {isEditing ? (
-                    <CategorySingleSelectPicker
+                    <CategoryCombobox
+                      autoFocus
                       categories={categories}
+                      className="transaction-category-editor"
                       disabled={isSavingCategories}
-                      errorMessage={pickerError}
                       inputRef={pickerSearchInputRef}
-                      transaction={transaction}
+                      label={`Choose a category for ${transactionDescription(transaction)}`}
+                      menuLabel={(query) =>
+                        query.trim()
+                          ? `Categories matching ${query.trim()}`
+                          : 'All categories'
+                      }
+                      placeholder="Search categories"
+                      semanticContext={{
+                        createAction: 'create-transaction-category',
+                        idPrefix: `transaction-category-picker-${transaction.id}`,
+                        inputAction: 'search-transaction-categories',
+                        optionAction: 'select-transaction-category',
+                        statusLabel: transactionDescription(transaction),
+                      }}
                       onCreate={createCategory}
                       onCancel={() => cancelCategoryPicker(transaction.id)}
-                      onError={setPickerError}
                       onSelect={(category) => saveCategory(transaction, category)}
                     />
                   ) : (
@@ -963,221 +961,6 @@ export function TransactionsPanel({
 
 function CategorySummary({ categoryNames }: { categoryNames: string[] }) {
   return <span className="category-summary">{categoryNames.join(', ')}</span>
-}
-
-type ActivePickerOption = string | 'create' | null
-
-function CategorySingleSelectPicker({
-  categories,
-  disabled,
-  errorMessage,
-  inputRef,
-  transaction,
-  onCreate,
-  onCancel,
-  onError,
-  onSelect,
-}: {
-  categories: Category[]
-  disabled: boolean
-  errorMessage: string | null
-  inputRef: RefObject<HTMLInputElement | null>
-  transaction: Transaction
-  onCreate: (name: string) => Promise<Category>
-  onCancel: () => void
-  onError: (error: string | null) => void
-  onSelect: (category: Category) => Promise<void>
-}) {
-  const [query, setQuery] = useState('')
-  const [activeOption, setActiveOption] = useState<ActivePickerOption>(null)
-  const [activeQuery, setActiveQuery] = useState('')
-  const [isCreating, setIsCreating] = useState(false)
-  const normalizedQuery = query.trim().toLocaleLowerCase()
-  const matchingCategories = useMemo(
-    () =>
-      normalizedQuery
-        ? categories.filter((category) =>
-            category.name.toLocaleLowerCase().includes(normalizedQuery),
-          )
-        : categories,
-    [categories, normalizedQuery],
-  )
-  const canCreate =
-    normalizedQuery.length > 0 &&
-    !categories.some(
-      (category) => category.name.trim().toLocaleLowerCase() === normalizedQuery,
-    )
-  const createOption: ActivePickerOption[] = canCreate ? ['create'] : []
-  const pickerOptionIds: ActivePickerOption[] = [
-    ...matchingCategories.map((category) => category.id),
-    ...createOption,
-  ]
-  const activeOptionIsAvailable = pickerOptionIds.includes(activeOption)
-  const effectiveActiveOption =
-    activeQuery === normalizedQuery && activeOptionIsAvailable
-      ? activeOption
-      : (pickerOptionIds[0] ?? null)
-
-  async function createFromQuery() {
-    const name = query.trim()
-    if (!name || !canCreate || disabled || isCreating) {
-      return
-    }
-    setIsCreating(true)
-    onError(null)
-    try {
-      const category = await onCreate(name)
-      await onSelect(category)
-    } catch (error) {
-      onError(
-        error instanceof Error
-          ? error.message
-          : 'The category could not be created.',
-      )
-    } finally {
-      setIsCreating(false)
-    }
-  }
-
-  function moveActiveOption(direction: 1 | -1) {
-    if (pickerOptionIds.length === 0) {
-      return
-    }
-    const activeIndex = pickerOptionIds.indexOf(effectiveActiveOption)
-    const nextIndex =
-      activeIndex === -1
-        ? 0
-        : Math.max(
-            0,
-            Math.min(pickerOptionIds.length - 1, activeIndex + direction),
-          )
-    setActiveOption(pickerOptionIds[nextIndex])
-    setActiveQuery(normalizedQuery)
-  }
-
-  function handleKeyDown(event: ReactKeyboardEvent<HTMLInputElement>) {
-    if (event.key === 'Escape') {
-      event.preventDefault()
-      if (!disabled && !isCreating) {
-        onCancel()
-      }
-      return
-    }
-    const movesDown =
-      event.key === 'ArrowDown' ||
-      (event.ctrlKey && !event.shiftKey && event.key.toLocaleLowerCase() === 'n')
-    const movesUp =
-      event.key === 'ArrowUp' ||
-      (event.ctrlKey && !event.shiftKey && event.key.toLocaleLowerCase() === 'p')
-    if (movesDown || movesUp) {
-      event.preventDefault()
-      moveActiveOption(movesDown ? 1 : -1)
-      return
-    }
-    if (event.key === 'Enter') {
-      event.preventDefault()
-      if (effectiveActiveOption === 'create') {
-        void createFromQuery()
-        return
-      }
-      const category = matchingCategories.find(
-        (candidate) => candidate.id === effectiveActiveOption,
-      )
-      if (category) {
-        void onSelect(category)
-      }
-    }
-  }
-
-  const transactionLabel = transactionDescription(transaction)
-
-  return (
-    <div className="transaction-category-editor">
-      <input
-        aria-activedescendant={
-          typeof effectiveActiveOption === 'string' &&
-          effectiveActiveOption !== 'create'
-            ? `transaction-category-picker-option-${transaction.id}-${effectiveActiveOption}`
-            : undefined
-        }
-        aria-label={`Choose a category for ${transactionLabel}`}
-        aria-controls={`transaction-category-picker-menu-${transaction.id}`}
-        className="category-search-input"
-        data-semantic-id={`transaction-category-picker-search-${transaction.id}`}
-        data-semantic-kind="category-picker-search"
-        data-semantic-region="workspace"
-        data-semantic-status-action="search-transaction-categories"
-        data-semantic-status-label={transactionLabel}
-        disabled={disabled || isCreating}
-        placeholder="Search categories"
-        ref={inputRef}
-        type="text"
-        value={query}
-        onChange={(event) => {
-          setQuery(event.target.value)
-          setActiveQuery('')
-          onError(null)
-        }}
-        onKeyDown={handleKeyDown}
-      />
-      <div
-        aria-label={
-          normalizedQuery
-            ? `Categories matching ${query.trim()}`
-            : 'All categories'
-        }
-        className="category-search-menu"
-        id={`transaction-category-picker-menu-${transaction.id}`}
-        role="listbox"
-      >
-        {matchingCategories.map((category) => {
-          const isActive = category.id === effectiveActiveOption
-          return (
-            <button
-              aria-selected={isActive}
-              className={isActive ? 'is-highlighted' : ''}
-              data-semantic-id={`transaction-category-picker-option-${transaction.id}-${category.id}`}
-              data-semantic-kind="category-picker-option"
-              data-semantic-region="workspace"
-              data-semantic-status-action="select-transaction-category"
-              data-semantic-status-label={`${transactionLabel}: ${category.name}`}
-              disabled={disabled || isCreating}
-              id={`transaction-category-picker-option-${transaction.id}-${category.id}`}
-              key={category.id}
-              role="option"
-              type="button"
-              onClick={() => void onSelect(category)}
-            >
-              {category.name}
-            </button>
-          )
-        })}
-        {canCreate && (
-          <button
-            className={`category-search-menu__create${
-              effectiveActiveOption === 'create' ? ' is-highlighted' : ''
-            }`}
-            data-semantic-id={`transaction-category-picker-create-${transaction.id}`}
-            data-semantic-kind="category-picker-create"
-            data-semantic-region="workspace"
-            data-semantic-status-action="create-transaction-category"
-            data-semantic-status-label={`${transactionLabel}: ${query.trim()}`}
-            disabled={disabled || isCreating}
-            role="option"
-            type="button"
-            onClick={() => void createFromQuery()}
-          >
-          {`+ Create “${query.trim()}”`}
-          </button>
-        )}
-      </div>
-      {errorMessage && (
-        <p className="form-message form-message--error" role="alert">
-          {errorMessage}
-        </p>
-      )}
-    </div>
-  )
 }
 
 function FilterChip({

@@ -421,8 +421,7 @@ h3 {
   gap: 0.35rem;
 }
 
-.month-controls button,
-.new-category {
+.month-controls button {
   border: 1px solid #414868;
   border-radius: 0.3rem;
   background: #24283b;
@@ -433,8 +432,7 @@ h3 {
   padding: 0.45rem 0.55rem;
 }
 
-.month-controls button:hover,
-.new-category:hover {
+.month-controls button:hover {
   border-color: #7aa2f7;
   background: #292e42;
   color: #c0caf5;
@@ -492,16 +490,6 @@ h3 {
 .table-head {
   padding: 1rem;
   border-bottom: 1px solid #3b4261;
-}
-
-.new-category {
-  padding: 0.45rem 0.65rem;
-  font-size: 0.69rem;
-}
-
-.new-category > span {
-  color: #9ece6a;
-  font-size: 1rem;
 }
 
 .column-head,
@@ -1193,8 +1181,7 @@ body:has(#theme-light:checked) {
 
 .terminal-app:has(#theme-light:checked) .budget-group header,
 .terminal-app:has(#theme-light:checked) .direction-tag,
-.terminal-app:has(#theme-light:checked) .month-controls button,
-.terminal-app:has(#theme-light:checked) .new-category {
+.terminal-app:has(#theme-light:checked) .month-controls button {
   border-color: #a1a6b5;
   background: #dfe0e6;
   color: #343b58;
@@ -1435,8 +1422,8 @@ input:focus-visible {
     gap: 0.5rem;
   }
 
-  .column-head span:nth-child(3),
-  .budget-row span:nth-child(3) {
+  .column-head > span:nth-child(3),
+  .budget-row > span:nth-child(3) {
     display: none;
   }
 
@@ -3564,11 +3551,6 @@ body.review-page > .review-frame {
   font: inherit;
 }
 
-.category-create {
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid #3b4261;
-}
-
 .empty-state {
   padding: 2.5rem 1rem;
   color: #787c99;
@@ -3643,6 +3625,19 @@ body.review-page > .review-frame {
   width: 2px;
   background: #7aa2f7;
   content: "";
+}
+
+.pending-budget-entry:has(.pending-budget-category-combobox) {
+  z-index: 2;
+}
+
+.pending-budget-category-combobox {
+  flex: 1 1 14rem;
+  min-width: 0;
+}
+
+.pending-budget-category-combobox .combo-menu {
+  min-width: 14rem;
 }
 
 .pending-budget-subsection {

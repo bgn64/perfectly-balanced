@@ -719,6 +719,10 @@ details > summary::-webkit-details-marker {
   width: 100%;
 }
 
+.transaction-category-editor {
+  min-width: 0;
+}
+
 .category-combobox > input,
 .search input,
 .subsection-add input,
@@ -2180,7 +2184,21 @@ summary:focus-visible {
   position: relative;
 }
 
-.authenticated-app.terminal-app .pending-budget-name-input {
+.authenticated-app.terminal-app .pending-budget-entry:has(.pending-budget-category-combobox) {
+  z-index: 2;
+}
+
+.authenticated-app.terminal-app .pending-budget-category-combobox {
+  min-width: 0;
+  flex: 1 1 14rem;
+}
+
+.authenticated-app.terminal-app .pending-budget-category-combobox .combo-menu {
+  min-width: 14rem;
+}
+
+.authenticated-app.terminal-app .pending-budget-name-input,
+.authenticated-app.terminal-app .pending-budget-category-combobox > input {
   min-width: 0;
   flex: 1;
   border: 1px solid #7dcfff;
@@ -2193,7 +2211,8 @@ summary:focus-visible {
   outline: 1px solid #7aa2f7;
 }
 
-.authenticated-app.terminal-app .pending-budget-name-input::placeholder {
+.authenticated-app.terminal-app .pending-budget-name-input::placeholder,
+.authenticated-app.terminal-app .pending-budget-category-combobox > input::placeholder {
   color: #787c99;
 }
 
@@ -2272,6 +2291,7 @@ summary:focus-visible {
 }
 
 .authenticated-app.terminal-app.theme-light .pending-budget-name-input,
+.authenticated-app.terminal-app.theme-light .pending-budget-category-combobox > input,
 .authenticated-app.terminal-app.theme-light .budget-action-dialog {
   border-color: #a1a6b5;
   background: #e9e9ed;
@@ -2289,6 +2309,7 @@ summary:focus-visible {
 }
 
 .authenticated-app.terminal-app.theme-light .budget-action-dialog > p,
-.authenticated-app.terminal-app.theme-light .pending-budget-name-input::placeholder {
+.authenticated-app.terminal-app.theme-light .pending-budget-name-input::placeholder,
+.authenticated-app.terminal-app.theme-light .pending-budget-category-combobox > input::placeholder {
   color: #5a5f78;
 }
