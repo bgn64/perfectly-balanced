@@ -1,16 +1,28 @@
 import { useId, useMemo, useRef, useState, type Ref } from 'react'
 import type { Category } from './types.ts'
 
+interface CategoryComboboxSemanticContext {
+  createAction: string
+  idPrefix: string
+  inputAction: string
+  optionAction: string
+  statusLabel: string
+}
+
 export function CategoryCombobox({
   autoFocus = false,
   cancelOnBlur = false,
   categories,
+  className,
   createAlternativeLabel,
   excludedCategoryIds = [],
   inputRef,
   label,
+  menuLabel,
   onCancel,
+  onQueryChange,
   placeholder = 'Search categories or enter a new name...',
+  semanticContext,
   selectedCategory,
   disabled = false,
   onCreate,
@@ -20,12 +32,16 @@ export function CategoryCombobox({
   autoFocus?: boolean
   cancelOnBlur?: boolean
   categories: Category[]
+  className?: string
   createAlternativeLabel?: (name: string) => string
   excludedCategoryIds?: string[]
   inputRef?: Ref<HTMLInputElement>
   label: string
+  menuLabel?: (query: string) => string
   onCancel?: () => void
+  onQueryChange?: (query: string) => void
   placeholder?: string
+  semanticContext?: CategoryComboboxSemanticContext
   selectedCategory?: Category
   disabled?: boolean
   onCreate: (name: string) => Promise<Category>
@@ -150,7 +166,7 @@ export function CategoryCombobox({
 
   return (
     <div
-      className="category-combobox"
+      className={`category-combobox${className ? ` ${className}` : ''}`}
       ref={containerRef}
       onBlur={(event) => {
         if (!containerRef.current?.contains(event.relatedTarget)) {
@@ -175,6 +191,13 @@ export function CategoryCombobox({
         aria-controls={`${optionIdPrefix}-listbox`}
         autoFocus={autoFocus}
         autoComplete="off"
+        data-semantic-id={
+          semanticContext ? `${semanticContext.idPrefix}-search` : undefined
+        }
+        data-semantic-kind={semanticContext ? 'category-picker-search' : undefined}
+        data-semantic-region={semanticContext ? 'workspace' : undefined}
+        data-semantic-status-action={semanticContext?.inputAction}
+        data-semantic-status-label={semanticContext?.statusLabel}
         disabled={disabled || isBusy}
         maxLength={100}
         placeholder={placeholder}
@@ -183,6 +206,7 @@ export function CategoryCombobox({
         value={query}
         onChange={(event) => {
           setQuery(event.target.value)
+          onQueryChange?.(event.target.value)
           setIsOpen(true)
           setActiveIndex(0)
           setErrorMessage(null)
@@ -210,7 +234,9 @@ export function CategoryCombobox({
             void chooseActiveOption()
           } else if (event.key === 'Escape') {
             event.preventDefault()
-            setQuery(selectedCategory?.name ?? '')
+            const resetQuery = selectedCategory?.name ?? ''
+            setQuery(resetQuery)
+            onQueryChange?.(resetQuery)
             setIsOpen(false)
             onCancel?.()
           }
@@ -218,6 +244,7 @@ export function CategoryCombobox({
       />
       {isOpen && (
         <div
+          aria-label={menuLabel?.(query) ?? label}
           className="combo-menu"
           id={`${optionIdPrefix}-listbox`}
           role="listbox"
@@ -232,6 +259,39 @@ export function CategoryCombobox({
                     ? ' combo-option--create'
                     : ' combo-option--create combo-option--budget'
               }${index === activeIndex ? ' highlighted' : ''}`}
+              data-semantic-id={
+                semanticContext
+                  ? `${semanticContext.idPrefix}-${
+                      option.kind === 'category'
+                        ? `option-${option.category.id}`
+                        : option.kind
+                    }`
+                  : undefined
+              }
+              data-semantic-kind={
+                semanticContext
+                  ? option.kind === 'category'
+                    ? 'category-picker-option'
+                    : 'category-picker-create'
+                  : undefined
+              }
+              data-semantic-region={semanticContext ? 'workspace' : undefined}
+              data-semantic-status-action={
+                semanticContext
+                  ? option.kind === 'category'
+                    ? semanticContext.optionAction
+                    : semanticContext.createAction
+                  : undefined
+              }
+              data-semantic-status-label={
+                semanticContext
+                  ? `${semanticContext.statusLabel}: ${
+                      option.kind === 'category'
+                        ? option.category.name
+                        : normalizedQuery
+                    }`
+                  : undefined
+              }
               disabled={isBusy}
               id={`${optionIdPrefix}-${option.id}`}
               key={option.id}

@@ -520,12 +520,14 @@ function AuthenticatedShell({
             : event.key === 'Escape'
             ? 'cancel'
             : (key === 'j' || key === 'k') &&
-                budgetKeyboardInteraction.mode !== 'name-entry'
+                budgetKeyboardInteraction.mode !== 'name-entry' &&
+                budgetKeyboardInteraction.mode !== 'choose-category'
               ? key === 'j'
                 ? 'next'
                 : 'previous'
               : event.key === 'Enter' &&
-                  budgetKeyboardInteraction.mode !== 'moving'
+                  budgetKeyboardInteraction.mode !== 'moving' &&
+                  budgetKeyboardInteraction.mode !== 'choose-category'
                 ? 'confirm'
                 : key === 'p' && budgetKeyboardInteraction.mode === 'moving'
                   ? 'confirm'
@@ -888,9 +890,14 @@ function AuthenticatedShell({
                   type="button"
                   onClick={() => {
                     closeCommandPalette()
-                    window.requestAnimationFrame(() =>
-                      document.getElementById('add-category')?.focus(),
-                    )
+                    window.requestAnimationFrame(() => {
+                      const firstBudgetEntry = document.querySelector<HTMLElement>(
+                        '.budget-table [data-semantic-kind="budget-row"], .budget-table [data-semantic-kind="budget-subsection"]',
+                      )
+                      const categoryTarget =
+                        firstBudgetEntry ?? document.getElementById('budget-heading')
+                      categoryTarget?.focus()
+                    })
                   }}
                 >
                   Go to category
@@ -909,7 +916,8 @@ function AuthenticatedShell({
                     ? 'CONFIRM'
                     : budgetKeyboardInteraction.mode === 'choose-create'
                       ? 'CREATE'
-                      : budgetKeyboardInteraction.mode === 'name-entry'
+                      : budgetKeyboardInteraction.mode === 'name-entry' ||
+                          budgetKeyboardInteraction.mode === 'choose-category'
                         ? 'NAME'
                           : budgetKeyboardInteraction.mode === 'rename-entry'
                             ? 'RENAME'
@@ -930,6 +938,12 @@ function AuthenticatedShell({
                 {(budgetKeyboardInteraction.mode === 'name-entry' ||
                   budgetKeyboardInteraction.mode === 'rename-entry') && (
                   <span><kbd>Enter</kbd> save</span>
+                )}
+                {budgetKeyboardInteraction.mode === 'choose-category' && (
+                  <>
+                    <span><kbd>Ctrl+N</kbd><kbd>Ctrl+P</kbd> choose</span>
+                    <span><kbd>Enter</kbd> select</span>
+                  </>
                 )}
                 {budgetKeyboardInteraction.mode === 'moving' && (
                   <>

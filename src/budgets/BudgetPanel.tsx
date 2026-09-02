@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
   type KeyboardEvent as ReactKeyboardEvent,
+  type ReactNode,
   type RefObject,
 } from 'react'
 import { CategoryCombobox } from '../finance/CategoryCombobox.tsx'
@@ -57,6 +58,7 @@ export interface BudgetKeyboardInteraction {
   mode:
     | 'confirm-delete'
     | 'choose-create'
+    | 'choose-category'
     | 'name-entry'
     | 'rename-entry'
     | 'moving'
@@ -397,7 +399,6 @@ export function BudgetPanel({
   const [editingAllocationId, setEditingAllocationId] = useState<string | null>(
     null,
   )
-  const [isAddingCategory, setIsAddingCategory] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<BudgetEntry | null>(null)
   const [deleteChoice, setDeleteChoice] = useState<'yes' | 'no'>('no')
   const [creationTarget, setCreationTarget] = useState<BudgetEntry | null>(null)
@@ -534,24 +535,6 @@ export function BudgetPanel({
     )
     onCategoriesChanged()
     return data
-  }
-
-  async function addRootAllocation(category: Category): Promise<void> {
-    if (!budget) {
-      throw new Error('Create this month before adding categories.')
-    }
-    const { didSave } = await runMutation('add-root', () =>
-      getSupabaseClient().rpc('create_budget_category_allocation', {
-        p_budget_id: budget.id,
-        p_category_id: category.id,
-        p_subsection_id: null,
-        p_magnitude: 0,
-        p_direction: 'spending',
-      }),
-    )
-    if (!didSave) {
-      throw new Error('The category could not be added to this budget.')
-    }
   }
 
   async function updateAllocation(
@@ -751,8 +734,34 @@ export function BudgetPanel({
     setCreationTarget(null)
   }
 
-  async function savePendingCreation() {
-    if (!pendingCreation || !budget) {
+  async function savePendingAllocation(category: Category) {
+    if (pendingCreation?.kind !== 'allocation' || !budget) {
+      return
+    }
+    const creation = pendingCreation
+    const result = await runMutation<string>(
+      'create-budget-line-item',
+      () =>
+        getSupabaseClient().rpc(
+          'create_budget_category_allocation_at_position',
+          {
+            p_budget_id: budget.id,
+            p_category_id: category.id,
+            p_position: creation.position,
+            p_subsection_id: creation.subsectionId,
+          },
+        ),
+    )
+    if (!result.didSave || !result.data) {
+      throw new Error('The category could not be added to this budget.')
+    }
+    setPendingCreation(null)
+    setPendingName('')
+    focusSemanticEntry(`budget-row-${result.data}`)
+  }
+
+  async function savePendingSubsection() {
+    if (pendingCreation?.kind !== 'subsection' || !budget) {
       return
     }
     const name = pendingName.trim()
@@ -761,48 +770,23 @@ export function BudgetPanel({
       return
     }
 
-    const result =
-      pendingCreation.kind === 'allocation'
-        ? await runMutation<string>(
-            'create-budget-line-item',
-            () =>
-              getSupabaseClient().rpc(
-                'create_budget_category_allocation_at_position',
-                {
-                  p_budget_id: budget.id,
-                  p_name: name,
-                  p_position: pendingCreation.position,
-                  p_subsection_id: pendingCreation.subsectionId,
-                },
-              ),
-          )
-        : await runMutation<string>(
-            'create-budget-subsection',
-            () =>
-              getSupabaseClient().rpc(
-                'create_budget_subsection_at_position',
-                {
-                  p_budget_id: budget.id,
-                  p_name: name,
-                  p_position: pendingCreation.position,
-                },
-              ),
-          )
+    const result = await runMutation<string>(
+      'create-budget-subsection',
+      () =>
+        getSupabaseClient().rpc('create_budget_subsection_at_position', {
+          p_budget_id: budget.id,
+          p_name: name,
+          p_position: pendingCreation.position,
+        }),
+    )
 
     if (!result.didSave || !result.data) {
       return
     }
 
-    const semanticId =
-      pendingCreation.kind === 'allocation'
-        ? `budget-row-${result.data}`
-        : `budget-subsection-${result.data}`
     setPendingCreation(null)
     setPendingName('')
-    if (pendingCreation.kind === 'allocation') {
-      onCategoriesChanged()
-    }
-    focusSemanticEntry(semanticId)
+    focusSemanticEntry(`budget-subsection-${result.data}`)
   }
 
   async function saveRename() {
@@ -864,7 +848,7 @@ export function BudgetPanel({
       .slice(0, targetIndex)
       .toReversed()
       .find((entry) => !isRemoved(entry))
-    return following?.semanticId ?? previous?.semanticId ?? 'add-category'
+    return following?.semanticId ?? previous?.semanticId ?? 'budget-heading'
   }
 
   async function confirmDelete(choice = deleteChoice) {
@@ -1085,9 +1069,14 @@ export function BudgetPanel({
       onKeyboardInteractionChange({
         label:
           pendingCreation.kind === 'allocation'
-            ? 'name budget line item'
+            ? pendingName.trim()
+              ? 'choose or create category'
+              : 'choose category'
             : 'name subsection',
-        mode: 'name-entry',
+        mode:
+          pendingCreation.kind === 'allocation'
+            ? 'choose-category'
+            : 'name-entry',
       })
       return
     }
@@ -1119,6 +1108,7 @@ export function BudgetPanel({
     movingEntry,
     onKeyboardInteractionChange,
     pendingCreation,
+    pendingName,
     renameTarget,
     savingMoveEntry,
   ])
@@ -1345,7 +1335,23 @@ export function BudgetPanel({
         nameInputRef={pendingNameInputRef}
         onCancel={closeCreation}
         onNameChange={setPendingName}
-        onSave={() => void savePendingCreation()}
+        onSave={() => void savePendingSubsection()}
+      />
+    )
+  }
+
+  function renderPendingAllocation(isSectioned: boolean): ReactNode {
+    return (
+      <PendingBudgetAllocation
+        busy={busyId !== null}
+        categories={categories}
+        excludedCategoryIds={allocatedCategoryIds}
+        isSectioned={isSectioned}
+        nameInputRef={pendingNameInputRef}
+        onCancel={closeCreation}
+        onCreate={createCategory}
+        onQueryChange={setPendingName}
+        onSelect={savePendingAllocation}
       />
     )
   }
@@ -1358,17 +1364,7 @@ export function BudgetPanel({
       pendingCreation?.kind === 'allocation' &&
       pendingCreation.subsectionId === null
     ) {
-      return (
-        <PendingBudgetAllocation
-          busy={busyId !== null}
-          isSectioned={false}
-          name={pendingName}
-          nameInputRef={pendingNameInputRef}
-          onCancel={closeCreation}
-          onNameChange={setPendingName}
-          onSave={() => void savePendingCreation()}
-        />
-      )
+      return renderPendingAllocation(false)
     }
     return null
   }
@@ -1401,16 +1397,12 @@ export function BudgetPanel({
             ? pendingCreation
             : null
         }
-        pendingName={pendingName}
-        pendingNameInputRef={pendingNameInputRef}
         renameName={renameName}
         renameNameInputRef={renameNameInputRef}
         renameTarget={renameTarget}
         showHeader
         subsection={subsection}
-        onPendingCreationCancel={closeCreation}
-        onPendingNameChange={setPendingName}
-        onPendingNameSave={() => void savePendingCreation()}
+        renderPendingAllocation={renderPendingAllocation}
         onRenameCancel={closeRename}
         onRenameNameChange={setRenameName}
         onRenameSave={() => void saveRename()}
@@ -1561,40 +1553,9 @@ export function BudgetPanel({
             <div className="table-head">
               <div>
                 <p className="eyebrow">Monthly plan</p>
-                <h2 id="budget-heading">Categories</h2>
+                <h2 id="budget-heading" tabIndex={-1}>Categories</h2>
               </div>
-              <button
-                id="add-category"
-                className="new-category"
-                data-semantic-id="add-category"
-                data-semantic-region="workspace"
-                data-status-action="add category"
-                data-status-label="budget / categories"
-                disabled={busyId !== null}
-                type="button"
-                onClick={() => setIsAddingCategory(true)}
-              >
-                <span>+</span> Add category
-              </button>
             </div>
-            {isAddingCategory && (
-              <div className="category-create">
-                <CategoryCombobox
-                  autoFocus
-                  cancelOnBlur
-                  categories={categories}
-                  disabled={busyId !== null}
-                  excludedCategoryIds={allocatedCategoryIds}
-                  label="Add or create a category"
-                  onCancel={() => setIsAddingCategory(false)}
-                  onCreate={createCategory}
-                  onSelect={async (category) => {
-                    await addRootAllocation(category)
-                    setIsAddingCategory(false)
-                  }}
-                />
-              </div>
-            )}
             <div className="column-head" aria-hidden="true">
               <span>Category</span>
               <span>Planned</span>
@@ -1683,19 +1644,15 @@ function BudgetGroup({
   onEdit,
   onAmountEditorClosed,
   onAmountEditorOpenChange,
-  onPendingCreationCancel,
-  onPendingNameChange,
-  onPendingNameSave,
   onRenameCancel,
   onRenameNameChange,
   onRenameSave,
   onUpdate,
   pendingCreation,
-  pendingName,
-  pendingNameInputRef,
   renameName,
   renameNameInputRef,
   renameTarget,
+  renderPendingAllocation,
   showHeader,
   subsection,
 }: {
@@ -1708,9 +1665,6 @@ function BudgetGroup({
   onEdit: (allocationId: string | null) => void
   onAmountEditorClosed: (allocationId: string) => void
   onAmountEditorOpenChange: (isOpen: boolean) => void
-  onPendingCreationCancel: () => void
-  onPendingNameChange: (name: string) => void
-  onPendingNameSave: () => void
   onRenameCancel: () => void
   onRenameNameChange: (name: string) => void
   onRenameSave: () => void
@@ -1720,11 +1674,10 @@ function BudgetGroup({
     direction: BudgetDirection,
   ) => Promise<boolean>
   pendingCreation: PendingCreation | null
-  pendingName: string
-  pendingNameInputRef: RefObject<HTMLInputElement | null>
   renameName: string
   renameNameInputRef: RefObject<HTMLInputElement | null>
   renameTarget: BudgetEntry | null
+  renderPendingAllocation: (isSectioned: boolean) => ReactNode
   showHeader: boolean
   subsection: BudgetSubsection | null
 }) {
@@ -1841,16 +1794,9 @@ function BudgetGroup({
             renameNameInputRef={renameNameInputRef}
           />
         ) : (
-          <PendingBudgetAllocation
-            busy={busyId !== null}
-            isSectioned={subsection !== null}
-            key={`pending-allocation-${index}`}
-            name={pendingName}
-            nameInputRef={pendingNameInputRef}
-            onCancel={onPendingCreationCancel}
-            onNameChange={onPendingNameChange}
-            onSave={onPendingNameSave}
-          />
+          <Fragment key={`pending-allocation-${index}`}>
+            {renderPendingAllocation(subsection !== null)}
+          </Fragment>
         ),
       )}
     </section>
@@ -2006,20 +1952,24 @@ function BudgetAllocationRow({
 
 function PendingBudgetAllocation({
   busy,
+  categories,
+  excludedCategoryIds,
   isSectioned,
-  name,
   nameInputRef,
   onCancel,
-  onNameChange,
-  onSave,
+  onCreate,
+  onQueryChange,
+  onSelect,
 }: {
   busy: boolean
+  categories: Category[]
+  excludedCategoryIds: string[]
   isSectioned: boolean
-  name: string
   nameInputRef: RefObject<HTMLInputElement | null>
   onCancel: () => void
-  onNameChange: (name: string) => void
-  onSave: () => void
+  onCreate: (name: string) => Promise<Category>
+  onQueryChange: (name: string) => void
+  onSelect: (category: Category) => Promise<void>
 }) {
   return (
     <div
@@ -2029,29 +1979,20 @@ function PendingBudgetAllocation({
     >
       <span className="category-name">
         <i className="selection-caret">›</i>
-        <input
-          aria-label="New budget line item name"
-          className="pending-budget-name-input"
+        <CategoryCombobox
+          autoFocus
+          categories={categories}
+          className="pending-budget-category-combobox"
           disabled={busy}
-          maxLength={100}
-          placeholder="Name this budget line item"
-          ref={nameInputRef}
-          type="text"
-          value={name}
-          onChange={(event) => onNameChange(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') {
-              event.preventDefault()
-              onSave()
-            } else if (event.key === 'Escape') {
-              event.preventDefault()
-              onCancel()
-            }
-          }}
+          excludedCategoryIds={excludedCategoryIds}
+          inputRef={nameInputRef}
+          label="Search or create category"
+          placeholder="Search or create category"
+          onCancel={onCancel}
+          onCreate={onCreate}
+          onQueryChange={onQueryChange}
+          onSelect={onSelect}
         />
-        <button className="direction-tag" disabled type="button">
-          Spending
-        </button>
       </span>
       <span className="amount-cell">$0</span>
       <span className="spent">$0</span>
