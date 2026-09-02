@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
   type Dispatch,
+  type FocusEvent as ReactFocusEvent,
   type KeyboardEvent as ReactKeyboardEvent,
   type RefObject,
   type SetStateAction,
@@ -94,12 +95,14 @@ export function TransactionsPanel({
   categoriesRevision,
   selectedMonth,
   onCategoriesChanged,
+  onSearchStateChange,
   onTransactionsChanged,
   onUncategorizedCountChange,
 }: {
   categoriesRevision: number
   selectedMonth: string
   onCategoriesChanged: () => void
+  onSearchStateChange: (isOpen: boolean, query: string) => void
   onTransactionsChanged: () => void
   onUncategorizedCountChange: (count: number) => void
 }) {
@@ -111,6 +114,7 @@ export function TransactionsPanel({
   const [isLoading, setIsLoading] = useState(true)
   const [dataError, setDataError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [scopeFilter, setScopeFilter] = useState<string | null>(null)
   const [categoryFilters, setCategoryFilters] = useState<string[]>([])
   const [sort, setSort] = useState<TransactionSort>('date')
@@ -127,6 +131,9 @@ export function TransactionsPanel({
   const selectedTransactionIdRef = useRef<string | null>(null)
   const transactionButtonRefs = useRef(new Map<string, HTMLButtonElement>())
   const pickerSearchInputRef = useRef<HTMLInputElement>(null)
+  const transactionSearchInputRef = useRef<HTMLInputElement>(null)
+  const searchOriginRef = useRef<HTMLElement | null>(null)
+  const lastFocusedTransactionControlRef = useRef<HTMLElement | null>(null)
 
   const refreshTransactions = useCallback(async () => {
     const generation = ++requestGeneration.current
@@ -207,6 +214,15 @@ export function TransactionsPanel({
   useEffect(() => {
     onUncategorizedCountChange(uncategorizedTransactionCount)
   }, [onUncategorizedCountChange, uncategorizedTransactionCount])
+
+  useEffect(() => {
+    onSearchStateChange(isSearchOpen, searchQuery)
+  }, [isSearchOpen, onSearchStateChange, searchQuery])
+
+  useEffect(
+    () => () => onSearchStateChange(false, ''),
+    [onSearchStateChange],
+  )
 
   const monthOptions = useMemo(
     () =>
@@ -305,6 +321,85 @@ export function TransactionsPanel({
     )
   }, [])
 
+  const focusTransaction = useCallback((transactionId: string) => {
+    window.requestAnimationFrame(() => {
+      const button = transactionButtonRefs.current.get(transactionId)
+      button?.focus({ preventScroll: true })
+      button?.scrollIntoView({ block: 'nearest' })
+    })
+  }, [])
+
+  const openSearch = useCallback((origin?: HTMLElement | null) => {
+    const activeElement =
+      origin ??
+      searchOriginRef.current ??
+      lastFocusedTransactionControlRef.current ??
+      (document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null)
+    searchOriginRef.current = activeElement?.isConnected ? activeElement : null
+    setIsSearchOpen(true)
+    window.requestAnimationFrame(() =>
+      transactionSearchInputRef.current?.focus({ preventScroll: true }),
+    )
+  }, [])
+
+  const rememberSearchOrigin = useCallback((origin: EventTarget | null) => {
+    if (origin instanceof HTMLElement && origin.isConnected) {
+      searchOriginRef.current = origin
+    }
+  }, [])
+
+  const rememberTransactionFocus = useCallback(
+    (event: ReactFocusEvent<HTMLElement>) => {
+      const target = event.target
+      if (
+        target.matches('.transaction-search-trigger, #merchant-search')
+      ) {
+        return
+      }
+      lastFocusedTransactionControlRef.current = target
+    },
+    [],
+  )
+
+  const closeSearch = useCallback(() => {
+    const origin = searchOriginRef.current
+    searchOriginRef.current = null
+    setSearchQuery('')
+    setIsSearchOpen(false)
+    window.requestAnimationFrame(() => {
+      if (origin?.isConnected) {
+        origin.focus({ preventScroll: true })
+        return
+      }
+      if (selectedTransactionId) {
+        focusTransaction(selectedTransactionId)
+      }
+    })
+  }, [focusTransaction, selectedTransactionId])
+
+  function focusFirstSearchResult() {
+    const firstTransaction = displayedTransactions[0]
+    if (!firstTransaction) {
+      return
+    }
+    selectTransaction(firstTransaction)
+    focusTransaction(firstTransaction.id)
+  }
+
+  function handleSearchKeyDown(event: ReactKeyboardEvent<HTMLInputElement>) {
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      closeSearch()
+      return
+    }
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      focusFirstSearchResult()
+    }
+  }
+
   const focusPickerSearch = useCallback(() => {
     window.requestAnimationFrame(() => {
       pickerSearchInputRef.current?.focus({ preventScroll: true })
@@ -330,14 +425,6 @@ export function TransactionsPanel({
   )
 
   useEffect(() => {
-    function focusTransaction(transactionId: string) {
-      window.requestAnimationFrame(() => {
-        const button = transactionButtonRefs.current.get(transactionId)
-        button?.focus({ preventScroll: true })
-        button?.scrollIntoView({ block: 'nearest' })
-      })
-    }
-
     function handleKeyDown(event: KeyboardEvent) {
       if (event.defaultPrevented || event.altKey || event.metaKey) {
         return
@@ -347,6 +434,16 @@ export function TransactionsPanel({
       }
 
       const key = event.key.toLocaleLowerCase()
+      if (event.key === 'Escape' && isSearchOpen) {
+        event.preventDefault()
+        closeSearch()
+        return
+      }
+      if (key === '/' && !event.ctrlKey && !event.shiftKey) {
+        event.preventDefault()
+        openSearch()
+        return
+      }
       const focusedTransactionRow =
         event.target instanceof HTMLElement
           ? event.target.closest<HTMLButtonElement>(
@@ -402,7 +499,11 @@ export function TransactionsPanel({
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [
+    closeSearch,
     displayedTransactions,
+    focusTransaction,
+    isSearchOpen,
+    openSearch,
     openCategoryPicker,
     selectTransaction,
     selectedTransaction,
@@ -500,7 +601,10 @@ export function TransactionsPanel({
   const activeFilterCount = (scopeFilter ? 1 : 0) + categoryFilters.length
 
   return (
-    <section className="page transactions-page transactions-page--terminal">
+    <section
+      className="page transactions-page transactions-page--terminal"
+      onFocusCapture={rememberTransactionFocus}
+    >
       <header className="workspace-head workspace-head--compact">
         <div>
           <p className="eyebrow">Transaction stream / all accounts</p>
@@ -556,29 +660,36 @@ export function TransactionsPanel({
           </div>
         </div>
         <div className="data-toolbar">
-          <label
-            className="terminal-search"
-            data-semantic-id="transactions-search-label"
-            data-semantic-kind="search-label"
-            data-semantic-region="workspace"
-            data-semantic-status-label="Search transactions"
-            htmlFor="merchant-search"
-          >
-            <span aria-hidden="true">/</span>
-            <span className="sr-only">Search merchant name</span>
-            <input
-              data-semantic-id="transactions-search"
-              data-semantic-kind="search-input"
-              data-semantic-region="workspace"
-              data-semantic-status-action="search-transactions"
-              data-semantic-status-label="Search merchant name"
-              id="merchant-search"
-              placeholder="Search merchant name..."
-              type="search"
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-            />
-          </label>
+          {isSearchOpen ? (
+            <label className="terminal-search" htmlFor="merchant-search">
+              <span aria-hidden="true">/</span>
+              <span className="sr-only">Search merchant name</span>
+              <input
+                data-semantic-id="transactions-search"
+                data-semantic-kind="search-input"
+                data-semantic-region="workspace"
+                data-status-action="search"
+                data-status-label="transactions / search"
+                id="merchant-search"
+                placeholder="Search merchant name..."
+                ref={transactionSearchInputRef}
+                type="search"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                onKeyDown={handleSearchKeyDown}
+              />
+            </label>
+          ) : (
+            <button
+              aria-label="Search transactions"
+              className="terminal-button transaction-search-trigger"
+              type="button"
+              onMouseDown={() => rememberSearchOrigin(document.activeElement)}
+              onClick={() => openSearch()}
+            >
+              <kbd>/</kbd> Search transactions
+            </button>
+          )}
           {activeFilterCount > 0 && (
             <div
               className="active-filters toolbar-tokens"

@@ -11,14 +11,14 @@
       <header class="titlebar">
         <a class="brand" href="neovim-tokyonight.html" aria-label="Perfectly Balanced budget mockup"><span class="brand-mark">pb</span><span>perfectly-balanced</span></a>
         <p>August 2026 · Personal budget</p>
-        <a class="mockup-sample-link" href="neovim-tokyonight-transaction-editing.html">Category picker states</a>
+        <a class="mockup-sample-link" href="neovim-tokyonight-transaction-search.html">Search state</a>
         <div class="theme-switcher" role="group" aria-label="Theme"><input checked id="theme-dark" name="theme" type="radio" /><label for="theme-dark">Dark</label><input id="theme-light" name="theme" type="radio" /><label for="theme-light">Light</label></div>
         <button class="profile" type="button" aria-label="Open profile menu"><span>BG</span>ben@local</button>
       </header>
 
       <aside class="sidebar" aria-label="Application navigation">
         <nav class="main-nav"><a class="nav-item" href="neovim-tokyonight.html"><span>Budget</span></a><a class="nav-item is-active" href="neovim-tokyonight-transactions.html"><span>Transactions</span><strong>12</strong></a><a class="nav-item" href="neovim-tokyonight-reports.html"><span>Reports</span></a></nav>
-        <section class="sidebar-section mockup-screen-nav" aria-labelledby="more-screens-title"><h2 id="more-screens-title">More screens</h2><a href="neovim-tokyonight-transaction-editing.html">Category picker states</a><a href="neovim-tokyonight-budget-empty.html">Empty budget</a><a href="neovim-tokyonight-sign-in.html">Sign in</a><a href="neovim-tokyonight-auth-states.html">Sign-in states</a><a href="neovim-tokyonight-configuration-error.html">Setup error</a><a href="neovim-tokyonight-actions.html">Action samples</a></section>
+        <section class="sidebar-section mockup-screen-nav" aria-labelledby="more-screens-title"><h2 id="more-screens-title">More screens</h2><a href="neovim-tokyonight-transaction-search.html">Search state</a><a href="neovim-tokyonight-transaction-editing.html">Category picker states</a><a href="neovim-tokyonight-budget-empty.html">Empty budget</a><a href="neovim-tokyonight-sign-in.html">Sign in</a><a href="neovim-tokyonight-auth-states.html">Sign-in states</a><a href="neovim-tokyonight-configuration-error.html">Setup error</a><a href="neovim-tokyonight-actions.html">Action samples</a></section>
       </aside>
 
       <main class="workspace">
@@ -36,7 +36,7 @@
         <section class="budget-table transaction-table" aria-labelledby="transactions-title">
           <div class="table-head"><div><p class="eyebrow">Imported activity</p><h2 id="transactions-title">Every account, one queue</h2></div></div>
           <div class="data-toolbar">
-            <label class="terminal-search"><span>/</span><input autofocus aria-label="Search transactions" placeholder="Search merchant, account, or amount" value="" /></label>
+            <button class="terminal-button transaction-search-trigger" type="button"><kbd>/</kbd> Search transactions</button>
             <div class="toolbar-tokens">
               <span class="filter-token">August 2026 <button type="button" aria-label="Remove August filter">×</button></span>
               <span class="filter-token">Uncategorized <button type="button" aria-label="Remove uncategorized filter">×</button></span>

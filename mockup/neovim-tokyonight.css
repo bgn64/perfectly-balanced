@@ -1593,6 +1593,19 @@ input:focus-visible {
   color: #787c99;
 }
 
+.transaction-search-trigger {
+  display: inline-flex;
+  min-width: min(100%, 18rem);
+  flex: 1 1 15rem;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.5rem;
+}
+
+.transaction-search-trigger kbd {
+  color: #7dcfff;
+}
+
 .terminal-search:focus-within {
   border-color: #7dcfff;
   box-shadow: 0 0 0 1px #7aa2f7;

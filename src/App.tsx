@@ -339,6 +339,9 @@ function AuthenticatedShell({
   const [budgetActivityRevision, setBudgetActivityRevision] = useState(0)
   const [uncategorizedTransactionCount, setUncategorizedTransactionCount] =
     useState(0)
+  const [isTransactionSearchOpen, setIsTransactionSearchOpen] =
+    useState(false)
+  const [transactionSearchQuery, setTransactionSearchQuery] = useState('')
   const [commandQuery, setCommandQuery] = useState('go')
   const [theme, setTheme] = useState<WorkspaceTheme>(readInitialTheme)
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
@@ -370,6 +373,13 @@ function AuthenticatedShell({
   const handleUncategorizedCountChange = useCallback((count: number) => {
     setUncategorizedTransactionCount(count)
   }, [])
+  const handleTransactionSearchStateChange = useCallback(
+    (isOpen: boolean, query: string) => {
+      setIsTransactionSearchOpen(isOpen)
+      setTransactionSearchQuery(query)
+    },
+    [],
+  )
   const initials = email
     .split('@')[0]
     .split(/[._-]/)
@@ -1082,6 +1092,7 @@ function AuthenticatedShell({
             categoriesRevision={categoriesRevision}
             selectedMonth={selectedMonth}
             onCategoriesChanged={handleCategoriesChanged}
+            onSearchStateChange={handleTransactionSearchStateChange}
             onTransactionsChanged={handleTransactionsChanged}
             onUncategorizedCountChange={handleUncategorizedCountChange}
           />
@@ -1099,22 +1110,37 @@ function AuthenticatedShell({
 
       <footer className="statusline">
         <div>
-          <strong>{activeView === 'transactions' ? 'EDIT' : 'REPORT'}</strong>
+          <strong>
+            {activeView === 'transactions'
+              ? isTransactionSearchOpen
+                ? 'SEARCH'
+                : 'EDIT'
+              : 'REPORT'}
+          </strong>
           <span>
             {activeView === 'transactions'
-              ? 'transaction / category'
+              ? isTransactionSearchOpen
+                ? transactionSearchQuery || 'search'
+                : 'transaction / category'
               : `${formatMonth(selectedMonth)} / all accounts`}
           </span>
         </div>
         <div>
           {activeView === 'transactions' ? (
-            <>
-              <span><kbd>/</kbd> search</span>
-              <span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span>
-              <span><kbd>c</kbd> category</span>
-              <span><kbd>enter</kbd> select</span>
-              <span><kbd>esc</kbd> cancel</span>
-            </>
+            isTransactionSearchOpen ? (
+              <>
+                <span><kbd>esc</kbd> clear and return</span>
+                <span><kbd>enter</kbd> focus first result</span>
+              </>
+            ) : (
+              <>
+                <span><kbd>/</kbd> search</span>
+                <span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span>
+                <span><kbd>c</kbd> category</span>
+                <span><kbd>enter</kbd> select</span>
+                <span><kbd>esc</kbd> cancel</span>
+              </>
+            )
           ) : (
             <>
               <span><kbd>h</kbd><kbd>l</kbd> change month</span>
