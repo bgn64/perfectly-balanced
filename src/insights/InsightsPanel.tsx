@@ -4,12 +4,10 @@ import type {
   BudgetAllocation,
   BudgetDirection,
   BudgetSubsection,
-  Category,
   Transaction,
   TransactionSplit,
 } from '../finance/types.ts'
 import {
-  currentMonth,
   formatDisplayMoney,
   formatMonth,
   monthKey,
@@ -18,14 +16,11 @@ import {
 import { collectPages } from '../finance/query.ts'
 import { getSupabaseClient } from '../lib/supabase.ts'
 
-type InsightMode = 'all' | 'categorized' | 'planned'
-
 interface InsightsData {
   budgets: Budget[]
   budget: Budget | null
   subsections: BudgetSubsection[]
   allocations: BudgetAllocation[]
-  categories: Category[]
   transactions: Transaction[]
   splits: TransactionSplit[]
 }
@@ -36,13 +31,6 @@ interface InsightSlice {
   value: number
 }
 
-interface CategoryInsight {
-  id: string
-  label: string
-  value: number
-  netActivity: number
-}
-
 interface VarianceItem {
   id: string
   name: string
@@ -51,14 +39,13 @@ interface VarianceItem {
   variance: number
 }
 
-const chartColors = ['#356b5b', '#7cae9e', '#d7a95b', '#9c8273', '#91a39d']
+const chartColors = ['#7aa2f7', '#bb9af7', '#e0af68', '#f7768e', '#7dcfff']
 
 async function queryInsights(month: string): Promise<InsightsData> {
   const client = getSupabaseClient()
   const nextMonth = shiftMonth(month, 1)
-  const [budgetsResult, categoriesResult, transactions] = await Promise.all([
+  const [budgetsResult, transactions] = await Promise.all([
     client.from('budgets').select('id, month').order('month', { ascending: false }),
-    client.from('categories').select('id, name').order('name'),
     collectPages((afterId, limit) => {
       let query = client
         .from('transactions')
@@ -77,10 +64,8 @@ async function queryInsights(month: string): Promise<InsightsData> {
     }),
   ])
 
-  for (const result of [budgetsResult, categoriesResult]) {
-    if (result.error) {
-      throw new Error(result.error.message)
-    }
+  if (budgetsResult.error) {
+    throw new Error(budgetsResult.error.message)
   }
 
   const budgets = budgetsResult.data ?? []
@@ -95,7 +80,7 @@ async function queryInsights(month: string): Promise<InsightsData> {
   )
   const transactionIdSet = new Set(transactionIds)
 
-  const [subsectionsResult, allocationsResult, splitsResult] = await Promise.all([
+  const [subsectionsResult, allocationsResult, splits] = await Promise.all([
     budget
       ? client
           .from('budget_subsections')
@@ -142,13 +127,12 @@ async function queryInsights(month: string): Promise<InsightsData> {
       budgeted_amount: Number(allocation.budgeted_amount),
       actual_amount: Number(allocation.actual_amount),
     })) as BudgetAllocation[],
-    categories: categoriesResult.data ?? [],
     transactions: normalizedTransactions,
-    splits: splitsResult
+    splits: splits
       .filter((split) => transactionIdSet.has(split.transaction_id))
       .map((split) => ({
-      ...split,
-      amount: Number(split.amount),
+        ...split,
+        amount: Number(split.amount),
       })),
   }
 }
@@ -156,22 +140,24 @@ async function queryInsights(month: string): Promise<InsightsData> {
 export function InsightsPanel({
   categoriesRevision,
   activityRevision,
+  selectedMonth,
+  onMonthChange,
+  onOpenTransactions,
 }: {
   categoriesRevision: number
   activityRevision: number
+  selectedMonth: string
+  onMonthChange: (month: string) => void
+  onOpenTransactions: () => void
 }) {
-  const [selectedMonth, setSelectedMonth] = useState(currentMonth)
   const [data, setData] = useState<InsightsData>({
     budgets: [],
     budget: null,
     subsections: [],
     allocations: [],
-    categories: [],
     transactions: [],
     splits: [],
   })
-  const [incomeMode, setIncomeMode] = useState<InsightMode>('all')
-  const [spendingMode, setSpendingMode] = useState<InsightMode>('all')
   const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const requestGeneration = useRef(0)
@@ -208,20 +194,6 @@ export function InsightsPanel({
     }
   }, [activityRevision, categoriesRevision, loadInsights])
 
-  const activityByCategory = useMemo(() => {
-    const values = new Map<string, number>()
-    for (const split of data.splits) {
-      values.set(
-        split.category_id,
-        (values.get(split.category_id) ?? 0) + split.amount,
-      )
-    }
-    return values
-  }, [data.splits])
-  const transactionIdsWithSplits = useMemo(
-    () => new Set(data.splits.map((split) => split.transaction_id)),
-    [data.splits],
-  )
   const allocationsByCategory = useMemo(
     () =>
       new Map(
@@ -232,21 +204,46 @@ export function InsightsPanel({
       ),
     [data.allocations],
   )
-  const categoriesById = useMemo(
-    () => new Map(data.categories.map((category) => [category.id, category])),
-    [data.categories],
+  const transactionIdsWithSplits = useMemo(
+    () => new Set(data.splits.map((split) => split.transaction_id)),
+    [data.splits],
   )
-  const selectorMonths = Array.from(
-    new Set([
-      selectedMonth,
-      ...data.budgets.map((budget) => monthKey(budget.month)),
-    ]),
-  ).sort((left, right) => right.localeCompare(left))
-  function changeMonth(month: string) {
-    setIsLoading(true)
-    setSelectedMonth(month)
-  }
-
+  const spendingSlices = useMemo(
+    () =>
+      buildSlices({
+        direction: 'spending',
+        subsections: data.subsections,
+        transactions: data.transactions,
+        splits: data.splits,
+        allocationsByCategory,
+        transactionIdsWithSplits,
+      }),
+    [
+      allocationsByCategory,
+      data.subsections,
+      data.splits,
+      data.transactions,
+      transactionIdsWithSplits,
+    ],
+  )
+  const incomeSlices = useMemo(
+    () =>
+      buildSlices({
+        direction: 'income',
+        subsections: data.subsections,
+        transactions: data.transactions,
+        splits: data.splits,
+        allocationsByCategory,
+        transactionIdsWithSplits,
+      }),
+    [
+      allocationsByCategory,
+      data.subsections,
+      data.splits,
+      data.transactions,
+      transactionIdsWithSplits,
+    ],
+  )
   const overBudget = data.allocations
     .filter((allocation) => allocation.direction === 'spending')
     .map(toVarianceItem)
@@ -257,52 +254,61 @@ export function InsightsPanel({
     .map(toVarianceItem)
     .filter((item) => item.variance < 0)
     .sort((left, right) => left.variance - right.variance)
+  const received = data.transactions
+    .filter((transaction) => transaction.amount > 0)
+    .reduce((sum, transaction) => sum + transaction.amount, 0)
+  const spent = data.transactions
+    .filter((transaction) => transaction.amount < 0)
+    .reduce((sum, transaction) => sum + Math.abs(transaction.amount), 0)
+  const plannedSpending = data.allocations
+    .filter((allocation) => allocation.direction === 'spending')
+    .reduce(
+      (sum, allocation) => sum + Math.abs(allocation.budgeted_amount),
+      0,
+    )
+  const plannedIncome = data.allocations
+    .filter((allocation) => allocation.direction === 'income')
+    .reduce(
+      (sum, allocation) => sum + Math.abs(allocation.budgeted_amount),
+      0,
+    )
+  const uncategorizedTransactionCount = data.transactions.filter(
+    (transaction) => !transactionIdsWithSplits.has(transaction.id),
+  ).length
 
   return (
-    <main className="page insights-page">
-      <div className="page-head">
+    <section className="page insights-page insights-page--terminal">
+      <header className="workspace-head workspace-head--compact">
         <div>
-          <p className="eyebrow">Monthly insights</p>
-          <h1>{formatMonth(selectedMonth)}</h1>
-          <p className="subtle">
-            Understand where this month&apos;s money went and how it compares
-            with the plan.
+          <p className="eyebrow">Reports / {selectedMonth.replace('-', ' / ')}</p>
+          <h1>{formatMonth(selectedMonth)} at a glance</h1>
+          <p className="subtitle">
+            A compact readout of how this month is tracking against your plan.
           </p>
         </div>
-        <div className="toolbar-group month-toolbar">
+        <div className="month-controls" aria-label="Month navigation">
           <button
-            aria-label="Previous month"
-            className="icon-button"
+            data-semantic-id="report-month-previous"
+            data-semantic-region="workspace"
+            data-status-action="previous month"
+            data-status-label="reports / previous month"
             type="button"
-            onClick={() => changeMonth(shiftMonth(selectedMonth, -1))}
+            onClick={() => onMonthChange(shiftMonth(selectedMonth, -1))}
           >
-            &larr;
+            &larr; Previous
           </button>
-          <label className="sr-only" htmlFor="insights-month-selector">
-            Insights month
-          </label>
-          <select
-            className="pill-select"
-            id="insights-month-selector"
-            value={selectedMonth}
-            onChange={(event) => changeMonth(event.target.value)}
-          >
-            {selectorMonths.map((month) => (
-              <option key={month} value={month}>
-                {formatMonth(month)}
-              </option>
-            ))}
-          </select>
           <button
-            aria-label="Next month"
-            className="icon-button"
+            data-semantic-id="report-month-next"
+            data-semantic-region="workspace"
+            data-status-action="next month"
+            data-status-label="reports / next month"
             type="button"
-            onClick={() => changeMonth(shiftMonth(selectedMonth, 1))}
+            onClick={() => onMonthChange(shiftMonth(selectedMonth, 1))}
           >
-            &rarr;
+            Next &rarr;
           </button>
         </div>
-      </div>
+      </header>
 
       {errorMessage && (
         <p className="form-message form-message--error" role="alert">
@@ -311,381 +317,161 @@ export function InsightsPanel({
       )}
 
       {isLoading ? (
-        <section className="panel empty-state" aria-live="polite">
+        <section className="screen-panel empty-state" aria-live="polite">
           Loading insights...
         </section>
       ) : (
         <>
-          <InsightChart
-            activityByCategory={activityByCategory}
-            allocations={data.allocations}
-            allocationsByCategory={allocationsByCategory}
-            categoriesById={categoriesById}
-            direction="income"
-            mode={incomeMode}
-            splits={data.splits}
-            subsections={data.subsections}
-            transactions={data.transactions}
-            transactionIdsWithSplits={transactionIdsWithSplits}
-            onModeChange={setIncomeMode}
-          />
-          <InsightChart
-            activityByCategory={activityByCategory}
-            allocations={data.allocations}
-            allocationsByCategory={allocationsByCategory}
-            categoriesById={categoriesById}
-            direction="spending"
-            mode={spendingMode}
-            splits={data.splits}
-            subsections={data.subsections}
-            transactions={data.transactions}
-            transactionIdsWithSplits={transactionIdsWithSplits}
-            onModeChange={setSpendingMode}
-          />
-          <div className="variance-grid">
+          <section className="summary" aria-label={`${formatMonth(selectedMonth)} report summary`}>
+            <div>
+              <span>Received</span>
+              <strong className="available">{formatDisplayMoney(received)}</strong>
+            </div>
+            <div>
+              <span>Spent</span>
+              <strong className="spent">{formatDisplayMoney(spent)}</strong>
+            </div>
+            <div>
+              <span>Still available</span>
+              <strong className="available">
+                {formatDisplayMoney(plannedSpending - spent)}
+              </strong>
+            </div>
+            <div>
+              <span>Needs review</span>
+              <strong className="warning">
+                {uncategorizedTransactionCount} transaction
+                {uncategorizedTransactionCount === 1 ? '' : 's'}
+              </strong>
+            </div>
+          </section>
+
+          <section
+            className="report-grid"
+            aria-label={`${formatMonth(selectedMonth)} reports`}
+          >
+            <BreakdownCard
+              eyebrow="Spending breakdown"
+              heading={`Where the ${formatDisplayMoney(spent)} went`}
+              slices={spendingSlices}
+              total={spent}
+              wide
+            />
+            <IncomeCard
+              plannedIncome={plannedIncome}
+              received={received}
+              slices={incomeSlices}
+            />
             <VarianceCard direction="over" items={overBudget} />
             <VarianceCard direction="under" items={underBudget} />
-          </div>
-        </>
-      )}
-    </main>
-  )
-}
-
-function InsightChart({
-  direction,
-  mode,
-  allocations,
-  subsections,
-  transactions,
-  splits,
-  allocationsByCategory,
-  categoriesById,
-  activityByCategory,
-  transactionIdsWithSplits,
-  onModeChange,
-}: {
-  direction: BudgetDirection
-  mode: InsightMode
-  allocations: BudgetAllocation[]
-  subsections: BudgetSubsection[]
-  transactions: Transaction[]
-  splits: TransactionSplit[]
-  allocationsByCategory: Map<string, BudgetAllocation>
-  categoriesById: Map<string, Category>
-  activityByCategory: Map<string, number>
-  transactionIdsWithSplits: Set<string>
-  onModeChange: (mode: InsightMode) => void
-}) {
-  const [selectedSliceId, setSelectedSliceId] = useState<string | null>(null)
-  const slices = buildSlices({
-    direction,
-    mode,
-    allocations,
-    subsections,
-    transactions,
-    splits,
-    allocationsByCategory,
-    transactionIdsWithSplits,
-  })
-  const selectedSlice =
-    slices.find((slice) => slice.id === selectedSliceId) ?? null
-  const categoryInsights = selectedSlice
-    ? buildCategoryInsights({
-        selectedSlice,
-        direction,
-        mode,
-        allocations,
-        splits,
-        allocationsByCategory,
-        categoriesById,
-        activityByCategory,
-        transactions,
-        transactionIdsWithSplits,
-      })
-    : []
-  const categorySlices = categoryInsights.map((category) => ({
-    id: category.id,
-    label: category.label,
-    value: category.value,
-  }))
-  const categoryTotal = categorySlices.reduce(
-    (sum, category) => sum + category.value,
-    0,
-  )
-  const total = slices.reduce((sum, slice) => sum + slice.value, 0)
-  const plannedTotal = allocations
-    .filter((allocation) => allocation.direction === direction)
-    .reduce((sum, allocation) => sum + Math.abs(allocation.budgeted_amount), 0)
-  const categorizedTotal = splits
-    .filter((split) =>
-      direction === 'income' ? split.amount > 0 : split.amount < 0,
-    )
-    .reduce((sum, split) => sum + Math.abs(split.amount), 0)
-  const allTotal = transactions
-    .filter((transaction) =>
-      direction === 'income' ? transaction.amount > 0 : transaction.amount < 0,
-    )
-    .reduce((sum, transaction) => sum + Math.abs(transaction.amount), 0)
-
-  return (
-    <section className="panel chart-card">
-      <div className="chart-head">
-        <div>
-          <p className="eyebrow">
-            {direction === 'income' ? 'Income' : 'Spending'}
-          </p>
-          <h2>
-            {direction === 'income' ? 'Money received' : 'Money spent'}
-          </h2>
-        </div>
-        <div className="segmented" aria-label={`${direction} insight mode`}>
-          {(
-            [
-              ['all', allTotal],
-              ['categorized', categorizedTotal],
-              ['planned', plannedTotal],
-            ] as const
-          ).map(([value, valueTotal]) => (
-            <button
-              aria-pressed={mode === value}
-              className={mode === value ? 'selected' : ''}
-              key={value}
-              type="button"
-              onClick={() => {
-                setSelectedSliceId(null)
-                onModeChange(value)
-              }}
-            >
-              {value[0].toUpperCase() + value.slice(1)} ·{' '}
-              {formatDisplayMoney(valueTotal)}
-            </button>
-          ))}
-        </div>
-      </div>
-      {slices.length === 0 ? (
-        <div className="chart-empty">
-          No {mode} {direction} for this month.
-        </div>
-      ) : (
-        <div className="chart-body">
-          <Donut slices={slices} total={total} />
-          <div className="legend">
-            {slices.map((slice, index) => (
-              <button
-                className={selectedSlice?.id === slice.id ? 'selected' : ''}
-                key={slice.id}
-                type="button"
-                onClick={() => setSelectedSliceId(slice.id)}
-              >
-                <i style={{ background: chartColors[index % chartColors.length] }} />
-                <span>{slice.label}</span>
-                <strong>{formatDisplayMoney(slice.value)}</strong>
-              </button>
-            ))}
-          </div>
-          {selectedSlice && (
-            <aside className="drilldown">
-              <p className="eyebrow">Selected subsection</p>
-              <div className="chart-head">
-                <h3>{selectedSlice.label}</h3>
+            <section className="report-card report-card--review">
+              <header className="report-card__head">
+                <div>
+                  <p className="eyebrow">Review queue</p>
+                  <h2>Uncategorized activity</h2>
+                </div>
+                <strong className="warning">{uncategorizedTransactionCount}</strong>
+              </header>
+              <div className="report-card__body">
+                <p className="detail-note">
+                  Uncategorized spending remains visible in every total so
+                  reports never conceal it.
+                </p>
                 <button
-                  className="button ghost"
+                  className="terminal-button"
+                  data-semantic-id="report-review-queue"
+                  data-semantic-region="workspace"
+                  data-status-action="open"
+                  data-status-label="reports / transaction queue"
                   type="button"
-                  onClick={() => setSelectedSliceId(null)}
+                  onClick={onOpenTransactions}
                 >
-                  Close
+                  Open transaction queue
                 </button>
               </div>
-              <div className="drilldown-body">
-                <Donut slices={categorySlices} total={categoryTotal} />
-                <div className="legend detail-legend">
-                  {categoryInsights.map((category, index) => (
-                    <div key={category.id}>
-                      <i
-                        style={{
-                          background:
-                            chartColors[index % chartColors.length],
-                        }}
-                      />
-                      <span>{category.label}</span>
-                      <strong>{formatDisplayMoney(category.value)}</strong>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </aside>
-          )}
-        </div>
+            </section>
+          </section>
+        </>
       )}
     </section>
   )
 }
 
-function buildSlices({
-  direction,
-  mode,
-  allocations,
-  subsections,
-  transactions,
-  splits,
-  allocationsByCategory,
-  transactionIdsWithSplits,
+function BreakdownCard({
+  eyebrow,
+  heading,
+  slices,
+  total,
+  wide = false,
 }: {
-  direction: BudgetDirection
-  mode: InsightMode
-  allocations: BudgetAllocation[]
-  subsections: BudgetSubsection[]
-  transactions: Transaction[]
-  splits: TransactionSplit[]
-  allocationsByCategory: Map<string, BudgetAllocation>
-  transactionIdsWithSplits: Set<string>
-}): InsightSlice[] {
-  const values = new Map<string, InsightSlice>()
-  const add = (id: string, label: string, amount: number) => {
-    const current = values.get(id)
-    values.set(id, {
-      id,
-      label,
-      value: (current?.value ?? 0) + Math.abs(amount),
-    })
-  }
-  const subsectionNames = new Map(
-    subsections.map((subsection) => [subsection.id, subsection.name]),
+  eyebrow: string
+  heading: string
+  slices: InsightSlice[]
+  total: number
+  wide?: boolean
+}) {
+  return (
+    <section className={`report-card${wide ? ' report-card--wide' : ''}`}>
+      <header className="report-card__head">
+        <div>
+          <p className="eyebrow">{eyebrow}</p>
+          <h2>{heading}</h2>
+        </div>
+        <strong>{formatDisplayMoney(total)}</strong>
+      </header>
+      <div className="report-card__body donut-report">
+        {slices.length === 0 ? (
+          <p className="detail-note">No activity for this month.</p>
+        ) : (
+          <>
+            <ReportDonut slices={slices} total={total} />
+            <BarList slices={slices} />
+          </>
+        )}
+      </div>
+    </section>
   )
-
-  if (mode === 'planned') {
-    for (const allocation of allocations) {
-      if (allocation.direction !== direction) {
-        continue
-      }
-      const id = allocation.subsection_id ?? 'unsectioned'
-      add(
-        id,
-        allocation.subsection_id
-          ? subsectionNames.get(allocation.subsection_id) ?? 'Subsection'
-          : 'Unsectioned',
-        allocation.budgeted_amount,
-      )
-    }
-  } else {
-    for (const split of splits) {
-      if (
-        (direction === 'income' && split.amount <= 0) ||
-        (direction === 'spending' && split.amount >= 0)
-      ) {
-        continue
-      }
-      const allocation = allocationsByCategory.get(split.category_id)
-      const id = allocation
-        ? allocation.subsection_id ?? 'unsectioned'
-        : 'not-budgeted'
-      add(
-        id,
-        allocation?.subsection_name ??
-          (allocation ? 'Unsectioned' : 'Not budgeted'),
-        split.amount,
-      )
-    }
-    if (mode === 'all') {
-      for (const transaction of transactions) {
-        if (
-          transactionIdsWithSplits.has(transaction.id) ||
-          (direction === 'income' && transaction.amount <= 0) ||
-          (direction === 'spending' && transaction.amount >= 0)
-        ) {
-          continue
-        }
-        add('uncategorized', 'Uncategorized', transaction.amount)
-      }
-    }
-  }
-
-  return Array.from(values.values()).filter((slice) => slice.value > 0)
 }
 
-function buildCategoryInsights({
-  selectedSlice,
-  direction,
-  mode,
-  allocations,
-  splits,
-  allocationsByCategory,
-  categoriesById,
-  activityByCategory,
-  transactions,
-  transactionIdsWithSplits,
+function IncomeCard({
+  plannedIncome,
+  received,
+  slices,
 }: {
-  selectedSlice: InsightSlice
-  direction: BudgetDirection
-  mode: InsightMode
-  allocations: BudgetAllocation[]
-  splits: TransactionSplit[]
-  allocationsByCategory: Map<string, BudgetAllocation>
-  categoriesById: Map<string, Category>
-  activityByCategory: Map<string, number>
-  transactions: Transaction[]
-  transactionIdsWithSplits: Set<string>
-}): CategoryInsight[] {
-  if (selectedSlice.id === 'uncategorized') {
-    const netActivity = transactions.reduce(
-      (sum, transaction) =>
-        transactionIdsWithSplits.has(transaction.id)
-          ? sum
-          : sum + transaction.amount,
-      0,
-    )
-    return [
-      {
-        id: 'uncategorized',
-        label: 'Uncategorized',
-        value: selectedSlice.value,
-        netActivity,
-      },
-    ]
-  }
+  plannedIncome: number
+  received: number
+  slices: InsightSlice[]
+}) {
+  const progress =
+    plannedIncome === 0 ? 0 : Math.min(100, (received / plannedIncome) * 100)
 
-  const values = new Map<string, number>()
-  if (mode === 'planned') {
-    for (const allocation of allocations) {
-      if (
-        allocation.direction === direction &&
-        (allocation.subsection_id ?? 'unsectioned') === selectedSlice.id
-      ) {
-        values.set(allocation.category_id, Math.abs(allocation.budgeted_amount))
-      }
-    }
-  } else {
-    for (const split of splits) {
-      const allocation = allocationsByCategory.get(split.category_id)
-      const sliceId = allocation
-        ? allocation.subsection_id ?? 'unsectioned'
-        : 'not-budgeted'
-      if (
-        sliceId === selectedSlice.id &&
-        ((direction === 'income' && split.amount > 0) ||
-          (direction === 'spending' && split.amount < 0))
-      ) {
-        values.set(
-          split.category_id,
-          (values.get(split.category_id) ?? 0) + Math.abs(split.amount),
-        )
-      }
-    }
-  }
-
-  return Array.from(values, ([categoryId, value]) => ({
-    id: categoryId,
-    label:
-      categoriesById.get(categoryId)?.name ??
-      allocationsByCategory.get(categoryId)?.category_name ??
-      'Category',
-    value,
-    netActivity: activityByCategory.get(categoryId) ?? 0,
-  })).sort((left, right) => right.value - left.value)
+  return (
+    <section className="report-card">
+      <header className="report-card__head">
+        <div>
+          <p className="eyebrow">Income</p>
+          <h2>Progress to plan</h2>
+        </div>
+        <strong className="available">{Math.round(progress)}%</strong>
+      </header>
+      <div className="report-card__body">
+        {slices.length === 0 ? (
+          <p className="detail-note">No income activity for this month.</p>
+        ) : (
+          <BarList slices={slices} />
+        )}
+      </div>
+    </section>
+  )
 }
 
-function Donut({ slices, total }: { slices: InsightSlice[]; total: number }) {
+function ReportDonut({
+  slices,
+  total,
+}: {
+  slices: InsightSlice[]
+  total: number
+}) {
   const stops = slices.map((slice, index) => {
     const start =
       (slices
@@ -700,13 +486,103 @@ function Donut({ slices, total }: { slices: InsightSlice[]; total: number }) {
   return (
     <div
       aria-label={`Total ${formatDisplayMoney(total)}`}
-      className="donut"
+      className="donut-chart"
       role="img"
       style={{ background: `conic-gradient(${stops.join(', ')})` }}
     >
       <span>{formatDisplayMoney(total)}</span>
     </div>
   )
+}
+
+function BarList({ slices }: { slices: InsightSlice[] }) {
+  const maximum = Math.max(...slices.map((slice) => slice.value), 1)
+
+  return (
+    <ul className="bar-list">
+      {slices.map((slice, index) => (
+        <li key={slice.id}>
+          <span>{slice.label}</span>
+          <span className="bar-track">
+            <i
+              style={{
+                background: chartColors[index % chartColors.length],
+                width: `${(slice.value / maximum) * 100}%`,
+              }}
+            />
+          </span>
+          <strong>{formatDisplayMoney(slice.value)}</strong>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+function buildSlices({
+  direction,
+  subsections,
+  transactions,
+  splits,
+  allocationsByCategory,
+  transactionIdsWithSplits,
+}: {
+  direction: BudgetDirection
+  subsections: BudgetSubsection[]
+  transactions: Transaction[]
+  splits: TransactionSplit[]
+  allocationsByCategory: Map<string, BudgetAllocation>
+  transactionIdsWithSplits: Set<string>
+}): InsightSlice[] {
+  const values = new Map<string, InsightSlice>()
+  const subsectionNames = new Map(
+    subsections.map((subsection) => [subsection.id, subsection.name]),
+  )
+
+  function add(id: string, label: string, amount: number) {
+    const current = values.get(id)
+    values.set(id, {
+      id,
+      label,
+      value: (current?.value ?? 0) + Math.abs(amount),
+    })
+  }
+
+  for (const split of splits) {
+    if (
+      (direction === 'income' && split.amount <= 0) ||
+      (direction === 'spending' && split.amount >= 0)
+    ) {
+      continue
+    }
+    const allocation = allocationsByCategory.get(split.category_id)
+    const id = allocation
+      ? allocation.subsection_id ?? 'unsectioned'
+      : 'not-budgeted'
+    add(
+      id,
+      allocation?.subsection_id
+        ? subsectionNames.get(allocation.subsection_id) ?? 'Subsection'
+        : allocation
+          ? 'Unsectioned'
+          : 'Not budgeted',
+      split.amount,
+    )
+  }
+
+  for (const transaction of transactions) {
+    if (
+      transactionIdsWithSplits.has(transaction.id) ||
+      (direction === 'income' && transaction.amount <= 0) ||
+      (direction === 'spending' && transaction.amount >= 0)
+    ) {
+      continue
+    }
+    add('uncategorized', 'Uncategorized', transaction.amount)
+  }
+
+  return Array.from(values.values())
+    .filter((slice) => slice.value > 0)
+    .sort((left, right) => right.value - left.value)
 }
 
 function toVarianceItem(allocation: BudgetAllocation): VarianceItem {
@@ -730,59 +606,47 @@ function VarianceCard({
 }) {
   const isOver = direction === 'over'
   const visible = items.slice(0, 3)
-  const more = items.slice(3)
 
   return (
-    <section className="panel variance-card">
-      <div className="chart-head">
+    <section className="report-card">
+      <header className="report-card__head">
         <div>
-          <p className="eyebrow">Spending plan variance</p>
-          <h2>Most {direction} budget</h2>
+          <p className="eyebrow">Plan variance</p>
+          <h2>{isOver ? 'Over budget' : 'Under budget'}</h2>
         </div>
-        <span className={isOver ? 'negative' : 'positive'}>
-          Amount {direction} budget
+        <span
+          className={`terminal-pill ${
+            isOver ? 'terminal-pill--danger' : 'terminal-pill--ok'
+          }`}
+        >
+          {items.length} item{items.length === 1 ? '' : 's'}
         </span>
+      </header>
+      <div className="report-card__body">
+        {visible.length === 0 ? (
+          <p className="detail-note">
+            No {direction}-budget spending items.
+          </p>
+        ) : (
+          <ol className="variance-list">
+            {visible.map((item) => (
+              <li key={item.id}>
+                <span>
+                  {item.name}
+                  <small>
+                    {formatDisplayMoney(item.spent)} spent ·{' '}
+                    {formatDisplayMoney(item.planned)} planned
+                  </small>
+                </span>
+                <strong className={isOver ? 'is-over' : 'is-under'}>
+                  {isOver ? '+' : ''}
+                  {formatDisplayMoney(Math.abs(item.variance))}
+                </strong>
+              </li>
+            ))}
+          </ol>
+        )}
       </div>
-      {visible.length === 0 ? (
-        <p className="variance-empty">
-          No nonzero {direction}-budget spending items.
-        </p>
-      ) : (
-        <VarianceList isOver={isOver} items={visible} />
-      )}
-      {more.length > 0 && (
-        <details className="variance-more">
-          <summary>Show more {direction}-budget items</summary>
-          <VarianceList isOver={isOver} items={more} />
-        </details>
-      )}
     </section>
-  )
-}
-
-function VarianceList({
-  items,
-  isOver,
-}: {
-  items: VarianceItem[]
-  isOver: boolean
-}) {
-  return (
-    <ol className="variance-list">
-      {items.map((item) => (
-        <li key={item.id}>
-          <div>
-            <strong>{item.name}</strong>
-            <small>
-              {formatDisplayMoney(item.spent)} spent ·{' '}
-              {formatDisplayMoney(item.planned)} planned
-            </small>
-          </div>
-          <strong className={isOver ? 'negative' : 'positive'}>
-            {formatDisplayMoney(Math.abs(item.variance))}
-          </strong>
-        </li>
-      ))}
-    </ol>
   )
 }
