@@ -74,6 +74,9 @@ function getSemanticControls(
   )
     .filter(
       (control) =>
+        control.matches(
+          'button, input, select, textarea, summary, [tabindex]:not([tabindex="-1"])',
+        ) &&
         !control.matches(':disabled') &&
         control.getAttribute('aria-hidden') !== 'true' &&
         control.closest('[aria-hidden="true"], [hidden]') === null &&
@@ -439,9 +442,6 @@ function AuthenticatedShell({
   }, [theme])
 
   useEffect(() => {
-    if (activeView !== 'budgets') {
-      return
-    }
     const root = workspaceShellRef.current
     if (!root) {
       return
@@ -526,7 +526,11 @@ function AuthenticatedShell({
         }
         return
       }
-      if (event.key === ':' && !isAmountEditorOpen) {
+      if (
+        event.key === ':' &&
+        activeView === 'budgets' &&
+        !isAmountEditorOpen
+      ) {
         event.preventDefault()
         openCommandPalette()
         return
@@ -622,12 +626,21 @@ function AuthenticatedShell({
       const index = focusedControl ? controls.indexOf(focusedControl) : -1
       let nextControl: HTMLElement | null = null
 
+      if (
+        (key === 'j' || key === 'k') &&
+        (focusedControl?.dataset.semanticKind === 'transaction-row' ||
+          focusedControl?.dataset.semanticKind === 'transaction-selection')
+      ) {
+        return
+      }
+
       if (key === 'j' || key === 'k') {
         const nextIndex = index + (key === 'j' ? 1 : -1)
         nextControl = controls[nextIndex] ?? null
       } else if (key === 'h') {
         if (region === 'workspace') {
           nextControl =
+            activeView === 'budgets' &&
             focusedControl?.dataset.semanticId === 'month-next'
               ? workspaceControls.find(
                   (control) =>
@@ -639,12 +652,11 @@ function AuthenticatedShell({
         }
       } else if (key === 'l') {
         if (region === 'sidebar') {
-          nextControl =
-            workspaceControls.find(
-              (control) =>
-                control.dataset.semanticId === 'month-previous',
-            ) ?? null
-        } else if (focusedControl?.dataset.semanticId === 'month-previous') {
+          nextControl = workspaceControls[0] ?? null
+        } else if (
+          activeView === 'budgets' &&
+          focusedControl?.dataset.semanticId === 'month-previous'
+        ) {
           nextControl =
             workspaceControls.find(
               (control) => control.dataset.semanticId === 'month-next',
@@ -668,6 +680,7 @@ function AuthenticatedShell({
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [
+    activeView,
     focusBudgetRow,
     focusWorkspaceControl,
     focusedSemanticId,
@@ -962,6 +975,7 @@ function AuthenticatedShell({
   return (
     <div
       className={`authenticated-app terminal-app command-closed screen-app theme-${theme}`}
+      ref={workspaceShellRef}
     >
       <header className="titlebar">
         <button
@@ -1017,7 +1031,13 @@ function AuthenticatedShell({
               aria-current={activeView === item.view ? 'page' : undefined}
               className={`nav-item${
                 activeView === item.view ? ' is-active' : ''
+              }${
+                focusedSemanticId === `nav-${item.view}` ? ' is-focused' : ''
               }`}
+              data-semantic-id={`nav-${item.view}`}
+              data-semantic-region="sidebar"
+              data-status-action="select"
+              data-status-label={`${item.label.toLocaleLowerCase()} / navigation`}
               key={item.view}
               type="button"
               onClick={() => navigateToView(item.view)}
@@ -1035,6 +1055,10 @@ function AuthenticatedShell({
             {[selectedMonth, shiftMonth(selectedMonth, -1)].map((month) => (
               <button
                 className={month === selectedMonth ? 'is-current' : ''}
+                data-semantic-id={`report-month-${month}`}
+                data-semantic-region="sidebar"
+                data-status-action="select month"
+                data-status-label={`reports / ${formatMonth(month)}`}
                 key={month}
                 type="button"
                 onClick={() => setSelectedMonth(month)}
@@ -1078,7 +1102,7 @@ function AuthenticatedShell({
           <strong>{activeView === 'transactions' ? 'EDIT' : 'REPORT'}</strong>
           <span>
             {activeView === 'transactions'
-              ? 'transaction / category split'
+              ? 'transaction / category'
               : `${formatMonth(selectedMonth)} / all accounts`}
           </span>
         </div>
@@ -1086,8 +1110,9 @@ function AuthenticatedShell({
           {activeView === 'transactions' ? (
             <>
               <span><kbd>/</kbd> search</span>
-              <span><kbd>j</kbd><kbd>k</kbd> select</span>
-              <span><kbd>enter</kbd> categorize</span>
+              <span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span>
+              <span><kbd>c</kbd> category</span>
+              <span><kbd>enter</kbd> select</span>
               <span><kbd>esc</kbd> cancel</span>
             </>
           ) : (

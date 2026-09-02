@@ -288,12 +288,20 @@ export function InsightsPanel({
         </div>
         <div className="month-controls" aria-label="Month navigation">
           <button
+            data-semantic-id="report-month-previous"
+            data-semantic-region="workspace"
+            data-status-action="previous month"
+            data-status-label="reports / previous month"
             type="button"
             onClick={() => onMonthChange(shiftMonth(selectedMonth, -1))}
           >
             &larr; Previous
           </button>
           <button
+            data-semantic-id="report-month-next"
+            data-semantic-region="workspace"
+            data-status-action="next month"
+            data-status-label="reports / next month"
             type="button"
             onClick={() => onMonthChange(shiftMonth(selectedMonth, 1))}
           >
@@ -371,6 +379,10 @@ export function InsightsPanel({
                 </p>
                 <button
                   className="terminal-button"
+                  data-semantic-id="report-review-queue"
+                  data-semantic-region="workspace"
+                  data-status-action="open"
+                  data-status-label="reports / transaction queue"
                   type="button"
                   onClick={onOpenTransactions}
                 >
