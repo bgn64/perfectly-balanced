@@ -20,6 +20,9 @@
         <strong>Budget states</strong>
         <a href="#startup">Startup</a>
         <a href="#current">Current month</a>
+        <a href="#copy-previous">Copy previous</a>
+        <a href="#first-item">First item</a>
+        <a href="#first-item-picker">First item picker</a>
         <a href="#canonical">Canonical</a>
         <a href="#row-focus">Row focus</a>
         <a href="#subsection-focus">Subsection focus</a>
@@ -81,8 +84,8 @@
 
       <section id="current" class="review-frame">
         <header class="review-frame__head">
-          <div><span class="review-frame__id">02</span><h2>Current month empty state</h2></div>
-          <p class="review-frame__note">After loading, the current month remains September 2026. The seeded August budget is only visible after explicitly selecting the previous month.</p>
+          <div><span class="review-frame__id">02</span><h2>Empty month create action focused</h2></div>
+          <p class="review-frame__note">The primary Create button is part of the workspace semantic map. Because August has a budget, a conditional copy action appears next in keyboard order; users without a previous budget see only Create empty.</p>
         </header>
         <div class="frame-screen">
           <div class="authenticated-app terminal-app command-closed theme-dark">
@@ -115,12 +118,57 @@
                   <p class="eyebrow">Buffer empty</p>
                   <h2>Create the September 2026 budget.</h2>
                   <p>Set up an empty workspace now, then add subsections and categories in the order that makes sense for the month.</p>
-                  <button class="terminal-button terminal-button--primary" type="button">+ Create September 2026 budget</button>
+                  <div class="empty-budget-actions"><button class="terminal-button terminal-button--primary is-semantic-focused" type="button">+ Create empty September budget</button><button class="terminal-button empty-budget-copy" type="button">Copy August 2026 budget</button></div>
                 </div>
                 <aside class="empty-terminal__aside"><p class="eyebrow">Nearby months</p><nav class="month-list"><button type="button">August 2026</button><button class="is-current" type="button">September 2026</button><button type="button">October 2026</button></nav></aside>
               </section>
             </main>
-            <footer class="statusline"><div><strong>NAVIGATE</strong><span>budget / empty month</span><span>focus 1 of 8</span></div><div><span><kbd>Enter</kbd> create budget</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span><span><kbd>:</kbd> command</span></div></footer>
+            <footer class="statusline"><div><strong>NAVIGATE</strong><span>budget / create empty September 2026</span><span>focus 9 of 10</span></div><div><span><kbd>Enter</kbd> create empty budget</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span><span><kbd>:</kbd> command</span></div></footer>
+          </div>
+        </div>
+      </section>
+
+      <section id="copy-previous" class="review-frame">
+        <header class="review-frame__head">
+          <div><span class="review-frame__id">02b</span><h2>Copy previous budget focused</h2></div>
+          <p class="review-frame__note">Shown only when the immediately previous month has a budget. <kbd>Enter</kbd> creates September by copying August&rsquo;s subsections, category placement, Type, and Planned amounts.</p>
+        </header>
+        <div class="frame-screen">
+          <div class="authenticated-app terminal-app command-closed theme-dark">
+            <header class="titlebar"><button class="brand" type="button"><span class="brand-mark">pb</span><span>perfectly-balanced</span></button><p>September 2026 &middot; Personal budget</p><div class="theme-switcher" role="group" aria-label="Theme"><input checked id="theme-dark-copy-previous" name="theme-copy-previous" type="radio" /><label for="theme-dark-copy-previous">Dark</label><input id="theme-light-copy-previous" name="theme-copy-previous" type="radio" /><label for="theme-light-copy-previous">Light</label></div><details class="profile"><summary><span>D</span>dev</summary></details></header>
+            <aside class="sidebar" aria-label="Application navigation"><nav class="main-nav"><button class="nav-item is-active" type="button"><span>Budget</span></button><button class="nav-item" type="button"><span>Transactions</span><strong>1</strong></button><button class="nav-item" type="button"><span>Reports</span></button></nav><section class="sidebar-section"><h2>Months</h2><button type="button">August 2026</button><button class="is-current" type="button">September 2026</button><button type="button">October 2026</button></section></aside>
+            <main class="workspace"><header class="workspace-head"><div><p class="eyebrow">Budget / 2026 / 09</p><h1>September 2026</h1><p class="subtitle">Plan with the keyboard. Review with a glance.</p></div><div class="month-controls"><button type="button">&larr; Previous</button><button type="button">Next &rarr;</button></div></header><section class="screen-panel empty-terminal"><div class="empty-terminal__copy"><p class="eyebrow">Buffer empty</p><h2>Create the September 2026 budget.</h2><p>Start empty or reuse last month&rsquo;s structure and planned amounts.</p><div class="empty-budget-actions"><button class="terminal-button terminal-button--primary" type="button">+ Create empty September budget</button><button class="terminal-button empty-budget-copy is-semantic-focused" type="button">Copy August 2026 budget</button></div></div><aside class="empty-terminal__aside"><p class="eyebrow">Nearby months</p><nav class="month-list"><button type="button">August 2026</button><button class="is-current" type="button">September 2026</button><button type="button">October 2026</button></nav></aside></section></main>
+            <footer class="statusline"><div><strong>NAVIGATE</strong><span>budget / copy August 2026</span><span>focus 10 of 10</span></div><div><span><kbd>Enter</kbd> copy previous budget</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span><span><kbd>:</kbd> command</span></div></footer>
+          </div>
+        </div>
+      </section>
+
+      <section id="first-item" class="review-frame">
+        <header class="review-frame__head">
+          <div><span class="review-frame__id">03</span><h2>Empty created budget starts at first item</h2></div>
+          <p class="review-frame__note">After the month is created, focus moves to one inline starting row. <kbd>Enter</kbd> or <kbd>n</kbd> opens the existing category picker; the rest of the budget remains a clean empty table.</p>
+        </header>
+        <div class="frame-screen">
+          <div class="authenticated-app terminal-app command-closed theme-dark">
+            <header class="titlebar"><button class="brand" type="button"><span class="brand-mark">pb</span><span>perfectly-balanced</span></button><p>September 2026 &middot; Personal budget</p><div class="theme-switcher" role="group" aria-label="Theme"><input checked id="theme-dark-first-item" name="theme-first-item" type="radio" /><label for="theme-dark-first-item">Dark</label><input id="theme-light-first-item" name="theme-first-item" type="radio" /><label for="theme-light-first-item">Light</label></div><details class="profile"><summary><span>KN</span>keyboard-new-user</summary></details></header>
+            <aside class="sidebar" aria-label="Application navigation"><nav class="main-nav"><button class="nav-item is-active" type="button"><span>Budget</span></button><button class="nav-item" type="button"><span>Transactions</span><strong>3</strong></button><button class="nav-item" type="button"><span>Reports</span></button></nav><section class="sidebar-section"><h2>Months</h2><button type="button">August 2026</button><button class="is-current" type="button">September 2026</button><button type="button">October 2026</button></section></aside>
+            <main class="workspace"><header class="workspace-head"><div><p class="eyebrow">Budget / 2026 / 09</p><h1>September 2026</h1><p class="subtitle">Plan with the keyboard. Review with a glance.</p></div><div class="month-controls"><button type="button">&larr; Previous</button><button type="button">Next &rarr;</button></div></header><section class="summary"><div><span>Available</span><strong class="available">$0</strong></div><div><span>Planned</span><strong>$0</strong></div><div><span>Spent</span><strong class="spent">$0</strong></div><div><span>Uncategorized</span><strong class="warning">3 transactions</strong></div></section><section class="budget-table"><div class="table-head"><div><p class="eyebrow">Monthly plan</p><h2>Categories</h2></div></div><div class="column-head"><span>Category</span><span>Planned</span><span>Spent</span><span>Remaining</span></div><button class="first-budget-item is-selected" type="button"><span><i class="selection-caret">&rsaquo;</i>Add first budget line item</span><span class="first-budget-item__hint"><kbd>Enter</kbd> or <kbd>n</kbd></span></button></section></main>
+            <footer class="statusline"><div><strong>NAVIGATE</strong><span>budget / add first item</span><span>focus 9 of 9</span></div><div><span><kbd>Enter</kbd> choose category</span><span><kbd>n</kbd> new</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span></div></footer>
+          </div>
+        </div>
+      </section>
+
+      <section id="first-item-picker" class="review-frame">
+        <header class="review-frame__head">
+          <div><span class="review-frame__id">04</span><h2>First item category picker</h2></div>
+          <p class="review-frame__note">The starting row becomes the same inline picker used for later budget items. Existing categories appear immediately, and typing a new name still offers category creation.</p>
+        </header>
+        <div class="frame-screen">
+          <div class="authenticated-app terminal-app command-closed theme-dark">
+            <header class="titlebar"><button class="brand" type="button"><span class="brand-mark">pb</span><span>perfectly-balanced</span></button><p>September 2026 &middot; Personal budget</p><div class="theme-switcher" role="group" aria-label="Theme"><input checked id="theme-dark-first-picker" name="theme-first-picker" type="radio" /><label for="theme-dark-first-picker">Dark</label><input id="theme-light-first-picker" name="theme-first-picker" type="radio" /><label for="theme-light-first-picker">Light</label></div><details class="profile"><summary><span>KN</span>keyboard-new-user</summary></details></header>
+            <aside class="sidebar" aria-label="Application navigation"><nav class="main-nav"><button class="nav-item is-active" type="button"><span>Budget</span></button><button class="nav-item" type="button"><span>Transactions</span><strong>3</strong></button><button class="nav-item" type="button"><span>Reports</span></button></nav><section class="sidebar-section"><h2>Months</h2><button type="button">August 2026</button><button class="is-current" type="button">September 2026</button><button type="button">October 2026</button></section></aside>
+            <main class="workspace"><header class="workspace-head"><div><p class="eyebrow">Budget / 2026 / 09</p><h1>September 2026</h1><p class="subtitle">Plan with the keyboard. Review with a glance.</p></div><div class="month-controls"><button type="button">&larr; Previous</button><button type="button">Next &rarr;</button></div></header><section class="summary"><div><span>Available</span><strong class="available">$0</strong></div><div><span>Planned</span><strong>$0</strong></div><div><span>Spent</span><strong class="spent">$0</strong></div><div><span>Uncategorized</span><strong class="warning">3 transactions</strong></div></section><section class="budget-table"><div class="table-head"><div><p class="eyebrow">Monthly plan</p><h2>Categories</h2></div></div><div class="column-head"><span>Category</span><span>Planned</span><span>Spent</span><span>Remaining</span></div><div class="budget-row is-selected pending-budget-entry"><span class="category-name"><i class="selection-caret">&rsaquo;</i><span class="category-combobox pending-budget-category-combobox"><label class="sr-only" for="first-category-search">Search or create category</label><input aria-activedescendant="first-category-groceries" aria-autocomplete="list" aria-controls="first-category-listbox" aria-expanded="true" id="first-category-search" placeholder="Search or create category" role="combobox" type="search" /><span class="combo-menu" id="first-category-listbox" role="listbox"><button aria-selected="true" class="combo-option highlighted" id="first-category-groceries" role="option" type="button">Groceries</button><button class="combo-option" role="option" type="button">Transit</button></span></span></span><span class="amount-cell">$0</span><span class="spent">$0</span><span class="available">$0</span></div></section></main>
+            <footer class="statusline"><div><strong>NAME</strong><span>choose category</span></div><div><span><kbd>Ctrl+N</kbd><kbd>Ctrl+P</kbd> choose</span><span><kbd>Enter</kbd> select</span><span><kbd>Esc</kbd> cancel</span></div></footer>
           </div>
         </div>
       </section>

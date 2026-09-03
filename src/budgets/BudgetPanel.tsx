@@ -317,7 +317,9 @@ async function queryBudget(month: string): Promise<BudgetData> {
   )
   const uncategorizedCount = transactions.filter(
     (transaction) =>
-      !transaction.is_ignored && !categorizedTransactionIds.has(transaction.id),
+      !transaction.is_ignored &&
+      monthKey(transaction.transaction_date) === month &&
+      !categorizedTransactionIds.has(transaction.id),
   ).length
   const ignoredTransactionIds = transactions
     .filter(
@@ -411,6 +413,7 @@ export function BudgetPanel({
   ) => void
 }) {
   const { user } = useAuth()
+  const [budgets, setBudgets] = useState<Budget[]>([])
   const [budget, setBudget] = useState<Budget | null>(null)
   const [subsections, setSubsections] = useState<BudgetSubsection[]>([])
   const [allocations, setAllocations] = useState<BudgetAllocation[]>([])
@@ -455,6 +458,7 @@ export function BudgetPanel({
       if (generation !== requestGeneration.current) {
         return
       }
+      setBudgets(data.budgets)
       setBudget(data.budget)
       setSubsections(data.subsections)
       setAllocations(data.allocations)
@@ -671,6 +675,19 @@ export function BudgetPanel({
     })
   }
 
+  function focusInitialBudgetEntry() {
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        const target = document.querySelector<HTMLElement>(
+          '[data-semantic-kind="budget-row"], [data-semantic-kind="budget-subsection"], [data-semantic-kind="budget-first-item"]',
+        )
+        if (target) {
+          focusWithScrollComfort(target)
+        }
+      })
+    })
+  }
+
   function closeDeleteConfirmation() {
     if (deleteTarget) {
       focusSemanticEntry(deleteTarget.semanticId)
@@ -757,6 +774,33 @@ export function BudgetPanel({
     setPendingName('')
     setPendingCreation(creationPosition(creationTarget, kind))
     setCreationTarget(null)
+  }
+
+  function beginFirstAllocation() {
+    setPendingName('')
+    setPendingCreation({
+      kind: 'allocation',
+      originSemanticId: 'budget-first-item',
+      position: 0,
+      subsectionId: null,
+    })
+  }
+
+  async function createBudget(copyPrevious: boolean) {
+    const result = await runMutation<string>(
+      copyPrevious ? 'copy-budget' : 'create-budget',
+      () =>
+        copyPrevious
+          ? getSupabaseClient().rpc('copy_previous_month_budget', {
+              p_month: `${selectedMonth}-01`,
+            })
+          : getSupabaseClient().rpc('create_monthly_budget', {
+              p_month: `${selectedMonth}-01`,
+            }),
+    )
+    if (result.didSave) {
+      focusInitialBudgetEntry()
+    }
   }
 
   async function savePendingAllocation(category: Category) {
@@ -873,7 +917,7 @@ export function BudgetPanel({
       .slice(0, targetIndex)
       .toReversed()
       .find((entry) => !isRemoved(entry))
-    return following?.semanticId ?? previous?.semanticId ?? 'budget-heading'
+    return following?.semanticId ?? previous?.semanticId ?? 'budget-first-item'
   }
 
   async function confirmDelete(choice = deleteChoice) {
@@ -1349,6 +1393,10 @@ export function BudgetPanel({
     displayedBudget.allocations,
     displayedBudget.subsections,
   )
+  const previousMonth = shiftMonth(selectedMonth, -1)
+  const hasPreviousBudget = budgets.some(
+    (candidate) => candidate.month.slice(0, 7) === previousMonth,
+  )
 
   function allocationsForSubsection(subsectionId: string | null) {
     return displayedBudget.allocations.filter(
@@ -1518,27 +1566,42 @@ export function BudgetPanel({
             <p className="eyebrow">Buffer empty</p>
             <h2>Create the {formatMonth(selectedMonth)} budget.</h2>
             <p>
-              Set up an empty workspace now, then add subsections and
-              categories in the order that makes sense for the month.
+              {hasPreviousBudget
+                ? 'Start empty or reuse last month’s structure and planned amounts.'
+                : 'Set up an empty workspace now, then add subsections and categories in the order that makes sense for the month.'}
             </p>
-            <button
-              className="terminal-button terminal-button--primary"
-              data-status-action="create budget"
-              data-status-label="budget / empty month"
-              type="button"
-              disabled={busyId === 'create-budget'}
-              onClick={() =>
-                void runMutation('create-budget', () =>
-                  getSupabaseClient().rpc('create_monthly_budget', {
-                    p_month: `${selectedMonth}-01`,
-                  }),
-                )
-              }
-            >
-              {busyId === 'create-budget'
-                ? 'Creating month...'
-                : `+ Create ${formatMonth(selectedMonth)} budget`}
-            </button>
+            <div className="empty-budget-actions">
+              <button
+                className="terminal-button terminal-button--primary"
+                data-semantic-id="create-empty-budget"
+                data-semantic-region="workspace"
+                data-status-action="create empty budget"
+                data-status-label={`budget / create empty ${formatMonth(selectedMonth)}`}
+                type="button"
+                disabled={busyId !== null}
+                onClick={() => void createBudget(false)}
+              >
+                {busyId === 'create-budget'
+                  ? 'Creating month...'
+                  : `+ Create empty ${formatMonth(selectedMonth)} budget`}
+              </button>
+              {hasPreviousBudget && (
+                <button
+                  className="terminal-button empty-budget-copy"
+                  data-semantic-id="copy-previous-budget"
+                  data-semantic-region="workspace"
+                  data-status-action="copy previous budget"
+                  data-status-label={`budget / copy ${formatMonth(previousMonth)}`}
+                  type="button"
+                  disabled={busyId !== null}
+                  onClick={() => void createBudget(true)}
+                >
+                  {busyId === 'copy-budget'
+                    ? 'Copying budget...'
+                    : `Copy ${formatMonth(previousMonth)} budget`}
+                </button>
+              )}
+            </div>
           </div>
           <aside className="empty-terminal__aside" aria-label="Nearby months">
             <p className="eyebrow">Nearby months</p>
@@ -1611,6 +1674,29 @@ export function BudgetPanel({
               <span>Spent</span>
               <span>Remaining</span>
             </div>
+            {displayedTopLevelEntries.length === 0 && !pendingCreation && (
+              <button
+                className={`first-budget-item${
+                  focusedSemanticId === 'budget-first-item' ? ' is-selected' : ''
+                }`}
+                data-semantic-id="budget-first-item"
+                data-semantic-kind="budget-first-item"
+                data-semantic-region="workspace"
+                data-status-action="choose category"
+                data-status-label="budget / add first item"
+                id="budget-first-item"
+                type="button"
+                onClick={beginFirstAllocation}
+              >
+                <span>
+                  <i className="selection-caret">›</i>
+                  Add first budget line item
+                </span>
+                <span className="first-budget-item__hint">
+                  <kbd>Enter</kbd> or <kbd>n</kbd>
+                </span>
+              </button>
+            )}
             {displayedTopLevelEntries.map((entry, index) => (
               <Fragment
                 key={
@@ -2277,6 +2363,7 @@ function InlineBudgetAmount({
     <div className="inline-amount-editor">
       <input
         autoFocus
+        aria-label={`${allocation.category_name} planned amount`}
         aria-invalid={errorMessage ? 'true' : undefined}
         className="amount-cell amount-cell--editing"
         data-status-action="save amount"

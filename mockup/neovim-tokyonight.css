@@ -1647,6 +1647,70 @@ input:focus-visible {
   color: #1a1b26;
 }
 
+.is-semantic-focused {
+  outline: 2px solid #7dcfff;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 1px #1a1b26;
+}
+
+.first-budget-item {
+  display: flex;
+  width: 100%;
+  min-height: 3.1rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 0;
+  border-top: 1px solid #292e42;
+  padding: 0.7rem 1rem;
+  background: transparent;
+  color: #7dcfff;
+  font: inherit;
+  font-size: 0.75rem;
+  text-align: left;
+}
+
+.first-budget-item.is-selected {
+  position: relative;
+  background: #292e42;
+  outline: 2px solid #7dcfff;
+  outline-offset: -2px;
+}
+
+.first-budget-item.is-selected::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 2px;
+  background: #7aa2f7;
+  content: "";
+}
+
+.first-budget-item__hint {
+  flex: 0 0 auto;
+  color: #787c99;
+  font-size: 0.64rem;
+}
+
+#first-item-picker .budget-table {
+  min-height: 15rem;
+}
+
+.empty-budget-actions {
+  display: grid;
+  justify-items: start;
+  gap: 0.55rem;
+  margin-top: 1rem;
+}
+
+.empty-terminal__copy .empty-budget-actions .terminal-button {
+  margin-top: 0;
+}
+
+.empty-budget-copy {
+  background: transparent;
+  color: #7dcfff;
+}
+
 .terminal-button--danger {
   color: #f7768e;
 }
@@ -3989,7 +4053,7 @@ body.review-page > .review-frame {
 @media (max-width: 34rem) {
   :is(#ignore-action, #ignored-result) .review-frame__viewport > .terminal-app,
   #ignored-excluded > .terminal-app,
-  :is(#ignored-budget, #scroll-focus, #scroll-picker) .frame-screen > .terminal-app {
+  :is(#current, #copy-previous, #first-item, #first-item-picker, #ignored-budget, #scroll-focus, #scroll-picker) .frame-screen > .terminal-app {
     width: calc(100% - 1rem);
     min-width: 0;
     height: calc(100% - 1rem);
