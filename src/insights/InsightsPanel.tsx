@@ -308,7 +308,7 @@ export function InsightsPanel({
             A compact readout of how this month is tracking against your plan.
           </p>
         </div>
-        <div className="month-controls" aria-label="Month navigation">
+        <nav className="month-jump-controls" aria-label="Month navigation">
           <button
             data-semantic-id="report-month-previous"
             data-semantic-region="workspace"
@@ -317,7 +317,11 @@ export function InsightsPanel({
             type="button"
             onClick={() => onMonthChange(shiftMonth(selectedMonth, -1))}
           >
-            &larr; Previous
+            <span aria-hidden="true">←</span>
+            <span>
+              <small>Previous month</small>
+              <strong>{formatMonth(shiftMonth(selectedMonth, -1))}</strong>
+            </span>
           </button>
           <button
             data-semantic-id="report-month-next"
@@ -327,9 +331,13 @@ export function InsightsPanel({
             type="button"
             onClick={() => onMonthChange(shiftMonth(selectedMonth, 1))}
           >
-            Next &rarr;
+            <span>
+              <small>Next month</small>
+              <strong>{formatMonth(shiftMonth(selectedMonth, 1))}</strong>
+            </span>
+            <span aria-hidden="true">→</span>
           </button>
-        </div>
+        </nav>
       </header>
 
       {errorMessage && (

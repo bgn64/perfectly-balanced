@@ -1524,7 +1524,7 @@ export function BudgetPanel({
           <h1>{formatMonth(selectedMonth)}</h1>
           <p className="subtitle">Plan with the keyboard. Review with a glance.</p>
         </div>
-        <div className="month-controls" aria-label="Month navigation">
+        <nav className="month-jump-controls" aria-label="Month navigation">
           <button
             data-semantic-id="month-previous"
             data-semantic-region="workspace"
@@ -1534,7 +1534,11 @@ export function BudgetPanel({
             type="button"
             onClick={() => onMonthChange(shiftMonth(selectedMonth, -1))}
           >
-            ← Previous
+            <span aria-hidden="true">←</span>
+            <span>
+              <small>Previous month</small>
+              <strong>{formatMonth(shiftMonth(selectedMonth, -1))}</strong>
+            </span>
           </button>
           <button
             data-semantic-id="month-next"
@@ -1545,9 +1549,13 @@ export function BudgetPanel({
             type="button"
             onClick={() => onMonthChange(shiftMonth(selectedMonth, 1))}
           >
-            Next →
+            <span>
+              <small>Next month</small>
+              <strong>{formatMonth(shiftMonth(selectedMonth, 1))}</strong>
+            </span>
+            <span aria-hidden="true">→</span>
           </button>
-        </div>
+        </nav>
       </header>
 
       {errorMessage && (
@@ -1561,7 +1569,7 @@ export function BudgetPanel({
           Loading budget...
         </section>
       ) : !budget ? (
-        <section className="screen-panel empty-terminal">
+        <section className="screen-panel empty-terminal empty-terminal--streamlined">
           <div className="empty-terminal__copy">
             <p className="eyebrow">Buffer empty</p>
             <h2>Create the {formatMonth(selectedMonth)} budget.</h2>
@@ -1603,25 +1611,6 @@ export function BudgetPanel({
               )}
             </div>
           </div>
-          <aside className="empty-terminal__aside" aria-label="Nearby months">
-            <p className="eyebrow">Nearby months</p>
-            <nav className="month-list">
-              {[
-                shiftMonth(selectedMonth, -1),
-                selectedMonth,
-                shiftMonth(selectedMonth, 1),
-              ].map((month) => (
-                <button
-                  className={month === selectedMonth ? 'is-current' : ''}
-                  key={month}
-                  type="button"
-                  onClick={() => onMonthChange(month)}
-                >
-                  {formatMonth(month)}
-                </button>
-              ))}
-            </nav>
-          </aside>
         </section>
       ) : (
         <>
