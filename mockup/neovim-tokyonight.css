@@ -623,7 +623,8 @@ h3 {
   grid-column: 4;
 }
 
-.budget-row > .available {
+.budget-row > .remaining-cell,
+.budget-row > :last-child {
   grid-column: 5;
 }
 
@@ -1507,7 +1508,8 @@ input:focus-visible {
   }
 
   .column-head > span:nth-child(4),
-  .budget-row > .available {
+  .budget-row > .remaining-cell,
+  .budget-row > :last-child {
     grid-column: 3;
   }
 
@@ -1530,7 +1532,8 @@ input:focus-visible {
     grid-column: 3;
   }
 
-  .budget-row:has(.inline-amount-editor) > .available {
+  .budget-row:has(.inline-amount-editor) > .remaining-cell,
+  .budget-row:has(.inline-amount-editor) > :last-child {
     display: none;
   }
 
