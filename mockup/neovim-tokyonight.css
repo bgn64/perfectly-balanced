@@ -557,6 +557,15 @@ h3 {
   grid-column: 5;
 }
 
+.column-head > span:nth-last-child(2) {
+  font-size: 0;
+}
+
+.column-head > span:nth-last-child(2)::after {
+  content: "Spent / Received";
+  font-size: 0.62rem;
+}
+
 .column-head span:not(:first-child),
 .budget-row span:not(:first-child) {
   text-align: right;
@@ -619,6 +628,7 @@ h3 {
   grid-column: 3;
 }
 
+.budget-row > .activity-cell,
 .budget-row > .spent {
   grid-column: 4;
 }
@@ -626,6 +636,30 @@ h3 {
 .budget-row > .remaining-cell,
 .budget-row > :last-child {
   grid-column: 5;
+}
+
+.budget-row > .activity-cell,
+.budget-row > .spent,
+.budget-row > .available,
+.budget-row > .remaining-cell,
+.budget-row > :last-child {
+  color: #a9b1d6;
+}
+
+.budget-row--over-spending > .activity-cell,
+.budget-row--over-spending > .spent,
+.budget-row--over-spending > .remaining-cell,
+.budget-row--over-spending > :last-child {
+  color: #f7768e;
+  font-weight: 700;
+}
+
+.budget-row--over-income > .activity-cell,
+.budget-row--over-income > .spent,
+.budget-row--over-income > .remaining-cell,
+.budget-row--over-income > :last-child {
+  color: #9ece6a;
+  font-weight: 700;
 }
 
 .budget-row--sectioned .category-name {
@@ -1276,6 +1310,28 @@ body:has(#theme-light:checked) {
 
 .terminal-app:has(#theme-light:checked) .spent {
   color: #8c4351;
+}
+
+.terminal-app:has(#theme-light:checked) .budget-row > .activity-cell,
+.terminal-app:has(#theme-light:checked) .budget-row > .spent,
+.terminal-app:has(#theme-light:checked) .budget-row > .available,
+.terminal-app:has(#theme-light:checked) .budget-row > .remaining-cell,
+.terminal-app:has(#theme-light:checked) .budget-row > :last-child {
+  color: #343b58;
+}
+
+.terminal-app:has(#theme-light:checked) .budget-row--over-spending > .activity-cell,
+.terminal-app:has(#theme-light:checked) .budget-row--over-spending > .spent,
+.terminal-app:has(#theme-light:checked) .budget-row--over-spending > .remaining-cell,
+.terminal-app:has(#theme-light:checked) .budget-row--over-spending > :last-child {
+  color: #8c4351;
+}
+
+.terminal-app:has(#theme-light:checked) .budget-row--over-income > .activity-cell,
+.terminal-app:has(#theme-light:checked) .budget-row--over-income > .spent,
+.terminal-app:has(#theme-light:checked) .budget-row--over-income > .remaining-cell,
+.terminal-app:has(#theme-light:checked) .budget-row--over-income > :last-child {
+  color: #33635c;
 }
 
 .terminal-app:has(#theme-light:checked) .warning {
@@ -4056,7 +4112,7 @@ body.review-page > .review-frame {
 @media (max-width: 34rem) {
   :is(#ignore-action, #ignored-result) .review-frame__viewport > .terminal-app,
   #ignored-excluded > .terminal-app,
-  :is(#current, #copy-previous, #first-item, #first-item-picker, #ignored-budget, #scroll-focus, #scroll-picker) .frame-screen > .terminal-app {
+  :is(#current, #copy-previous, #first-item, #first-item-picker, #ignored-budget, #scroll-focus, #scroll-picker, #column-colors) .frame-screen > .terminal-app {
     width: calc(100% - 1rem);
     min-width: 0;
     height: calc(100% - 1rem);

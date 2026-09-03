@@ -1671,7 +1671,7 @@ export function BudgetPanel({
               <span>Category</span>
               <span>Type</span>
               <span>Planned</span>
-              <span>Spent</span>
+              <span>Spent / Received</span>
               <span>Remaining</span>
             </div>
             {displayedTopLevelEntries.length === 0 && !pendingCreation && (
@@ -1979,11 +1979,13 @@ function BudgetAllocationRow({
 }) {
   const plannedAmount = Math.abs(allocation.budgeted_amount)
   const isBusy = busyId !== null
-  const spentAmount =
+  const activityAmount =
     allocation.direction === 'spending'
       ? Math.max(0, -allocation.actual_amount)
       : Math.max(0, allocation.actual_amount)
-  const remaining = plannedAmount - spentAmount
+  const remaining = plannedAmount - activityAmount
+  const isOverPlan = activityAmount > plannedAmount
+  const isIncomeOverPlan = allocation.direction === 'income' && isOverPlan
   const isSelected =
     focusedSemanticId === `budget-row-${allocation.allocation_id}` ||
     isRenaming
@@ -1995,6 +1997,8 @@ function BudgetAllocationRow({
         isSelected ? ' is-selected' : ''
       }${
         isPickedUp ? ' is-picked-up' : ''
+      }${
+        isOverPlan ? ` budget-row--over-${allocation.direction}` : ''
       }`}
       data-allocation-id={allocation.allocation_id}
       data-semantic-id={`budget-row-${allocation.allocation_id}`}
@@ -2077,11 +2081,11 @@ function BudgetAllocationRow({
           {formatDisplayMoney(plannedAmount)}
         </button>
       )}
-      <span className="spent">{formatDisplayMoney(spentAmount)}</span>
-      <span
-        className={`remaining-cell ${remaining < 0 ? 'spent' : 'available'}`}
-      >
-        {formatDisplayMoney(remaining)}
+      <span className="activity-cell">{formatDisplayMoney(activityAmount)}</span>
+      <span className="remaining-cell">
+        {isIncomeOverPlan
+          ? `+${formatDisplayMoney(Math.abs(remaining))}`
+          : formatDisplayMoney(remaining)}
       </span>
     </div>
   )
@@ -2132,8 +2136,8 @@ function PendingBudgetAllocation({
         />
       </span>
       <span className="amount-cell">$0</span>
-      <span className="spent">$0</span>
-      <span className="available">$0</span>
+      <span className="activity-cell">$0</span>
+      <span className="remaining-cell">$0</span>
     </div>
   )
 }
