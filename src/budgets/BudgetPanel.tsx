@@ -20,10 +20,12 @@ import type {
 import {
   formatDisplayMoney,
   formatMonth,
+  monthKey,
   parseMagnitude,
   shiftMonth,
 } from '../finance/utils.ts'
 import { getSupabaseClient } from '../lib/supabase.ts'
+import { focusWithScrollComfort } from '../navigation/focus.ts'
 import { useAuth } from '../auth/useAuth.ts'
 
 interface BudgetData {
@@ -32,6 +34,7 @@ interface BudgetData {
   subsections: BudgetSubsection[]
   allocations: BudgetAllocation[]
   categories: Category[]
+  ignoredTransactionIds: string[]
   uncategorizedCount: number
 }
 
@@ -278,7 +281,11 @@ async function queryBudget(month: string): Promise<BudgetData> {
     client.from('budgets').select('id, month').order('month', { ascending: false }),
     client.from('categories').select('id, name').order('name'),
     collectPages((afterId, limit) => {
-      let query = client.from('transactions').select('id').order('id').limit(limit)
+      let query = client
+        .from('transactions')
+        .select('id, transaction_date, currency_code, is_ignored')
+        .order('id')
+        .limit(limit)
       if (afterId) {
         query = query.gt('id', afterId)
       }
@@ -309,8 +316,17 @@ async function queryBudget(month: string): Promise<BudgetData> {
     splits.map((split) => split.transaction_id),
   )
   const uncategorizedCount = transactions.filter(
-    (transaction) => !categorizedTransactionIds.has(transaction.id),
+    (transaction) =>
+      !transaction.is_ignored && !categorizedTransactionIds.has(transaction.id),
   ).length
+  const ignoredTransactionIds = transactions
+    .filter(
+      (transaction) =>
+        transaction.is_ignored &&
+        transaction.currency_code === 'USD' &&
+        monthKey(transaction.transaction_date) === month,
+    )
+    .map((transaction) => transaction.id)
   const budget =
     budgets.find((candidate) => candidate.month.slice(0, 7) === month) ?? null
 
@@ -321,6 +337,7 @@ async function queryBudget(month: string): Promise<BudgetData> {
       subsections: [],
       allocations: [],
       categories: categoriesResult.data ?? [],
+      ignoredTransactionIds,
       uncategorizedCount,
     }
   }
@@ -357,6 +374,7 @@ async function queryBudget(month: string): Promise<BudgetData> {
       actual_amount: Number(allocation.actual_amount),
     })),
     categories: categoriesResult.data ?? [],
+    ignoredTransactionIds,
     uncategorizedCount,
   }
 }
@@ -365,6 +383,7 @@ export function BudgetPanel({
   categoriesRevision,
   activityRevision,
   onCategoriesChanged,
+  onOpenTransaction,
   onUncategorizedCountChange,
   selectedMonth,
   onMonthChange,
@@ -378,6 +397,7 @@ export function BudgetPanel({
   categoriesRevision: number
   activityRevision: number
   onCategoriesChanged: () => void
+  onOpenTransaction: (transactionId: string) => void
   onUncategorizedCountChange: (count: number) => void
   selectedMonth: string
   onMonthChange: (month: string) => void
@@ -395,6 +415,7 @@ export function BudgetPanel({
   const [subsections, setSubsections] = useState<BudgetSubsection[]>([])
   const [allocations, setAllocations] = useState<BudgetAllocation[]>([])
   const [categories, setCategories] = useState<Category[]>([])
+  const [ignoredTransactionIds, setIgnoredTransactionIds] = useState<string[]>([])
   const [uncategorizedCount, setUncategorizedCount] = useState(0)
   const [editingAllocationId, setEditingAllocationId] = useState<string | null>(
     null,
@@ -438,6 +459,7 @@ export function BudgetPanel({
       setSubsections(data.subsections)
       setAllocations(data.allocations)
       setCategories(data.categories)
+      setIgnoredTransactionIds(data.ignoredTransactionIds)
       setUncategorizedCount(data.uncategorizedCount)
       onUncategorizedCountChange(data.uncategorizedCount)
       setEditingAllocationId(null)
@@ -642,7 +664,10 @@ export function BudgetPanel({
 
   function focusSemanticEntry(semanticId: string) {
     window.requestAnimationFrame(() => {
-      document.getElementById(semanticId)?.focus()
+      const entry = document.getElementById(semanticId)
+      if (entry) {
+        focusWithScrollComfort(entry)
+      }
     })
   }
 
@@ -1133,10 +1158,14 @@ export function BudgetPanel({
         return
       }
       if (pendingCreation) {
-        pendingNameInputRef.current?.focus()
+        if (pendingNameInputRef.current) {
+          focusWithScrollComfort(pendingNameInputRef.current)
+        }
         return
       }
-      renameNameInputRef.current?.focus()
+      if (renameNameInputRef.current) {
+        focusWithScrollComfort(renameNameInputRef.current)
+      }
     })
   }, [
     creationKind,
@@ -1549,6 +1578,25 @@ export function BudgetPanel({
             </div>
           </section>
 
+          {ignoredTransactionIds.length > 0 && (
+            <aside
+              className="ignored-report-notice"
+              aria-label="Ignored budget activity"
+            >
+              <span className="terminal-pill terminal-pill--muted">
+                {ignoredTransactionIds.length} ignored
+              </span>
+              <span>Excluded from budget actuals</span>
+              <button
+                className="terminal-button"
+                type="button"
+                onClick={() => onOpenTransaction(ignoredTransactionIds[0])}
+              >
+                View transaction{ignoredTransactionIds.length === 1 ? '' : 's'}
+              </button>
+            </aside>
+          )}
+
           <section className="budget-table" aria-labelledby="budget-heading">
             <div className="table-head">
               <div>
@@ -1558,6 +1606,7 @@ export function BudgetPanel({
             </div>
             <div className="column-head" aria-hidden="true">
               <span>Category</span>
+              <span>Type</span>
               <span>Planned</span>
               <span>Spent</span>
               <span>Remaining</span>

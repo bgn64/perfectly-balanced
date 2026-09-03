@@ -50,7 +50,7 @@ async function queryInsights(month: string): Promise<InsightsData> {
       let query = client
         .from('transactions')
         .select(
-          'id, plaid_item_id, transaction_date, merchant_name, transaction_name, amount, currency_code, is_pending, account_name',
+          'id, plaid_item_id, transaction_date, merchant_name, transaction_name, amount, currency_code, is_pending, is_ignored, account_name',
         )
         .gte('transaction_date', `${month}-01`)
         .lt('transaction_date', `${nextMonth}-01`)
@@ -142,12 +142,14 @@ export function InsightsPanel({
   activityRevision,
   selectedMonth,
   onMonthChange,
+  onOpenTransaction,
   onOpenTransactions,
 }: {
   categoriesRevision: number
   activityRevision: number
   selectedMonth: string
   onMonthChange: (month: string) => void
+  onOpenTransaction: (transactionId: string) => void
   onOpenTransactions: () => void
 }) {
   const [data, setData] = useState<InsightsData>({
@@ -204,25 +206,45 @@ export function InsightsPanel({
       ),
     [data.allocations],
   )
+  const activeTransactions = useMemo(
+    () => data.transactions.filter((transaction) => !transaction.is_ignored),
+    [data.transactions],
+  )
+  const activeTransactionIds = useMemo(
+    () => new Set(activeTransactions.map((transaction) => transaction.id)),
+    [activeTransactions],
+  )
+  const activeSplits = useMemo(
+    () =>
+      data.splits.filter((split) => activeTransactionIds.has(split.transaction_id)),
+    [activeTransactionIds, data.splits],
+  )
+  const ignoredTransactionIds = useMemo(
+    () =>
+      data.transactions
+        .filter((transaction) => transaction.is_ignored)
+        .map((transaction) => transaction.id),
+    [data.transactions],
+  )
   const transactionIdsWithSplits = useMemo(
-    () => new Set(data.splits.map((split) => split.transaction_id)),
-    [data.splits],
+    () => new Set(activeSplits.map((split) => split.transaction_id)),
+    [activeSplits],
   )
   const spendingSlices = useMemo(
     () =>
       buildSlices({
         direction: 'spending',
         subsections: data.subsections,
-        transactions: data.transactions,
-        splits: data.splits,
+        transactions: activeTransactions,
+        splits: activeSplits,
         allocationsByCategory,
         transactionIdsWithSplits,
       }),
     [
       allocationsByCategory,
       data.subsections,
-      data.splits,
-      data.transactions,
+      activeSplits,
+      activeTransactions,
       transactionIdsWithSplits,
     ],
   )
@@ -231,16 +253,16 @@ export function InsightsPanel({
       buildSlices({
         direction: 'income',
         subsections: data.subsections,
-        transactions: data.transactions,
-        splits: data.splits,
+        transactions: activeTransactions,
+        splits: activeSplits,
         allocationsByCategory,
         transactionIdsWithSplits,
       }),
     [
       allocationsByCategory,
       data.subsections,
-      data.splits,
-      data.transactions,
+      activeSplits,
+      activeTransactions,
       transactionIdsWithSplits,
     ],
   )
@@ -254,10 +276,10 @@ export function InsightsPanel({
     .map(toVarianceItem)
     .filter((item) => item.variance < 0)
     .sort((left, right) => left.variance - right.variance)
-  const received = data.transactions
+  const received = activeTransactions
     .filter((transaction) => transaction.amount > 0)
     .reduce((sum, transaction) => sum + transaction.amount, 0)
-  const spent = data.transactions
+  const spent = activeTransactions
     .filter((transaction) => transaction.amount < 0)
     .reduce((sum, transaction) => sum + Math.abs(transaction.amount), 0)
   const plannedSpending = data.allocations
@@ -272,7 +294,7 @@ export function InsightsPanel({
       (sum, allocation) => sum + Math.abs(allocation.budgeted_amount),
       0,
     )
-  const uncategorizedTransactionCount = data.transactions.filter(
+  const uncategorizedTransactionCount = activeTransactions.filter(
     (transaction) => !transactionIdsWithSplits.has(transaction.id),
   ).length
 
@@ -346,6 +368,25 @@ export function InsightsPanel({
             </div>
           </section>
 
+          {ignoredTransactionIds.length > 0 && (
+            <aside
+              className="ignored-report-notice"
+              aria-label="Ignored report activity"
+            >
+              <span className="terminal-pill terminal-pill--muted">
+                {ignoredTransactionIds.length} ignored
+              </span>
+              <span>Excluded from report totals</span>
+              <button
+                className="terminal-button"
+                type="button"
+                onClick={() => onOpenTransaction(ignoredTransactionIds[0])}
+              >
+                View transaction{ignoredTransactionIds.length === 1 ? '' : 's'}
+              </button>
+            </aside>
+          )}
+
           <section
             className="report-grid"
             aria-label={`${formatMonth(selectedMonth)} reports`}
@@ -374,8 +415,9 @@ export function InsightsPanel({
               </header>
               <div className="report-card__body">
                 <p className="detail-note">
-                  Uncategorized spending remains visible in every total so
-                  reports never conceal it.
+                  {ignoredTransactionIds.length > 0
+                    ? 'Uncategorized spending remains visible in active totals.'
+                    : 'Uncategorized spending remains visible in every total so reports never conceal it.'}
                 </p>
                 <button
                   className="terminal-button"

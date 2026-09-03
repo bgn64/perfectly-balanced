@@ -26,6 +26,7 @@ import {
   transactionDescription,
 } from '../finance/utils.ts'
 import { getSupabaseClient } from '../lib/supabase.ts'
+import { focusWithScrollComfort } from '../navigation/focus.ts'
 
 interface TransactionsData {
   transactions: Transaction[]
@@ -47,7 +48,7 @@ async function queryTransactions(): Promise<TransactionsData> {
         let query = client
           .from('transactions')
           .select(
-            'id, plaid_item_id, transaction_date, merchant_name, transaction_name, amount, currency_code, is_pending, account_name',
+            'id, plaid_item_id, transaction_date, merchant_name, transaction_name, amount, currency_code, is_pending, is_ignored, account_name',
           )
           .order('id')
           .limit(limit)
@@ -93,6 +94,7 @@ async function queryTransactions(): Promise<TransactionsData> {
 
 export function TransactionsPanel({
   categoriesRevision,
+  focusTransactionRequest,
   selectedMonth,
   onCategoriesChanged,
   onSearchStateChange,
@@ -100,6 +102,7 @@ export function TransactionsPanel({
   onUncategorizedCountChange,
 }: {
   categoriesRevision: number
+  focusTransactionRequest: { transactionId: string; sequence: number } | null
   selectedMonth: string
   onCategoriesChanged: () => void
   onSearchStateChange: (isOpen: boolean, query: string) => void
@@ -126,6 +129,9 @@ export function TransactionsPanel({
   >(null)
   const [categoryNotice, setCategoryNotice] = useState<string | null>(null)
   const [isSavingCategories, setIsSavingCategories] = useState(false)
+  const [savingIgnoredTransactionId, setSavingIgnoredTransactionId] = useState<
+    string | null
+  >(null)
   const requestGeneration = useRef(0)
   const selectedTransactionIdRef = useRef<string | null>(null)
   const transactionButtonRefs = useRef(new Map<string, HTMLButtonElement>())
@@ -133,6 +139,7 @@ export function TransactionsPanel({
   const transactionSearchInputRef = useRef<HTMLInputElement>(null)
   const searchOriginRef = useRef<HTMLElement | null>(null)
   const lastFocusedTransactionControlRef = useRef<HTMLElement | null>(null)
+  const handledFocusRequestSequence = useRef(0)
 
   const refreshTransactions = useCallback(async () => {
     const generation = ++requestGeneration.current
@@ -192,23 +199,28 @@ export function TransactionsPanel({
     () => new Map(categories.map((category) => [category.id, category])),
     [categories],
   )
+  const activeTransactions = useMemo(
+    () => transactions.filter((transaction) => !transaction.is_ignored),
+    [transactions],
+  )
+  const ignoredTransactionCount = transactions.length - activeTransactions.length
   const uncategorizedTransactionCount = useMemo(
     () =>
-      transactions.filter(
+      activeTransactions.filter(
         (transaction) =>
           (splitsByTransaction.get(transaction.id) ?? []).length === 0,
       ).length,
-    [splitsByTransaction, transactions],
+    [activeTransactions, splitsByTransaction],
   )
   const selectedMonthTransactionCount = useMemo(
     () =>
-      transactions.filter(
+      activeTransactions.filter(
         (transaction) => monthKey(transaction.transaction_date) === selectedMonth,
       ).length,
-    [selectedMonth, transactions],
+    [activeTransactions, selectedMonth],
   )
   const categorizedTransactionCount =
-    transactions.length - uncategorizedTransactionCount
+    activeTransactions.length - uncategorizedTransactionCount
 
   useEffect(() => {
     onUncategorizedCountChange(uncategorizedTransactionCount)
@@ -322,10 +334,30 @@ export function TransactionsPanel({
   const focusTransaction = useCallback((transactionId: string) => {
     window.requestAnimationFrame(() => {
       const button = transactionButtonRefs.current.get(transactionId)
-      button?.focus({ preventScroll: true })
-      button?.scrollIntoView({ block: 'nearest' })
+      if (button) {
+        focusWithScrollComfort(button)
+      }
     })
   }, [])
+
+  useEffect(() => {
+    if (
+      !focusTransactionRequest ||
+      focusTransactionRequest.sequence === handledFocusRequestSequence.current
+    ) {
+      return
+    }
+    const transaction = transactions.find(
+      (candidate) => candidate.id === focusTransactionRequest.transactionId,
+    )
+    if (!transaction) {
+      return
+    }
+    handledFocusRequestSequence.current = focusTransactionRequest.sequence
+    // oxlint-disable-next-line react/set-state-in-effect -- A parent navigation request selects the matching transaction after its data loads.
+    selectTransaction(transaction)
+    focusTransaction(transaction.id)
+  }, [focusTransaction, focusTransactionRequest, selectTransaction, transactions])
 
   const openSearch = useCallback((origin?: HTMLElement | null) => {
     const activeElement =
@@ -400,7 +432,9 @@ export function TransactionsPanel({
 
   const focusPickerSearch = useCallback(() => {
     window.requestAnimationFrame(() => {
-      pickerSearchInputRef.current?.focus({ preventScroll: true })
+      if (pickerSearchInputRef.current) {
+        focusWithScrollComfort(pickerSearchInputRef.current)
+      }
     })
   }, [])
 
@@ -418,6 +452,50 @@ export function TransactionsPanel({
       focusPickerSearch()
     },
     [editingTransactionId, focusPickerSearch, selectTransaction],
+  )
+
+  const setTransactionIgnored = useCallback(
+    async (transaction: Transaction, isIgnored: boolean) => {
+      if (savingIgnoredTransactionId) {
+        return
+      }
+      setSavingIgnoredTransactionId(transaction.id)
+      setDataError(null)
+      setTransactions((current) =>
+        current.map((candidate) =>
+          candidate.id === transaction.id
+            ? { ...candidate, is_ignored: isIgnored }
+            : candidate,
+        ),
+      )
+      try {
+        const { error } = await getSupabaseClient().rpc(
+          'set_transaction_ignored',
+          {
+            p_is_ignored: isIgnored,
+            p_transaction_id: transaction.id,
+          },
+        )
+        if (error) {
+          throw new Error(error.message)
+        }
+        onTransactionsChanged()
+      } catch (error) {
+        setTransactions((current) =>
+          current.map((candidate) =>
+            candidate.id === transaction.id ? transaction : candidate,
+          ),
+        )
+        setDataError(
+          error instanceof Error
+            ? error.message
+            : 'The transaction status could not be saved.',
+        )
+      } finally {
+        setSavingIgnoredTransactionId(null)
+      }
+    },
+    [onTransactionsChanged, savingIgnoredTransactionId],
   )
 
   useEffect(() => {
@@ -489,6 +567,15 @@ export function TransactionsPanel({
       if (key === 'c' && !event.ctrlKey && !event.shiftKey && selectedTransaction) {
         event.preventDefault()
         openCategoryPicker(selectedTransaction)
+        return
+      }
+
+      if (key === 't' && !event.ctrlKey && !event.shiftKey && selectedTransaction) {
+        event.preventDefault()
+        void setTransactionIgnored(
+          selectedTransaction,
+          !selectedTransaction.is_ignored,
+        )
       }
     }
 
@@ -504,6 +591,7 @@ export function TransactionsPanel({
     selectTransaction,
     selectedTransaction,
     selectedTransactionId,
+    setTransactionIgnored,
   ])
 
   async function createCategory(name: string): Promise<Category> {
@@ -599,9 +687,16 @@ export function TransactionsPanel({
             one simple queue.
           </p>
         </div>
-        <span className="terminal-pill terminal-pill--warning">
-          {uncategorizedTransactionCount} uncategorized
-        </span>
+        <div className="transaction-state-pills">
+          <span className="terminal-pill terminal-pill--warning">
+            {uncategorizedTransactionCount} uncategorized
+          </span>
+          {ignoredTransactionCount > 0 && (
+            <span className="terminal-pill terminal-pill--muted">
+              {ignoredTransactionCount} ignored
+            </span>
+          )}
+        </div>
       </header>
 
       {dataError && (
@@ -610,13 +705,16 @@ export function TransactionsPanel({
         </p>
       )}
 
-      <section className="summary" aria-label="Transaction overview">
+      <section className="summary" aria-label="Active transaction overview">
         <div>
-          <span>All activity</span>
-          <strong>{transactions.length.toLocaleString()}</strong>
+          <span>{ignoredTransactionCount > 0 ? 'Active activity' : 'All activity'}</span>
+          <strong>{activeTransactions.length.toLocaleString()}</strong>
         </div>
         <div>
-          <span>{formatMonth(selectedMonth)} activity</span>
+          <span>
+            {formatMonth(selectedMonth)}
+            {ignoredTransactionCount > 0 ? ' active' : ' activity'}
+          </span>
           <strong>{selectedMonthTransactionCount.toLocaleString()}</strong>
         </div>
         <div>
@@ -812,6 +910,7 @@ export function TransactionsPanel({
         <div className="transaction-column-head" aria-hidden="true">
           <span>Transaction</span>
           <span>Category</span>
+          <span>Status</span>
           <span>Amount</span>
         </div>
 
@@ -839,6 +938,8 @@ export function TransactionsPanel({
                 <div
                   className={`transaction-row-simple${
                     isSelected ? ' is-selected' : ''
+                  }${
+                    transaction.is_ignored ? ' is-ignored' : ''
                   }`}
                   key={transaction.id}
                 >
@@ -939,6 +1040,24 @@ export function TransactionsPanel({
                       )}
                     </div>
                   )}
+                  <button
+                    aria-label={`${
+                      transaction.is_ignored ? 'Ignored' : 'Included'
+                    } transaction: ${transactionDescription(transaction)}`}
+                    className={`transaction-state-button${
+                      transaction.is_ignored ? ' is-ignored' : ''
+                    }`}
+                    disabled={savingIgnoredTransactionId !== null}
+                    type="button"
+                    onClick={() =>
+                      void setTransactionIgnored(
+                        transaction,
+                        !transaction.is_ignored,
+                      )
+                    }
+                  >
+                    {transaction.is_ignored ? 'Ignored' : 'Included'}
+                  </button>
                   <strong
                     className={`transaction-amount ${
                       transaction.amount >= 0 ? 'positive' : 'negative'

@@ -24,6 +24,7 @@
 
     <nav class="review-section-nav" aria-label="Transaction frame navigation">
       <a href="#default">Default queue</a><a href="#selected">Selected row</a>
+      <a href="#ignore-action">Included status</a><a href="#ignored-result">Ignored status</a>
       <a href="#search-open">Search open</a><a href="#search-results">Search results</a>
       <a href="#search-empty">Search no match</a><a href="#filter-open">Filter open</a>
       <a href="#filter-applied">Filters applied</a><a href="#sort-open">Filter + sort</a>
@@ -130,6 +131,58 @@
               </section>
             </main>
             <footer class="statusline"><div><strong>EDIT</strong><span>transaction / category</span></div><div><span><kbd>/</kbd> search</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span><span><kbd>c</kbd> category</span><span><kbd>enter</kbd> select</span><span><kbd>esc</kbd> cancel</span></div></footer>
+          </div>
+        </div>
+      </section>
+
+      <section class="review-frame" id="ignore-action">
+        <header class="review-frame__head">
+          <div><p class="eyebrow">Transaction status</p><h2>Included status</h2></div>
+          <p class="review-frame__meta">Every row has one status pill, matching Budget Type · click the pill or press <kbd>t</kbd> to toggle it</p>
+        </header>
+        <div class="review-frame__viewport">
+          <div class="authenticated-app terminal-app command-closed screen-app theme-dark">
+            <header class="titlebar"><button class="brand" type="button"><span class="brand-mark">pb</span><span>perfectly-balanced</span></button><p>August 2026 · Personal budget</p><div class="theme-switcher" role="group" aria-label="Theme"><input checked id="ignore-action-theme-dark" name="ignore-action-theme" type="radio" /><label for="ignore-action-theme-dark">Dark</label><input id="ignore-action-theme-light" name="ignore-action-theme" type="radio" /><label for="ignore-action-theme-light">Light</label></div><details class="profile"><summary><span>D</span>dev</summary></details></header>
+            <aside class="sidebar" aria-label="Application navigation"><nav class="main-nav"><button class="nav-item" type="button"><span>Budget</span></button><button class="nav-item is-active" aria-current="page" type="button"><span>Transactions</span><strong>1</strong></button><button class="nav-item" type="button"><span>Reports</span></button></nav></aside>
+            <main class="workspace">
+              <section class="page transactions-page transactions-page--terminal">
+                <header class="workspace-head workspace-head--compact"><div><p class="eyebrow">Transaction stream / all accounts</p><h1>Transactions</h1><p class="subtle">Search, filter, sort, and categorize every imported transaction from one simple queue.</p></div><span class="terminal-pill terminal-pill--warning">1 uncategorized</span></header>
+                <section class="summary" aria-label="Transaction overview"><div><span>All activity</span><strong>4</strong></div><div><span>August 2026 activity</span><strong>4</strong></div><div><span>Categorized</span><strong class="available">3</strong></div><div><span>Needs review</span><strong class="warning">1</strong></div></section>
+                <section class="budget-table transaction-table"><div class="table-head"><div><p class="eyebrow">Imported activity</p><h2>Every account, one queue</h2></div></div><div class="data-toolbar"><button class="terminal-button transaction-search-trigger" type="button"><kbd>/</kbd> Search transactions</button><div class="toolbar-group transaction-tools"><details class="filter-wrap"><summary class="terminal-button pill-button">Filter</summary></details><details class="filter-wrap"><summary class="terminal-button pill-button">Newest first</summary></details></div></div><div class="transaction-column-head" aria-hidden="true"><span>Transaction</span><span>Category</span><span>Amount</span></div><section class="transactions">
+                  <div class="transaction-row-simple"><button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Corner Shop</strong><span>Aug 10 · Local Checking</span></span></button><div class="transaction-category-cell"><button class="category-chip empty" type="button">+ Categorize</button></div><strong class="transaction-amount negative">-$18.75</strong></div>
+                  <div class="transaction-row-simple is-selected"><button aria-pressed="true" class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Cedar Cafe</strong><span>Aug 8 · Local Credit Card</span></span></button><div class="transaction-category-cell"><button class="category-chip" type="button"><span class="category-summary">Restaurants</span></button></div><button class="transaction-state-button" type="button">Included</button><strong class="transaction-amount negative">-$42</strong></div>
+                  <div class="transaction-row-simple"><button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Local Market</strong><span>Aug 5 · Local Checking</span></span></button><div class="transaction-category-cell"><button class="category-chip" type="button"><span class="category-summary">Groceries</span></button></div><strong class="transaction-amount negative">-$125.50</strong></div>
+                  <div class="transaction-row-simple"><button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Contoso Payroll</strong><span>Aug 1 · Local Checking</span></span></button><div class="transaction-category-cell"><button class="category-chip" type="button"><span class="category-summary">Ben Pay</span></button></div><strong class="transaction-amount positive">+$7,000</strong></div>
+                </section></section>
+              </section>
+            </main>
+            <footer class="statusline"><div><strong>EDIT</strong><span>transaction / Cedar Cafe</span></div><div><span><kbd>t</kbd> status</span><span><kbd>c</kbd> category</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span></div></footer>
+          </div>
+        </div>
+      </section>
+
+      <section class="review-frame" id="ignored-result">
+        <header class="review-frame__head">
+          <div><p class="eyebrow">Transaction status</p><h2>Ignored status</h2></div>
+          <p class="review-frame__meta">The same status pill now reads Ignored · click it or press <kbd>t</kbd> to return the transaction to Included</p>
+        </header>
+        <div class="review-frame__viewport">
+          <div class="authenticated-app terminal-app command-closed screen-app theme-dark">
+            <header class="titlebar"><button class="brand" type="button"><span class="brand-mark">pb</span><span>perfectly-balanced</span></button><p>August 2026 · Personal budget</p><div class="theme-switcher" role="group" aria-label="Theme"><input checked id="ignored-result-theme-dark" name="ignored-result-theme" type="radio" /><label for="ignored-result-theme-dark">Dark</label><input id="ignored-result-theme-light" name="ignored-result-theme" type="radio" /><label for="ignored-result-theme-light">Light</label></div><details class="profile"><summary><span>D</span>dev</summary></details></header>
+            <aside class="sidebar" aria-label="Application navigation"><nav class="main-nav"><button class="nav-item" type="button"><span>Budget</span></button><button class="nav-item is-active" aria-current="page" type="button"><span>Transactions</span><strong>1</strong></button><button class="nav-item" type="button"><span>Reports</span></button></nav></aside>
+            <main class="workspace">
+              <section class="page transactions-page transactions-page--terminal">
+                <header class="workspace-head workspace-head--compact"><div><p class="eyebrow">Transaction stream / all accounts</p><h1>Transactions</h1><p class="subtle">Search, filter, sort, and categorize every imported transaction from one simple queue.</p></div><div class="transaction-state-pills"><span class="terminal-pill terminal-pill--warning">1 uncategorized</span><span class="terminal-pill terminal-pill--muted">1 ignored</span></div></header>
+                <section class="summary" aria-label="Active transaction overview"><div><span>Active activity</span><strong>3</strong></div><div><span>August 2026 active</span><strong>3</strong></div><div><span>Categorized</span><strong class="available">2</strong></div><div><span>Needs review</span><strong class="warning">1</strong></div></section>
+                <section class="budget-table transaction-table"><div class="table-head"><div><p class="eyebrow">Imported activity</p><h2>Every account, one queue</h2></div></div><div class="data-toolbar"><button class="terminal-button transaction-search-trigger" type="button"><kbd>/</kbd> Search transactions</button><div class="toolbar-group transaction-tools"><details class="filter-wrap"><summary class="terminal-button pill-button">Filter</summary></details><details class="filter-wrap"><summary class="terminal-button pill-button">Newest first</summary></details></div></div><div class="transaction-column-head" aria-hidden="true"><span>Transaction</span><span>Category</span><span>Amount</span></div><section class="transactions">
+                  <div class="transaction-row-simple"><button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Corner Shop</strong><span>Aug 10 · Local Checking</span></span></button><div class="transaction-category-cell"><button class="category-chip empty" type="button">+ Categorize</button></div><strong class="transaction-amount negative">-$18.75</strong></div>
+                  <div class="transaction-row-simple is-selected is-ignored"><button aria-pressed="true" class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Cedar Cafe</strong><span>Aug 8 · Local Credit Card</span></span></button><div class="transaction-category-cell"><button class="category-chip" type="button"><span class="category-summary">Restaurants</span></button></div><button class="transaction-state-button is-ignored" type="button">Ignored</button><strong class="transaction-amount">-$42</strong></div>
+                  <div class="transaction-row-simple"><button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Local Market</strong><span>Aug 5 · Local Checking</span></span></button><div class="transaction-category-cell"><button class="category-chip" type="button"><span class="category-summary">Groceries</span></button></div><strong class="transaction-amount negative">-$125.50</strong></div>
+                  <div class="transaction-row-simple"><button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Contoso Payroll</strong><span>Aug 1 · Local Checking</span></span></button><div class="transaction-category-cell"><button class="category-chip" type="button"><span class="category-summary">Ben Pay</span></button></div><strong class="transaction-amount positive">+$7,000</strong></div>
+                </section></section>
+              </section>
+            </main>
+            <footer class="statusline"><div><strong>EDIT</strong><span>transaction / Cedar Cafe / ignored</span></div><div><span><kbd>t</kbd> status</span><span><kbd>c</kbd> category</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span></div></footer>
           </div>
         </div>
       </section>
