@@ -37,6 +37,7 @@ export interface Transaction {
   amount: number
   currency_code: string | null
   is_pending: boolean
+  is_ignored: boolean
   account_name: string
 }
 

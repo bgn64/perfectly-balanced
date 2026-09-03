@@ -1,4 +1,5 @@
-import { useId, useMemo, useRef, useState, type Ref } from 'react'
+import { useEffect, useId, useMemo, useRef, useState, type Ref } from 'react'
+import { scrollIntoComfortView } from '../navigation/focus.ts'
 import type { Category } from './types.ts'
 
 interface CategoryComboboxSemanticContext {
@@ -163,6 +164,19 @@ export function CategoryCombobox({
       (current + direction + menuOptions.length) % menuOptions.length,
     )
   }
+
+  useEffect(() => {
+    if (!isOpen) {
+      return
+    }
+    const animationFrame = window.requestAnimationFrame(() => {
+      const input = containerRef.current?.querySelector<HTMLInputElement>('input')
+      if (input) {
+        scrollIntoComfortView(input)
+      }
+    })
+    return () => window.cancelAnimationFrame(animationFrame)
+  }, [isOpen, menuOptions.length])
 
   return (
     <div

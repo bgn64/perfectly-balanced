@@ -18,6 +18,7 @@
       </span>
       <span class="review-nav__group">
         <a href="#populated">Populated</a>
+        <a href="#ignored-excluded">Ignored exclusion</a>
         <a href="#alternate-month">Alternate month</a>
         <a href="#focused-action">Focused action</a>
         <a href="#loading">Loading</a>
@@ -157,6 +158,32 @@
           <div><strong>REPORT</strong><span>August 2026 / all accounts</span></div>
           <div><span><kbd>h</kbd><kbd>l</kbd> change month</span><span><kbd>tab</kbd> focus card</span><span><kbd>enter</kbd> drill down</span></div>
         </footer>
+      </div>
+    </section>
+
+    <section id="ignored-excluded" class="review-frame" aria-labelledby="ignored-excluded-label">
+      <header class="review-frame__head">
+        <div><p class="eyebrow">Reversible exclusion</p><h2 id="ignored-excluded-label">Report with ignored activity</h2></div>
+        <p>Cedar Cafe remains a Restaurants transaction but its $42 is excluded from every report total and variance.</p>
+      </header>
+      <div class="terminal-app command-closed screen-app theme-dark">
+        <header class="titlebar"><button class="brand" type="button"><span class="brand-mark">pb</span><span>perfectly-balanced</span></button><p>August 2026 · Personal budget</p><div class="theme-switcher" role="group" aria-label="Theme"><input checked id="theme-dark-ignored-report" name="theme-ignored-report" type="radio" /><label for="theme-dark-ignored-report">Dark</label><input id="theme-light-ignored-report" name="theme-ignored-report" type="radio" /><label for="theme-light-ignored-report">Light</label></div><details class="profile"><summary><span>D</span>dev</summary></details></header>
+        <aside class="sidebar" aria-label="Application navigation"><nav class="main-nav"><button class="nav-item" type="button"><span>Budget</span></button><button class="nav-item" type="button"><span>Transactions</span><strong>1</strong></button><button class="nav-item is-active" aria-current="page" type="button"><span>Reports</span></button></nav><section class="sidebar-section"><h2>Report range</h2><button class="is-current" type="button">August 2026</button><button type="button">July 2026</button><span>2026 year to date</span></section></aside>
+        <main class="workspace">
+          <section class="page insights-page insights-page--terminal">
+            <header class="workspace-head workspace-head--compact"><div><p class="eyebrow">Reports / 2026 / 08</p><h1>August 2026 at a glance</h1><p class="subtitle">A compact readout of how this month is tracking against your plan.</p></div><div class="month-controls"><button class="terminal-button" type="button">← Previous</button><button type="button">Next →</button></div></header>
+            <section class="summary" aria-label="August 2026 active report summary"><div><span>Received</span><strong class="available">$7,000</strong></div><div><span>Spent</span><strong class="spent">$144.25</strong></div><div><span>Still available</span><strong class="available">$580.75</strong></div><div><span>Needs review</span><strong class="warning">1 transaction</strong></div></section>
+            <aside class="ignored-report-notice" aria-label="Ignored report activity"><span class="terminal-pill terminal-pill--muted">1 ignored</span><span>Excluded from report totals</span><button class="terminal-button" type="button">View transaction</button></aside>
+            <section class="report-grid" aria-label="August 2026 reports excluding ignored activity">
+              <section class="report-card report-card--wide"><header class="report-card__head"><div><p class="eyebrow">Spending breakdown</p><h2>Where the $144.25 went</h2></div><strong>$144.25</strong></header><div class="report-card__body donut-report"><div class="donut-chart" role="img" aria-label="Total $144.25" style="background: conic-gradient(#7aa2f7 0% 87%, #bb9af7 87% 100%)"><span>$144.25</span></div><ul class="bar-list"><li><span>Food</span><span class="bar-track"><i style="background: #7aa2f7; width: 100%"></i></span><strong>$125.50</strong></li><li><span>Uncategorized</span><span class="bar-track"><i style="background: #bb9af7; width: 14.94%"></i></span><strong>$18.75</strong></li></ul></div></section>
+              <section class="report-card"><header class="report-card__head"><div><p class="eyebrow">Income</p><h2>Progress to plan</h2></div><strong class="available">97%</strong></header><div class="report-card__body"><ul class="bar-list"><li><span>Income</span><span class="bar-track"><i style="background: #7aa2f7; width: 100%"></i></span><strong>$7,000</strong></li></ul></div></section>
+              <section class="report-card"><header class="report-card__head"><div><p class="eyebrow">Plan variance</p><h2>Over budget</h2></div><span class="terminal-pill terminal-pill--danger">0 items</span></header><div class="report-card__body"><p class="detail-note">No over-budget spending items.</p></div></section>
+              <section class="report-card"><header class="report-card__head"><div><p class="eyebrow">Plan variance</p><h2>Under budget</h2></div><span class="terminal-pill terminal-pill--ok">4 items</span></header><div class="report-card__body"><ol class="variance-list"><li><span>Groceries<small>$125.50 spent · $400 planned</small></span><strong class="is-under">$274.50</strong></li><li><span>Restaurants<small>$0 spent · $250 planned</small></span><strong class="is-under">$250</strong></li><li><span>Internet<small>$0 spent · $60 planned</small></span><strong class="is-under">$60</strong></li></ol></div></section>
+              <section class="report-card report-card--review"><header class="report-card__head"><div><p class="eyebrow">Review queue</p><h2>Uncategorized activity</h2></div><strong class="warning">1</strong></header><div class="report-card__body"><p class="detail-note">Uncategorized spending remains visible in active totals.</p><button class="terminal-button" type="button">Open transaction queue</button></div></section>
+            </section>
+          </section>
+        </main>
+        <footer class="statusline"><div><strong>REPORT</strong><span>August 2026 / active activity</span></div><div><span><kbd>h</kbd><kbd>l</kbd> change month</span><span><kbd>tab</kbd> focus card</span><span><kbd>enter</kbd> drill down</span></div></footer>
       </div>
     </section>
 

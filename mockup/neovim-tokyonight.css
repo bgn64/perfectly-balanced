@@ -367,7 +367,12 @@ kbd {
   min-height: 0;
   overflow-y: auto;
   padding: 2rem clamp(1.25rem, 4vw, 3.5rem);
+  scroll-padding-block: min(18vh, 8rem);
   scrollbar-color: #414868 #1a1b26;
+}
+
+.authenticated-app.terminal-app > .workspace:has(> .budget-table) {
+  padding-bottom: clamp(10rem, 25vh, 14rem);
 }
 
 .workspace-head,
@@ -495,7 +500,7 @@ h3 {
 .column-head,
 .budget-row {
   display: grid;
-  grid-template-columns: minmax(10rem, 1.7fr) repeat(3, minmax(5rem, 0.8fr));
+  grid-template-columns: minmax(10rem, 1.7fr) minmax(5.5rem, 0.7fr) repeat(3, minmax(5rem, 0.8fr));
   align-items: center;
   gap: 1rem;
 }
@@ -507,6 +512,49 @@ h3 {
   font-size: 0.62rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.column-head::after {
+  grid-column: 2;
+  grid-row: 1;
+  content: "Type";
+  text-align: left;
+}
+
+.column-head > span:first-child {
+  grid-column: 1;
+}
+
+.column-head > span:nth-child(2) {
+  grid-column: 3;
+}
+
+.column-head > span:nth-child(3) {
+  grid-column: 4;
+}
+
+.column-head > span:nth-child(4) {
+  grid-column: 5;
+}
+
+.column-head:has(> span:nth-child(5))::after {
+  display: none;
+}
+
+.column-head:has(> span:nth-child(5)) > span:nth-child(2) {
+  grid-column: 2;
+}
+
+.column-head:has(> span:nth-child(5)) > span:nth-child(3) {
+  grid-column: 3;
+}
+
+.column-head:has(> span:nth-child(5)) > span:nth-child(4) {
+  grid-column: 4;
+}
+
+.column-head:has(> span:nth-child(5)) > span:nth-child(5) {
+  grid-column: 5;
 }
 
 .column-head span:not(:first-child),
@@ -554,10 +602,29 @@ h3 {
 }
 
 .category-name {
-  display: flex;
+  display: grid;
+  grid-column: 1 / span 2;
+  grid-template-columns: subgrid;
   min-width: 0;
   align-items: center;
-  gap: 0.55rem;
+}
+
+.category-name > .direction-tag {
+  grid-column: 2;
+  justify-self: start;
+}
+
+.budget-row > .amount-cell,
+.budget-row > .inline-amount-editor {
+  grid-column: 3;
+}
+
+.budget-row > .spent {
+  grid-column: 4;
+}
+
+.budget-row > .available {
+  grid-column: 5;
 }
 
 .budget-row--sectioned .category-name {
@@ -635,6 +702,16 @@ h3 {
   color: #7aa2f7;
   font-style: normal;
   font-weight: 800;
+}
+
+.category-name > .selection-caret {
+  position: absolute;
+  left: 0.25rem;
+  margin: 0;
+}
+
+.budget-row--sectioned.is-selected .category-name {
+  padding-left: 2rem;
 }
 
 .command-panel {
@@ -1418,12 +1495,42 @@ input:focus-visible {
 
   .column-head,
   .budget-row {
-    grid-template-columns: minmax(8rem, 1fr) repeat(2, minmax(4rem, 0.75fr));
+    grid-template-columns: minmax(7rem, 1fr) minmax(5rem, 0.6fr) minmax(4rem, 0.75fr);
     gap: 0.5rem;
   }
 
+  .column-head > span:nth-child(2),
   .column-head > span:nth-child(3),
+  .budget-row > .amount-cell,
   .budget-row > span:nth-child(3) {
+    display: none;
+  }
+
+  .column-head > span:nth-child(4),
+  .budget-row > .available {
+    grid-column: 3;
+  }
+
+  .column-head:has(> span:nth-child(5)) > span:nth-child(2) {
+    display: block;
+    grid-column: 2;
+  }
+
+  .column-head:has(> span:nth-child(5)) > span:nth-child(3),
+  .column-head:has(> span:nth-child(5)) > span:nth-child(4) {
+    display: none;
+  }
+
+  .column-head:has(> span:nth-child(5)) > span:nth-child(5) {
+    display: block;
+    grid-column: 3;
+  }
+
+  .budget-row > .inline-amount-editor {
+    grid-column: 3;
+  }
+
+  .budget-row:has(.inline-amount-editor) > .available {
     display: none;
   }
 
@@ -1730,9 +1837,35 @@ input:focus-visible {
 .transaction-column-head,
 .transaction-row-simple {
   display: grid;
-  grid-template-columns: minmax(12rem, 1.35fr) minmax(8rem, 0.8fr) minmax(6rem, 0.5fr);
+  grid-template-columns: minmax(12rem, 1.35fr) minmax(8rem, 0.8fr) minmax(5.5rem, 0.55fr) minmax(6rem, 0.5fr);
   align-items: center;
   gap: 1rem;
+}
+
+.transaction-column-head::after {
+  grid-column: 3;
+  grid-row: 1;
+  content: "Status";
+}
+
+.transaction-column-head > span:first-child {
+  grid-column: 1;
+}
+
+.transaction-column-head > span:nth-child(2) {
+  grid-column: 2;
+}
+
+.transaction-column-head > span:nth-child(3) {
+  grid-column: 3;
+}
+
+.transaction-column-head > span:last-child {
+  grid-column: 4;
+}
+
+.transaction-column-head:has(> span:nth-child(4))::after {
+  display: none;
 }
 
 .transaction-column-head {
@@ -1748,6 +1881,73 @@ input:focus-visible {
 .transaction-column-head span:last-child,
 .transaction-row-simple > strong {
   text-align: right;
+}
+
+.transaction-row-simple > strong.transaction-amount {
+  grid-column: 4;
+}
+
+.transaction-row-simple::after,
+.transaction-state-button,
+.transaction-state-pill {
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: start;
+}
+
+.transaction-state-button,
+.transaction-state-pill,
+.transaction-row-simple.is-selected:not(.is-ignored):not(:has(.transaction-state-button))::after,
+.transaction-row-simple:hover:not(.is-ignored):not(:has(.transaction-state-button))::after,
+.transaction-row-simple:focus-visible:not(.is-ignored):not(:has(.transaction-state-button))::after {
+  border: 1px solid #414868;
+  border-radius: 999px;
+  padding: 0.2rem 0.45rem;
+  background: #24283b;
+  color: #7dcfff;
+  font: inherit;
+  font-size: 0.62rem;
+}
+
+.transaction-row-simple::after {
+  content: "";
+}
+
+.transaction-row-simple:has(> .transaction-state-button, > .transaction-state-pill)::after {
+  display: none;
+}
+
+.transaction-row-simple.is-selected:not(.is-ignored):not(:has(.transaction-state-button))::after,
+.transaction-row-simple:hover:not(.is-ignored):not(:has(.transaction-state-button))::after,
+.transaction-row-simple:focus-visible:not(.is-ignored):not(:has(.transaction-state-button))::after {
+  content: "Ignore";
+}
+
+.transaction-state-button:hover,
+.transaction-state-button:focus-visible {
+  border-color: #7aa2f7;
+  background: #292e42;
+  color: #c0caf5;
+}
+
+.transaction-state-pill {
+  color: #e0af68;
+}
+
+.transaction-state-button--action {
+  color: #7dcfff;
+}
+
+.transaction-state-button--quiet {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.transaction-row-simple:hover .transaction-state-button--quiet,
+.transaction-row-simple:focus-within .transaction-state-button--quiet,
+.transaction-row-simple.is-selected .transaction-state-button--quiet {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .transaction-row-simple {
@@ -1822,6 +2022,42 @@ input:focus-visible {
 .transaction-row-simple__select:focus-visible {
   outline: 2px solid #7dcfff;
   outline-offset: 0.3rem;
+}
+
+.transaction-row-simple.is-ignored {
+  opacity: 0.68;
+}
+
+.transaction-row-simple.is-ignored .transaction-row-simple__name strong,
+.transaction-row-simple.is-ignored .transaction-amount {
+  color: #787c99;
+}
+
+.transaction-state-pills {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.4rem;
+}
+
+.terminal-pill--muted {
+  color: #a9b1d6;
+}
+
+.ignored-report-notice {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid #414868;
+  border-radius: 0.35rem;
+  background: #1a1b26;
+  color: #a9b1d6;
+  font-size: 0.68rem;
+}
+
+.ignored-report-notice .terminal-button {
+  margin-left: auto;
 }
 
 .transaction-category-editor {
@@ -2752,13 +2988,27 @@ input:focus-visible {
 
   .transaction-column-head,
   .transaction-row-simple {
-    grid-template-columns: minmax(8rem, 1fr) minmax(5.5rem, 0.6fr);
+    grid-template-columns: minmax(0, 1fr) minmax(3.75rem, 0.5fr) minmax(4.75rem, 0.6fr);
     gap: 0.6rem;
   }
 
   .transaction-column-head span:nth-child(2),
-  .transaction-row-simple .category-chip {
+  .transaction-row-simple > .transaction-category-cell,
+  .transaction-row-simple > .transaction-category-editor {
     display: none;
+  }
+
+  .transaction-column-head::after,
+  .transaction-column-head > span:nth-child(3),
+  .transaction-row-simple::after,
+  .transaction-state-button,
+  .transaction-state-pill {
+    grid-column: 2;
+  }
+
+  .transaction-column-head > span:last-child,
+  .transaction-row-simple > strong.transaction-amount {
+    grid-column: 3;
   }
 
   .transaction-inline-editor {
@@ -3064,6 +3314,32 @@ input:focus-visible {
 .authenticated-app.terminal-app.theme-light .transaction-row-simple.is-selected {
   background: #dfe0e6;
   color: #343b58;
+}
+.terminal-app:has(#theme-light:checked) .transaction-state-button,
+.terminal-app:has(#theme-light:checked) .transaction-state-pill,
+.authenticated-app.terminal-app.theme-light .transaction-state-button,
+.authenticated-app.terminal-app.theme-light .transaction-state-pill {
+  border-color: #a1a6b5;
+  background: #dfe0e6;
+  color: #34548a;
+}
+.terminal-app:has(#theme-light:checked) .transaction-state-pill,
+.authenticated-app.terminal-app.theme-light .transaction-state-pill {
+  color: #8a6528;
+}
+
+.terminal-app:has(#theme-light:checked) .ignored-report-notice,
+.authenticated-app.terminal-app.theme-light .ignored-report-notice {
+  border-color: #a1a6b5;
+  background: #e9e9ed;
+  color: #343b58;
+}
+
+.terminal-app:has(#theme-light:checked) .transaction-row-simple.is-ignored .transaction-row-simple__name strong,
+.terminal-app:has(#theme-light:checked) .transaction-row-simple.is-ignored .transaction-amount,
+.authenticated-app.terminal-app.theme-light .transaction-row-simple.is-ignored .transaction-row-simple__name strong,
+.authenticated-app.terminal-app.theme-light .transaction-row-simple.is-ignored .transaction-amount {
+  color: #5a5f78;
 }
 
 .authenticated-app.terminal-app.theme-light .category-summary {
@@ -3404,6 +3680,30 @@ body.review-page > .review-frame {
   outline-offset: 2px;
 }
 
+.review-frame--viewport-demo .frame-screen {
+  height: 50rem;
+  min-height: 50rem;
+}
+
+.scroll-comfort-demo {
+  overflow: hidden;
+  padding-top: 6rem;
+  padding-bottom: 0;
+}
+
+.scroll-comfort-demo .scroll-tail-table {
+  margin-top: 0;
+  overflow: visible;
+}
+
+.budget-group--scroll-continuation {
+  border-top: 0;
+}
+
+.scroll-comfort-spacer {
+  height: 14rem;
+}
+
 .report-loading {
   display: grid;
   min-height: 18rem;
@@ -3711,5 +4011,44 @@ body.review-page > .review-frame {
   .frame-screen > .terminal-app,
   .review-frame > .terminal-app {
     min-width: 58rem;
+  }
+}
+
+@media (max-width: 34rem) {
+  :is(#ignore-action, #ignored-result, #ignored-selected) .review-frame__viewport > .terminal-app,
+  #ignored-excluded > .terminal-app,
+  :is(#ignored-budget, #scroll-focus, #scroll-picker) .frame-screen > .terminal-app {
+    width: calc(100% - 1rem);
+    min-width: 0;
+    height: calc(100% - 1rem);
+    margin: 0.5rem;
+  }
+
+  #ignored-excluded .ignored-report-notice {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  #ignored-excluded .ignored-report-notice .terminal-button {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .pending-budget-entry:has(.pending-budget-category-combobox) .category-name {
+    display: block;
+    grid-column: 1 / -1;
+  }
+
+  .pending-budget-entry:has(.pending-budget-category-combobox) {
+    display: block;
+  }
+
+  .pending-budget-entry .pending-budget-category-combobox {
+    display: block;
+    width: 100%;
+  }
+
+  .pending-budget-entry:has(.pending-budget-category-combobox) > span:not(:first-child) {
+    display: none;
   }
 }

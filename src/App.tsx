@@ -20,6 +20,7 @@ import {
 } from './finance/utils.ts'
 import { InsightsPanel } from './insights/InsightsPanel.tsx'
 import { getSupabaseClient } from './lib/supabase.ts'
+import { focusWithScrollComfort } from './navigation/focus.ts'
 import { TransactionsPanel } from './transactions/TransactionsPanel.tsx'
 import './App.css'
 import '../mockup/neovim-tokyonight.css'
@@ -39,6 +40,11 @@ interface StatusContext {
 
 interface AmountEditRequest {
   allocationId: string
+  sequence: number
+}
+
+interface TransactionFocusRequest {
+  transactionId: string
   sequence: number
 }
 
@@ -352,6 +358,8 @@ function AuthenticatedShell({
     useState<BudgetKeyboardAction | null>(null)
   const [budgetKeyboardInteraction, setBudgetKeyboardInteraction] =
     useState<BudgetKeyboardInteraction | null>(null)
+  const [transactionFocusRequest, setTransactionFocusRequest] =
+    useState<TransactionFocusRequest | null>(null)
   const [focusedSemanticId, setFocusedSemanticId] = useState<string | null>(
     'nav-budgets',
   )
@@ -380,6 +388,13 @@ function AuthenticatedShell({
     },
     [],
   )
+  const openTransaction = useCallback((transactionId: string) => {
+    setTransactionFocusRequest((current) => ({
+      transactionId,
+      sequence: (current?.sequence ?? 0) + 1,
+    }))
+    setActiveView('transactions')
+  }, [])
   const initials = email
     .split('@')[0]
     .split(/[._-]/)
@@ -397,13 +412,15 @@ function AuthenticatedShell({
     setActiveView(view)
   }, [])
   const focusWorkspaceControl = useCallback((control: HTMLElement) => {
-    control.focus({ preventScroll: true })
-    control.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+    focusWithScrollComfort(control)
   }, [])
   const focusBudgetRow = useCallback(
     (allocationId: string) => {
       window.requestAnimationFrame(() => {
-        document.getElementById(`budget-row-${allocationId}`)?.focus()
+        const row = document.getElementById(`budget-row-${allocationId}`)
+        if (row) {
+          focusWithScrollComfort(row)
+        }
       })
     },
     [],
@@ -830,6 +847,7 @@ function AuthenticatedShell({
             focusedSemanticId={focusedSemanticId}
             selectedMonth={selectedMonth}
             onCategoriesChanged={handleCategoriesChanged}
+            onOpenTransaction={openTransaction}
             onUncategorizedCountChange={handleUncategorizedCountChange}
             onKeyboardInteractionChange={setBudgetKeyboardInteraction}
             onAmountEditorClosed={(allocationId) => {
@@ -896,7 +914,9 @@ function AuthenticatedShell({
                       )
                       const categoryTarget =
                         firstBudgetEntry ?? document.getElementById('budget-heading')
-                      categoryTarget?.focus()
+                      if (categoryTarget) {
+                        focusWithScrollComfort(categoryTarget)
+                      }
                     })
                   }}
                 >
@@ -1104,6 +1124,7 @@ function AuthenticatedShell({
         {activeView === 'transactions' && (
           <TransactionsPanel
             categoriesRevision={categoriesRevision}
+            focusTransactionRequest={transactionFocusRequest}
             selectedMonth={selectedMonth}
             onCategoriesChanged={handleCategoriesChanged}
             onSearchStateChange={handleTransactionSearchStateChange}
@@ -1117,6 +1138,7 @@ function AuthenticatedShell({
             categoriesRevision={categoriesRevision}
             selectedMonth={selectedMonth}
             onMonthChange={setSelectedMonth}
+            onOpenTransaction={openTransaction}
             onOpenTransactions={() => navigateToView('transactions')}
           />
         )}
@@ -1151,6 +1173,7 @@ function AuthenticatedShell({
                 <span><kbd>/</kbd> search</span>
                 <span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span>
                 <span><kbd>c</kbd> category</span>
+                <span><kbd>t</kbd> status</span>
                 <span><kbd>enter</kbd> select</span>
                 <span><kbd>esc</kbd> cancel</span>
               </>
