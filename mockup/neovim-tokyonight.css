@@ -2486,12 +2486,15 @@ button.filter-token.is-selected {
 
 .transaction-row-simple:hover,
 .transaction-row-simple:focus-visible,
+.transaction-row-simple:focus-within,
 .transaction-row-simple.is-selected {
   outline: 0;
   background: #292e42;
   color: #c0caf5;
 }
 
+.transaction-row-simple:focus-visible::before,
+.transaction-row-simple:focus-within::before,
 .transaction-row-simple.is-selected::before {
   position: absolute;
   inset: 0 auto 0 0;
@@ -3913,6 +3916,8 @@ button.filter-token.is-selected {
 }
 
 .terminal-app:has(#theme-light:checked) .transaction-row-simple:hover,
+.terminal-app:has(#theme-light:checked) .transaction-row-simple:focus-visible,
+.terminal-app:has(#theme-light:checked) .transaction-row-simple:focus-within,
 .terminal-app:has(#theme-light:checked) .transaction-row-simple.is-selected,
 .authenticated-app.terminal-app.theme-light .transaction-table .transaction-row:hover,
 .authenticated-app.terminal-app.theme-light .transaction-table .selected-transaction {
@@ -3927,6 +3932,8 @@ button.filter-token.is-selected {
 }
 
 .authenticated-app.terminal-app.theme-light .transaction-row-simple:hover,
+.authenticated-app.terminal-app.theme-light .transaction-row-simple:focus-visible,
+.authenticated-app.terminal-app.theme-light .transaction-row-simple:focus-within,
 .authenticated-app.terminal-app.theme-light .transaction-row-simple.is-selected {
   background: #dfe0e6;
   color: #343b58;
