@@ -36,6 +36,7 @@
         <a href="#scroll-picker">Scroll picker</a>
         <a href="#amount">Amount</a>
         <a href="#direction">Direction</a>
+        <a href="#column-colors">Column colors</a>
         <a href="#create">Create</a>
         <a href="#rename">Rename</a>
         <a href="#delete">Delete</a>
@@ -682,6 +683,21 @@
               </section>
             </main>
             <footer class="statusline"><div><strong>NAVIGATE</strong><span>budget / internet</span><span>focus 10 of 18</span></div><div><span><kbd>a</kbd> amount</span><span><kbd>t</kbd> direction</span><span><kbd>n</kbd> new</span><span><kbd>r</kbd> rename</span><span><kbd>d</kbd> delete</span><span><kbd>x</kbd> move</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span><span><kbd>:</kbd> command</span></div></footer>
+          </div>
+        </div>
+      </section>
+
+      <section id="column-colors" class="review-frame">
+        <header class="review-frame__head">
+          <div><span class="review-frame__id">Variance</span><h2>Neutral values with over-plan emphasis</h2></div>
+          <p class="review-frame__note">Spent / Received and Remaining stay neutral until actual activity exceeds Planned. Spending overages turn red; Income overages turn green.</p>
+        </header>
+        <div class="frame-screen">
+          <div class="authenticated-app terminal-app command-closed theme-dark">
+            <header class="titlebar"><button class="brand" type="button"><span class="brand-mark">pb</span><span>perfectly-balanced</span></button><p>August 2026 &middot; Personal budget</p><div class="theme-switcher" role="group" aria-label="Theme"><input checked id="theme-dark" name="theme-column-colors" type="radio" /><label for="theme-dark">Dark</label><input id="theme-light" name="theme-column-colors" type="radio" /><label for="theme-light">Light</label></div><details class="profile"><summary><span>D</span>dev</summary></details></header>
+            <aside class="sidebar" aria-label="Application navigation"><nav class="main-nav"><button class="nav-item is-active" type="button"><span>Budget</span></button><button class="nav-item" type="button"><span>Transactions</span><strong>1</strong></button><button class="nav-item" type="button"><span>Reports</span></button></nav><section class="sidebar-section"><h2>Months</h2><button type="button">July 2026</button><button class="is-current" type="button">August 2026</button><button type="button">September 2026</button></section></aside>
+            <main class="workspace"><header class="workspace-head"><div><p class="eyebrow">Budget / 2026 / 08</p><h1>August 2026</h1><p class="subtitle">Plan with the keyboard. Review with a glance.</p></div><div class="month-controls"><button type="button">&larr; Previous</button><button type="button">Next &rarr;</button></div></header><section class="summary"><div><span>Available</span><strong class="available">$557.50</strong></div><div><span>Planned</span><strong>$725</strong></div><div><span>Spent</span><strong class="spent">$167.50</strong></div><div><span>Uncategorized</span><strong class="warning">1 transaction</strong></div></section><section class="budget-table"><div class="table-head"><div><p class="eyebrow">Monthly plan</p><h2>Categories</h2></div></div><div class="column-head"><span>Category</span><span>Planned</span><span>Spent</span><span>Remaining</span></div><section class="budget-group"><header class="budget-subsection-head"><h3><span>&#8964;</span> Spending examples</h3><strong>$440</strong></header><div class="budget-row budget-row--sectioned"><span class="category-name">Groceries <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$400</button><span class="spent">$125.50</span><span class="available">$274.50</span></div><div class="budget-row budget-row--sectioned budget-row--over-spending"><span class="category-name">Dining out <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$40</button><span class="spent">$60</span><span class="remaining-cell spent">-$20</span></div></section><section class="budget-group"><header class="budget-subsection-head"><h3><span>&#8964;</span> Income examples</h3><strong>$7,500</strong></header><div class="budget-row budget-row--sectioned"><span class="category-name">Salary <button class="direction-tag" type="button">Income</button></span><button class="amount-cell" type="button">$7,000</button><span class="spent">$6,500</span><span class="available">$500</span></div><div class="budget-row budget-row--sectioned budget-row--over-income"><span class="category-name">Bonus <button class="direction-tag" type="button">Income</button></span><button class="amount-cell" type="button">$500</button><span class="spent">$750</span><span class="remaining-cell spent">+$250</span></div></section></section></main>
+            <footer class="statusline"><div><strong>NAVIGATE</strong><span>budget / variance colors</span><span>focus 1 of 18</span></div><div><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span><span><kbd>:</kbd> command</span></div></footer>
           </div>
         </div>
       </section>
