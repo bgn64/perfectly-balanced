@@ -2078,7 +2078,9 @@ function BudgetAllocationRow({
         </button>
       )}
       <span className="spent">{formatDisplayMoney(spentAmount)}</span>
-      <span className={remaining < 0 ? 'spent' : 'available'}>
+      <span
+        className={`remaining-cell ${remaining < 0 ? 'spent' : 'available'}`}
+      >
         {formatDisplayMoney(remaining)}
       </span>
     </div>
