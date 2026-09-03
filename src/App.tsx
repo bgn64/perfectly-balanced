@@ -85,6 +85,8 @@ function getSemanticControls(
         ) &&
         !control.matches(':disabled') &&
         control.getAttribute('aria-hidden') !== 'true' &&
+        (control.tagName === 'SUMMARY' ||
+          control.closest('details:not([open])') === null) &&
         control.closest('[aria-hidden="true"], [hidden]') === null &&
         control.getClientRects().length > 0,
     )
@@ -642,6 +644,15 @@ function AuthenticatedShell({
                 : 'start-move',
           focusedControl.dataset.semanticId ?? null,
         )
+        return
+      }
+
+      if (
+        key === 'n' &&
+        focusedControl?.dataset.semanticKind === 'budget-first-item'
+      ) {
+        event.preventDefault()
+        focusedControl.click()
         return
       }
 

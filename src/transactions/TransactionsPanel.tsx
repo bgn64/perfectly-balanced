@@ -40,6 +40,11 @@ type TransactionSort = 'date' | 'merchant' | 'amount'
 const uncategorizedFilter = 'uncategorized'
 const nonUsdCategoryMessage = 'Only USD transactions can be categorized.'
 
+interface PendingIgnoredUpdate {
+  desired: boolean
+  persisted: boolean
+}
+
 async function queryTransactions(): Promise<TransactionsData> {
   const client = getSupabaseClient()
   const [transactions, categoriesResult, splits, budgetsResult] =
@@ -129,9 +134,6 @@ export function TransactionsPanel({
   >(null)
   const [categoryNotice, setCategoryNotice] = useState<string | null>(null)
   const [isSavingCategories, setIsSavingCategories] = useState(false)
-  const [savingIgnoredTransactionId, setSavingIgnoredTransactionId] = useState<
-    string | null
-  >(null)
   const requestGeneration = useRef(0)
   const selectedTransactionIdRef = useRef<string | null>(null)
   const transactionButtonRefs = useRef(new Map<string, HTMLButtonElement>())
@@ -140,6 +142,8 @@ export function TransactionsPanel({
   const searchOriginRef = useRef<HTMLElement | null>(null)
   const lastFocusedTransactionControlRef = useRef<HTMLElement | null>(null)
   const handledFocusRequestSequence = useRef(0)
+  const ignoredUpdatesRef = useRef(new Map<string, PendingIgnoredUpdate>())
+  const processingIgnoredUpdatesRef = useRef(false)
 
   const refreshTransactions = useCallback(async () => {
     const generation = ++requestGeneration.current
@@ -454,48 +458,76 @@ export function TransactionsPanel({
     [editingTransactionId, focusPickerSearch, selectTransaction],
   )
 
-  const setTransactionIgnored = useCallback(
-    async (transaction: Transaction, isIgnored: boolean) => {
-      if (savingIgnoredTransactionId) {
-        return
+  const processIgnoredUpdates = useCallback(async () => {
+    if (processingIgnoredUpdatesRef.current) {
+      return
+    }
+    processingIgnoredUpdatesRef.current = true
+    try {
+      while (ignoredUpdatesRef.current.size > 0) {
+        const [transactionId, update] = ignoredUpdatesRef.current.entries().next()
+          .value as [string, PendingIgnoredUpdate]
+        try {
+          while (update.persisted !== update.desired) {
+            const nextState = update.desired
+            const { error } = await getSupabaseClient().rpc(
+              'set_transaction_ignored',
+              {
+                p_is_ignored: nextState,
+                p_transaction_id: transactionId,
+              },
+            )
+            if (error) {
+              throw new Error(error.message)
+            }
+            update.persisted = nextState
+          }
+          onTransactionsChanged()
+        } catch (error) {
+          setTransactions((current) =>
+            current.map((candidate) =>
+              candidate.id === transactionId
+                ? { ...candidate, is_ignored: update.persisted }
+                : candidate,
+            ),
+          )
+          setDataError(
+            error instanceof Error
+              ? error.message
+              : 'The transaction status could not be saved.',
+          )
+        } finally {
+          ignoredUpdatesRef.current.delete(transactionId)
+        }
       }
-      setSavingIgnoredTransactionId(transaction.id)
+    } finally {
+      processingIgnoredUpdatesRef.current = false
+    }
+  }, [onTransactionsChanged])
+
+  const toggleTransactionIgnored = useCallback(
+    (transaction: Transaction) => {
+      const currentUpdate = ignoredUpdatesRef.current.get(transaction.id)
+      const desired = !(currentUpdate?.desired ?? transaction.is_ignored)
+      if (currentUpdate) {
+        currentUpdate.desired = desired
+      } else {
+        ignoredUpdatesRef.current.set(transaction.id, {
+          desired,
+          persisted: transaction.is_ignored,
+        })
+      }
       setDataError(null)
       setTransactions((current) =>
         current.map((candidate) =>
           candidate.id === transaction.id
-            ? { ...candidate, is_ignored: isIgnored }
+            ? { ...candidate, is_ignored: desired }
             : candidate,
         ),
       )
-      try {
-        const { error } = await getSupabaseClient().rpc(
-          'set_transaction_ignored',
-          {
-            p_is_ignored: isIgnored,
-            p_transaction_id: transaction.id,
-          },
-        )
-        if (error) {
-          throw new Error(error.message)
-        }
-        onTransactionsChanged()
-      } catch (error) {
-        setTransactions((current) =>
-          current.map((candidate) =>
-            candidate.id === transaction.id ? transaction : candidate,
-          ),
-        )
-        setDataError(
-          error instanceof Error
-            ? error.message
-            : 'The transaction status could not be saved.',
-        )
-      } finally {
-        setSavingIgnoredTransactionId(null)
-      }
+      void processIgnoredUpdates()
     },
-    [onTransactionsChanged, savingIgnoredTransactionId],
+    [processIgnoredUpdates],
   )
 
   useEffect(() => {
@@ -525,9 +557,15 @@ export function TransactionsPanel({
             )
           : null
       const direction =
-        !event.ctrlKey && !event.shiftKey && key === 'j'
+        focusedTransactionRow &&
+        !event.ctrlKey &&
+        !event.shiftKey &&
+        key === 'j'
           ? 1
-          : !event.ctrlKey && !event.shiftKey && key === 'k'
+          : focusedTransactionRow &&
+              !event.ctrlKey &&
+              !event.shiftKey &&
+              key === 'k'
             ? -1
             : focusedTransactionRow && event.key === 'ArrowDown'
               ? 1
@@ -572,10 +610,7 @@ export function TransactionsPanel({
 
       if (key === 't' && !event.ctrlKey && !event.shiftKey && selectedTransaction) {
         event.preventDefault()
-        void setTransactionIgnored(
-          selectedTransaction,
-          !selectedTransaction.is_ignored,
-        )
+        toggleTransactionIgnored(selectedTransaction)
       }
     }
 
@@ -591,7 +626,7 @@ export function TransactionsPanel({
     selectTransaction,
     selectedTransaction,
     selectedTransactionId,
-    setTransactionIgnored,
+    toggleTransactionIgnored,
   ])
 
   async function createCategory(name: string): Promise<Category> {
@@ -646,6 +681,7 @@ export function TransactionsPanel({
       }
       onTransactionsChanged()
       setEditingTransactionId(null)
+      focusTransaction(transaction.id)
     } finally {
       setIsSavingCategories(false)
     }
@@ -653,11 +689,7 @@ export function TransactionsPanel({
 
   function cancelCategoryPicker(transactionId: string) {
     setEditingTransactionId(null)
-    window.requestAnimationFrame(() => {
-      transactionButtonRefs.current.get(transactionId)?.focus({
-        preventScroll: true,
-      })
-    })
+    focusTransaction(transactionId)
   }
 
   function toggleFilter(
@@ -1047,13 +1079,9 @@ export function TransactionsPanel({
                     className={`transaction-state-button${
                       transaction.is_ignored ? ' is-ignored' : ''
                     }`}
-                    disabled={savingIgnoredTransactionId !== null}
                     type="button"
                     onClick={() =>
-                      void setTransactionIgnored(
-                        transaction,
-                        !transaction.is_ignored,
-                      )
+                      toggleTransactionIgnored(transaction)
                     }
                   >
                     {transaction.is_ignored ? 'Ignored' : 'Included'}
