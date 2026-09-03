@@ -229,10 +229,9 @@ export function TransactionsPanel({
   const [isSavingCategories, setIsSavingCategories] = useState(false)
   const requestGeneration = useRef(0)
   const selectedTransactionIdRef = useRef<string | null>(null)
-  const transactionButtonRefs = useRef(new Map<string, HTMLButtonElement>())
+  const transactionRowRefs = useRef(new Map<string, HTMLDivElement>())
   const pickerSearchInputRef = useRef<HTMLInputElement>(null)
   const transactionSearchInputRef = useRef<HTMLInputElement>(null)
-  const panelRef = useRef<HTMLElement>(null)
   const searchOriginRef = useRef<HTMLElement | null>(null)
   const lastFocusedTransactionControlRef = useRef<HTMLElement | null>(null)
   const handledFocusRequestSequence = useRef(0)
@@ -505,9 +504,9 @@ export function TransactionsPanel({
 
   const focusTransaction = useCallback((transactionId: string) => {
     window.requestAnimationFrame(() => {
-      const button = transactionButtonRefs.current.get(transactionId)
-      if (button) {
-        focusWithScrollComfort(button)
+      const row = transactionRowRefs.current.get(transactionId)
+      if (row) {
+        focusWithScrollComfort(row)
       }
     })
   }, [])
@@ -602,9 +601,21 @@ export function TransactionsPanel({
       ) {
         return
       }
+      const transactionId = target.dataset.transactionId
+      if (
+        transactionId &&
+        transactionId !== selectedTransactionIdRef.current
+      ) {
+        const transaction = transactions.find(
+          (candidate) => candidate.id === transactionId,
+        )
+        if (transaction) {
+          selectTransaction(transaction)
+        }
+      }
       lastFocusedTransactionControlRef.current = target
     },
-    [],
+    [selectTransaction, transactions],
   )
 
   const closeSearch = useCallback(() => {
@@ -781,6 +792,9 @@ export function TransactionsPanel({
       if (isTextEntryTarget(event.target)) {
         return
       }
+      if (controlDialog) {
+        return
+      }
 
       const key = event.key.toLocaleLowerCase()
       if (event.key === 'Escape' && isSearchOpen) {
@@ -793,90 +807,6 @@ export function TransactionsPanel({
         openSearch()
         return
       }
-      const focusedTransactionRow =
-        event.target instanceof HTMLElement
-          ? event.target.closest<HTMLButtonElement>(
-              '.transaction-row-simple__select',
-            )
-          : null
-      const direction =
-        focusedTransactionRow &&
-        !event.ctrlKey &&
-        !event.shiftKey &&
-        key === 'j'
-          ? 1
-          : focusedTransactionRow &&
-              !event.ctrlKey &&
-              !event.shiftKey &&
-              key === 'k'
-            ? -1
-            : focusedTransactionRow && event.key === 'ArrowDown'
-              ? 1
-              : focusedTransactionRow && event.key === 'ArrowUp'
-                ? -1
-                : null
-      if (direction !== null) {
-        if (pageTransactions.length === 0) {
-          return
-        }
-        event.preventDefault()
-        const originTransactionId =
-          focusedTransactionRow?.dataset.transactionId ?? selectedTransactionId
-        const currentIndex = pageTransactions.findIndex(
-          (transaction) => transaction.id === originTransactionId,
-        )
-        if (currentIndex === 0 && direction === -1) {
-          const controls = Array.from(
-            panelRef.current?.querySelectorAll<HTMLElement>(
-              '[data-semantic-region="workspace"]',
-            ) ?? [],
-          ).filter(
-            (control) =>
-              !control.matches(':disabled') &&
-              control.getAttribute('aria-hidden') !== 'true' &&
-              control.getClientRects().length > 0,
-          )
-          const controlIndex = focusedTransactionRow
-            ? controls.indexOf(focusedTransactionRow)
-            : -1
-          const previousControl = controls[controlIndex - 1]
-          if (previousControl) {
-            focusWithScrollComfort(previousControl)
-          }
-          return
-        }
-        if (
-          currentIndex === pageTransactions.length - 1 &&
-          direction === 1
-        ) {
-          const paginationControl = panelRef.current?.querySelector<HTMLElement>(
-            '.transaction-pagination [data-semantic-region="workspace"]:not(:disabled)',
-          )
-          if (paginationControl) {
-            focusWithScrollComfort(paginationControl)
-          }
-          return
-        }
-        const nextIndex =
-          currentIndex === -1
-            ? direction === 1
-              ? 0
-              : pageTransactions.length - 1
-            : Math.max(
-                0,
-                Math.min(
-                  pageTransactions.length - 1,
-                  currentIndex + direction,
-                ),
-              )
-        const transaction = pageTransactions[nextIndex]
-        if (transaction.id !== selectedTransactionId) {
-          selectTransaction(transaction)
-        }
-        focusTransaction(transaction.id)
-        return
-      }
-
       const focusedFilter =
         event.target instanceof HTMLElement
           ? event.target.closest<HTMLButtonElement>('[data-filter-value]')
@@ -890,15 +820,28 @@ export function TransactionsPanel({
         }
       }
 
-      if (key === 'c' && !event.ctrlKey && !event.shiftKey && selectedTransaction) {
+      const focusedTransactionId =
+        event.target instanceof HTMLElement
+          ? event.target.closest<HTMLElement>(
+              '[data-semantic-kind="transaction-row"]',
+            )?.dataset.transactionId
+          : null
+      const actionTransaction = focusedTransactionId
+        ? transactions.find(
+            (transaction) => transaction.id === focusedTransactionId,
+          ) ?? null
+        : selectedTransaction
+
+      if (key === 'c' && !event.ctrlKey && !event.shiftKey && actionTransaction) {
         event.preventDefault()
-        openCategoryPicker(selectedTransaction)
+        openCategoryPicker(actionTransaction)
         return
       }
 
-      if (key === 't' && !event.ctrlKey && !event.shiftKey && selectedTransaction) {
+      if (key === 't' && !event.ctrlKey && !event.shiftKey && actionTransaction) {
         event.preventDefault()
-        toggleTransactionIgnored(selectedTransaction)
+        selectTransaction(actionTransaction)
+        toggleTransactionIgnored(actionTransaction)
       }
     }
 
@@ -906,17 +849,16 @@ export function TransactionsPanel({
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [
     closeSearch,
-    focusTransaction,
+    controlDialog,
     isSearchOpen,
     openSearch,
     openCategoryPicker,
-    pageTransactions,
     removeTransactionFilter,
     selectTransaction,
     selectedTransaction,
-    selectedTransactionId,
     toggleTransactionIgnored,
     transactionFilters,
+    transactions,
   ])
 
   async function createCategory(name: string): Promise<Category> {
@@ -1033,34 +975,8 @@ export function TransactionsPanel({
     if (event.key === 'Escape') {
       event.preventDefault()
       closeControlDialog()
-      return
+      event.stopPropagation()
     }
-    const key = event.key.toLocaleLowerCase()
-    if (!['h', 'j', 'k', 'l'].includes(key)) {
-      return
-    }
-    const controls = Array.from(
-      controlDialogRef.current?.querySelectorAll<HTMLButtonElement>(
-        'button:not(:disabled)',
-      ) ?? [],
-    )
-    if (controls.length === 0) {
-      return
-    }
-    event.preventDefault()
-    const activeControl =
-      document.activeElement instanceof HTMLButtonElement
-        ? document.activeElement
-        : null
-    const currentIndex = activeControl ? controls.indexOf(activeControl) : -1
-    const direction = key === 'h' || key === 'k' ? -1 : 1
-    const nextIndex =
-      currentIndex === -1
-        ? direction === 1
-          ? 0
-          : controls.length - 1
-        : (currentIndex + direction + controls.length) % controls.length
-    controls[nextIndex].focus({ preventScroll: true })
   }
 
   function selectTimeRange(value: TransactionTimeRange) {
@@ -1092,7 +1008,6 @@ export function TransactionsPanel({
     <section
       className="page transactions-page transactions-page--terminal"
       onFocusCapture={rememberTransactionFocus}
-      ref={panelRef}
     >
       <header className="workspace-head workspace-head--compact">
         <div>
@@ -1303,34 +1218,42 @@ export function TransactionsPanel({
                 (split) =>
                   categoriesById.get(split.category_id)?.name ?? 'Unknown category',
               )
-              const isSelected = transaction.id === selectedTransactionId
               const isEditing = transaction.id === editingTransactionId
+              const isSelected = isEditing
               const isUsd = transaction.currency_code === 'USD'
               return (
                 <div
+                  aria-current={isSelected ? 'true' : undefined}
                   className={`transaction-row-simple${
                     isSelected ? ' is-selected' : ''
                   }${
                     transaction.is_ignored ? ' is-ignored' : ''
                   }`}
+                  data-semantic-id={`transaction-row-${transaction.id}`}
+                  data-semantic-kind="transaction-row"
+                  data-semantic-region="workspace"
+                  data-status-action="select transaction"
+                  data-status-label={`transaction / ${transactionDescription(transaction)}`}
+                  data-transaction-id={transaction.id}
                   key={transaction.id}
+                  ref={(row) => {
+                    if (row) {
+                      transactionRowRefs.current.set(transaction.id, row)
+                    } else {
+                      transactionRowRefs.current.delete(transaction.id)
+                    }
+                  }}
+                  tabIndex={0}
+                  onFocus={() => selectTransaction(transaction)}
+                  onClick={(event) => {
+                    if (event.target === event.currentTarget) {
+                      selectTransaction(transaction)
+                    }
+                  }}
                 >
                   <button
-                    aria-pressed={isSelected}
                     className="transaction-row-simple__select"
-                    data-semantic-id={`transaction-select-${transaction.id}`}
-                    data-semantic-kind="transaction-selection"
-                    data-semantic-region="workspace"
-                    data-semantic-status-action="select-transaction"
-                    data-semantic-status-label={transactionDescription(transaction)}
                     data-transaction-id={transaction.id}
-                    ref={(button) => {
-                      if (button) {
-                        transactionButtonRefs.current.set(transaction.id, button)
-                      } else {
-                        transactionButtonRefs.current.delete(transaction.id)
-                      }
-                    }}
                     type="button"
                     onClick={() => selectTransaction(transaction)}
                   >
@@ -1385,13 +1308,11 @@ export function TransactionsPanel({
                         className={`category-chip${
                           transactionSplits.length === 0 ? ' empty' : ''
                         }`}
-                        data-semantic-id={`transaction-category-${transaction.id}`}
-                        data-semantic-kind="category-action"
-                        data-semantic-region="workspace"
                         data-semantic-status-action={
                           isUsd ? 'edit-transaction-categories' : 'category-unavailable'
                         }
                         data-semantic-status-label={transactionDescription(transaction)}
+                        data-transaction-id={transaction.id}
                         disabled={!isUsd}
                         type="button"
                         onClick={() => openCategoryPicker(transaction)}
@@ -1419,10 +1340,14 @@ export function TransactionsPanel({
                     className={`transaction-state-button${
                       transaction.is_ignored ? ' is-ignored' : ''
                     }`}
+                    data-status-action="toggle status"
+                    data-status-label={`transaction / ${transactionDescription(transaction)}`}
+                    data-transaction-id={transaction.id}
                     type="button"
-                    onClick={() =>
+                    onClick={() => {
+                      selectTransaction(transaction)
                       toggleTransactionIgnored(transaction)
-                    }
+                    }}
                   >
                     {transaction.is_ignored ? 'Ignored' : 'Included'}
                   </button>

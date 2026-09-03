@@ -21,6 +21,10 @@ import {
 import { InsightsPanel } from './insights/InsightsPanel.tsx'
 import { getSupabaseClient } from './lib/supabase.ts'
 import { focusWithScrollComfort } from './navigation/focus.ts'
+import {
+  findSpatialTarget,
+  type SpatialDirection,
+} from './navigation/spatial.ts'
 import { TransactionsPanel } from './transactions/TransactionsPanel.tsx'
 import './App.css'
 import '../mockup/neovim-tokyonight.css'
@@ -420,6 +424,9 @@ function AuthenticatedShell({
   }, [])
   const focusWorkspaceControl = useCallback((control: HTMLElement) => {
     focusWithScrollComfort(control)
+    if (control.dataset.semanticKind === 'transaction-row') {
+      control.click()
+    }
   }, [])
   const focusBudgetRow = useCallback(
     (allocationId: string) => {
@@ -668,52 +675,38 @@ function AuthenticatedShell({
           : region === 'workspace'
             ? workspaceControls
             : []
-      const index = focusedControl ? controls.indexOf(focusedControl) : -1
       let nextControl: HTMLElement | null = null
 
-      if (
-        (key === 'j' || key === 'k') &&
-        (focusedControl?.dataset.semanticKind === 'transaction-row' ||
-          focusedControl?.dataset.semanticKind === 'transaction-selection')
-      ) {
+      const spatialDirection: SpatialDirection | null =
+        key === 'h'
+          ? 'left'
+          : key === 'j'
+            ? 'down'
+            : key === 'k'
+              ? 'up'
+              : key === 'l'
+                ? 'right'
+                : null
+      if (!spatialDirection) {
         return
       }
-
-      if (key === 'j' || key === 'k') {
-        const nextIndex = index + (key === 'j' ? 1 : -1)
-        nextControl = controls[nextIndex] ?? null
-      } else if (key === 'h') {
-        if (region === 'workspace') {
-          nextControl =
-            activeView === 'budgets' &&
-            focusedControl?.dataset.semanticId === 'month-next'
-              ? workspaceControls.find(
-                  (control) =>
-                    control.dataset.semanticId === 'month-previous',
-                ) ?? null
-              : sidebarControls.find((control) =>
-                  control.matches('.nav-item.is-active'),
-                ) ?? null
-        }
-      } else if (key === 'l') {
-        if (region === 'sidebar') {
-          nextControl = workspaceControls[0] ?? null
-        } else if (
-          activeView === 'budgets' &&
-          focusedControl?.dataset.semanticId === 'month-previous'
-        ) {
-          nextControl =
-            workspaceControls.find(
-              (control) => control.dataset.semanticId === 'month-next',
-            ) ?? null
-        }
-      } else if (index === -1) {
+      nextControl = findSpatialTarget(
+        focusedControl,
+        controls,
+        spatialDirection,
+      )
+      if (!nextControl && key === 'h' && region === 'workspace') {
         nextControl =
+          findSpatialTarget(focusedControl, sidebarControls, 'left') ??
           sidebarControls.find((control) =>
             control.matches('.nav-item.is-active'),
-          ) ?? null
-      } else {
-        return
+          ) ??
+          null
+      } else if (!nextControl && key === 'l' && region === 'sidebar') {
+        nextControl =
+          findSpatialTarget(focusedControl, workspaceControls, 'right') ??
+          workspaceControls[0] ??
+          null
       }
 
       if (nextControl) {

@@ -1652,6 +1652,11 @@ export function BudgetPanel({
               <span>Excluded from budget actuals</span>
               <button
                 className="terminal-button"
+                data-semantic-id="budget-ignored-transactions"
+                data-semantic-kind="budget-action"
+                data-semantic-region="workspace"
+                data-status-action="view ignored transactions"
+                data-status-label="budget / ignored activity"
                 type="button"
                 onClick={() => onOpenTransaction(ignoredTransactionIds[0])}
               >
