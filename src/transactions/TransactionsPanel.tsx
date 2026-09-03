@@ -1040,34 +1040,24 @@ export function TransactionsPanel({
                       )}
                     </div>
                   )}
-                  {transaction.is_ignored && !isSelected ? (
-                    <span className="transaction-state-pill">Ignored</span>
-                  ) : (
-                    <button
-                      aria-hidden={
-                        !transaction.is_ignored && !isSelected ? true : undefined
-                      }
-                      aria-label={`${
-                        transaction.is_ignored ? 'Include' : 'Ignore'
-                      } ${transactionDescription(transaction)}`}
-                      className={`transaction-state-button transaction-state-button--action${
-                        !transaction.is_ignored && !isSelected
-                          ? ' transaction-state-button--quiet'
-                          : ''
-                      }`}
-                      disabled={savingIgnoredTransactionId !== null}
-                      tabIndex={isSelected ? 0 : -1}
-                      type="button"
-                      onClick={() =>
-                        void setTransactionIgnored(
-                          transaction,
-                          !transaction.is_ignored,
-                        )
-                      }
-                    >
-                      {transaction.is_ignored ? 'Include' : 'Ignore'}
-                    </button>
-                  )}
+                  <button
+                    aria-label={`${
+                      transaction.is_ignored ? 'Ignored' : 'Included'
+                    } transaction: ${transactionDescription(transaction)}`}
+                    className={`transaction-state-button${
+                      transaction.is_ignored ? ' is-ignored' : ''
+                    }`}
+                    disabled={savingIgnoredTransactionId !== null}
+                    type="button"
+                    onClick={() =>
+                      void setTransactionIgnored(
+                        transaction,
+                        !transaction.is_ignored,
+                      )
+                    }
+                  >
+                    {transaction.is_ignored ? 'Ignored' : 'Included'}
+                  </button>
                   <strong
                     className={`transaction-amount ${
                       transaction.amount >= 0 ? 'positive' : 'negative'

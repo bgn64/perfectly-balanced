@@ -1888,18 +1888,14 @@ input:focus-visible {
 }
 
 .transaction-row-simple::after,
-.transaction-state-button,
-.transaction-state-pill {
+.transaction-state-button {
   grid-column: 3;
   grid-row: 1;
   justify-self: start;
 }
 
 .transaction-state-button,
-.transaction-state-pill,
-.transaction-row-simple.is-selected:not(.is-ignored):not(:has(.transaction-state-button))::after,
-.transaction-row-simple:hover:not(.is-ignored):not(:has(.transaction-state-button))::after,
-.transaction-row-simple:focus-visible:not(.is-ignored):not(:has(.transaction-state-button))::after {
+.transaction-row-simple::after {
   border: 1px solid #414868;
   border-radius: 999px;
   padding: 0.2rem 0.45rem;
@@ -1910,17 +1906,11 @@ input:focus-visible {
 }
 
 .transaction-row-simple::after {
-  content: "";
+  content: "Included";
 }
 
-.transaction-row-simple:has(> .transaction-state-button, > .transaction-state-pill)::after {
+.transaction-row-simple:has(> .transaction-state-button)::after {
   display: none;
-}
-
-.transaction-row-simple.is-selected:not(.is-ignored):not(:has(.transaction-state-button))::after,
-.transaction-row-simple:hover:not(.is-ignored):not(:has(.transaction-state-button))::after,
-.transaction-row-simple:focus-visible:not(.is-ignored):not(:has(.transaction-state-button))::after {
-  content: "Ignore";
 }
 
 .transaction-state-button:hover,
@@ -1930,24 +1920,8 @@ input:focus-visible {
   color: #c0caf5;
 }
 
-.transaction-state-pill {
+.transaction-state-button.is-ignored {
   color: #e0af68;
-}
-
-.transaction-state-button--action {
-  color: #7dcfff;
-}
-
-.transaction-state-button--quiet {
-  opacity: 0;
-  pointer-events: none;
-}
-
-.transaction-row-simple:hover .transaction-state-button--quiet,
-.transaction-row-simple:focus-within .transaction-state-button--quiet,
-.transaction-row-simple.is-selected .transaction-state-button--quiet {
-  opacity: 1;
-  pointer-events: auto;
 }
 
 .transaction-row-simple {
@@ -2988,7 +2962,7 @@ input:focus-visible {
 
   .transaction-column-head,
   .transaction-row-simple {
-    grid-template-columns: minmax(0, 1fr) minmax(3.75rem, 0.5fr) minmax(4.75rem, 0.6fr);
+    grid-template-columns: minmax(0, 1fr) minmax(5.75rem, 0.65fr) minmax(4.5rem, 0.5fr);
     gap: 0.6rem;
   }
 
@@ -3001,8 +2975,7 @@ input:focus-visible {
   .transaction-column-head::after,
   .transaction-column-head > span:nth-child(3),
   .transaction-row-simple::after,
-  .transaction-state-button,
-  .transaction-state-pill {
+  .transaction-state-button {
     grid-column: 2;
   }
 
@@ -3316,15 +3289,14 @@ input:focus-visible {
   color: #343b58;
 }
 .terminal-app:has(#theme-light:checked) .transaction-state-button,
-.terminal-app:has(#theme-light:checked) .transaction-state-pill,
-.authenticated-app.terminal-app.theme-light .transaction-state-button,
-.authenticated-app.terminal-app.theme-light .transaction-state-pill {
+.authenticated-app.terminal-app.theme-light .transaction-state-button {
   border-color: #a1a6b5;
   background: #dfe0e6;
   color: #34548a;
 }
-.terminal-app:has(#theme-light:checked) .transaction-state-pill,
-.authenticated-app.terminal-app.theme-light .transaction-state-pill {
+
+.terminal-app:has(#theme-light:checked) .transaction-state-button.is-ignored,
+.authenticated-app.terminal-app.theme-light .transaction-state-button.is-ignored {
   color: #8a6528;
 }
 
@@ -4015,7 +3987,7 @@ body.review-page > .review-frame {
 }
 
 @media (max-width: 34rem) {
-  :is(#ignore-action, #ignored-result, #ignored-selected) .review-frame__viewport > .terminal-app,
+  :is(#ignore-action, #ignored-result) .review-frame__viewport > .terminal-app,
   #ignored-excluded > .terminal-app,
   :is(#ignored-budget, #scroll-focus, #scroll-picker) .frame-screen > .terminal-app {
     width: calc(100% - 1rem);
