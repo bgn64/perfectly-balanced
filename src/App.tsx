@@ -73,8 +73,10 @@ function getSemanticControls(
   root: HTMLElement,
   region: SemanticRegion,
 ): HTMLElement[] {
+  const modal = root.querySelector<HTMLElement>('[aria-modal="true"]')
+  const semanticRoot = modal ?? root
   return Array.from(
-    root.querySelectorAll<HTMLElement>(
+    semanticRoot.querySelectorAll<HTMLElement>(
       `[data-semantic-region="${region}"]`,
     ),
   )
@@ -350,6 +352,9 @@ function AuthenticatedShell({
   const [isTransactionSearchOpen, setIsTransactionSearchOpen] =
     useState(false)
   const [transactionSearchQuery, setTransactionSearchQuery] = useState('')
+  const [transactionControlDialog, setTransactionControlDialog] = useState<
+    'time' | 'filter' | 'sort' | null
+  >(null)
   const [commandQuery, setCommandQuery] = useState('go')
   const [theme, setTheme] = useState<WorkspaceTheme>(readInitialTheme)
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
@@ -1138,6 +1143,7 @@ function AuthenticatedShell({
             focusTransactionRequest={transactionFocusRequest}
             selectedMonth={selectedMonth}
             onCategoriesChanged={handleCategoriesChanged}
+            onControlDialogChange={setTransactionControlDialog}
             onSearchStateChange={handleTransactionSearchStateChange}
             onTransactionsChanged={handleTransactionsChanged}
             onUncategorizedCountChange={handleUncategorizedCountChange}
@@ -1161,6 +1167,8 @@ function AuthenticatedShell({
             {activeView === 'transactions'
               ? isTransactionSearchOpen
                 ? 'SEARCH'
+                : transactionControlDialog
+                  ? transactionControlDialog.toLocaleUpperCase()
                 : 'EDIT'
               : 'REPORT'}
           </strong>
@@ -1168,6 +1176,8 @@ function AuthenticatedShell({
             {activeView === 'transactions'
               ? isTransactionSearchOpen
                 ? transactionSearchQuery || 'search'
+                : transactionControlDialog
+                  ? `transactions / ${transactionControlDialog}`
                 : 'transaction / category'
               : `${formatMonth(selectedMonth)} / all accounts`}
           </span>
@@ -1178,6 +1188,15 @@ function AuthenticatedShell({
               <>
                 <span><kbd>esc</kbd> clear and return</span>
                 <span><kbd>enter</kbd> focus first result</span>
+              </>
+            ) : transactionControlDialog ? (
+              <>
+                <span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span>
+                {transactionControlDialog === 'filter' && (
+                  <span><kbd>Space</kbd> toggle</span>
+                )}
+                <span><kbd>Enter</kbd> activate</span>
+                <span><kbd>Esc</kbd> close</span>
               </>
             ) : (
               <>

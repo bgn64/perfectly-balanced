@@ -4,15 +4,12 @@ import {
   useMemo,
   useRef,
   useState,
-  type Dispatch,
   type FocusEvent as ReactFocusEvent,
   type KeyboardEvent as ReactKeyboardEvent,
-  type SetStateAction,
 } from 'react'
 import { useAuth } from '../auth/useAuth.ts'
 import { CategoryCombobox } from '../finance/CategoryCombobox.tsx'
 import type {
-  Budget,
   Category,
   Transaction,
   TransactionSplit,
@@ -32,22 +29,112 @@ interface TransactionsData {
   transactions: Transaction[]
   categories: Category[]
   splits: TransactionSplit[]
-  budgets: Budget[]
 }
 
-type TransactionSort = 'date' | 'merchant' | 'amount'
+type TransactionSort =
+  | 'newest'
+  | 'oldest'
+  | 'merchant'
+  | 'amount-high'
+  | 'amount-low'
+type TransactionTimeRange =
+  | 'current-month'
+  | 'last-month'
+  | 'last-3-months'
+  | 'last-6-months'
+  | 'this-year'
+  | 'all-time'
+type TransactionFilter =
+  | 'categorized'
+  | 'uncategorized'
+  | 'included'
+  | 'ignored'
+type TransactionControlDialog = 'time' | 'filter' | 'sort'
 
-const uncategorizedFilter = 'uncategorized'
 const nonUsdCategoryMessage = 'Only USD transactions can be categorized.'
+const transactionPageSize = 25
+const timeRangeOptions: ReadonlyArray<{
+  value: TransactionTimeRange
+  label: string
+  description: string
+}> = [
+  { value: 'current-month', label: 'Current month', description: 'Selected month' },
+  { value: 'last-month', label: 'Last month', description: 'Previous month' },
+  { value: 'last-3-months', label: 'Last 3 months', description: 'Selected month and previous 2' },
+  { value: 'last-6-months', label: 'Last 6 months', description: 'Selected month and previous 5' },
+  { value: 'this-year', label: 'This year', description: 'January through selected month' },
+  { value: 'all-time', label: 'All time', description: 'All imported transactions' },
+]
+const sortOptions: ReadonlyArray<{
+  value: TransactionSort
+  label: string
+  description: string
+}> = [
+  { value: 'newest', label: 'Newest first', description: 'Transaction date descending' },
+  { value: 'oldest', label: 'Oldest first', description: 'Transaction date ascending' },
+  { value: 'amount-high', label: 'Highest amount', description: 'Absolute amount descending' },
+  { value: 'amount-low', label: 'Lowest amount', description: 'Absolute amount ascending' },
+  { value: 'merchant', label: 'Merchant A-Z', description: 'Alphabetical by display name' },
+]
+const transactionFilterOptions: ReadonlyArray<{
+  value: TransactionFilter
+  label: string
+  description: string
+}> = [
+  { value: 'uncategorized', label: 'Uncategorized', description: 'Needs a category' },
+  { value: 'categorized', label: 'Categorized', description: 'Has one or more categories' },
+  { value: 'included', label: 'Included', description: 'Contributes to budgets and reports' },
+  { value: 'ignored', label: 'Ignored', description: 'Excluded from budgets and reports' },
+]
+const filterLabels: Record<TransactionFilter, string> = {
+  categorized: 'Categorized',
+  uncategorized: 'Uncategorized',
+  included: 'Included',
+  ignored: 'Ignored',
+}
+
+function shiftMonth(month: string, offset: number): string {
+  const [year, monthNumber] = month.split('-').map(Number)
+  const date = new Date(Date.UTC(year, monthNumber - 1 + offset, 1))
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`
+}
+
+function isInTimeRange(
+  transactionMonth: string,
+  selectedMonth: string,
+  timeRange: TransactionTimeRange,
+): boolean {
+  if (timeRange === 'all-time') {
+    return true
+  }
+  if (timeRange === 'current-month') {
+    return transactionMonth === selectedMonth
+  }
+  if (timeRange === 'last-month') {
+    return transactionMonth === shiftMonth(selectedMonth, -1)
+  }
+  const firstMonth =
+    timeRange === 'last-3-months'
+      ? shiftMonth(selectedMonth, -2)
+      : timeRange === 'last-6-months'
+        ? shiftMonth(selectedMonth, -5)
+        : `${selectedMonth.slice(0, 4)}-01`
+  return transactionMonth >= firstMonth && transactionMonth <= selectedMonth
+}
 
 interface PendingIgnoredUpdate {
   desired: boolean
   persisted: boolean
 }
 
+interface PendingResultFocus {
+  transactionId: string
+  pageIndex: number
+}
+
 async function queryTransactions(): Promise<TransactionsData> {
   const client = getSupabaseClient()
-  const [transactions, categoriesResult, splits, budgetsResult] =
+  const [transactions, categoriesResult, splits] =
     await Promise.all([
       collectPages((afterId, limit) => {
         let query = client
@@ -74,13 +161,10 @@ async function queryTransactions(): Promise<TransactionsData> {
         }
         return query
       }),
-      client.from('budgets').select('id, month').order('month', { ascending: false }),
     ])
 
-  for (const result of [categoriesResult, budgetsResult]) {
-    if (result.error) {
-      throw new Error(result.error.message)
-    }
+  if (categoriesResult.error) {
+    throw new Error(categoriesResult.error.message)
   }
 
   return {
@@ -93,7 +177,6 @@ async function queryTransactions(): Promise<TransactionsData> {
       ...split,
       amount: Number(split.amount),
     })),
-    budgets: budgetsResult.data ?? [],
   }
 }
 
@@ -102,6 +185,7 @@ export function TransactionsPanel({
   focusTransactionRequest,
   selectedMonth,
   onCategoriesChanged,
+  onControlDialogChange,
   onSearchStateChange,
   onTransactionsChanged,
   onUncategorizedCountChange,
@@ -110,6 +194,7 @@ export function TransactionsPanel({
   focusTransactionRequest: { transactionId: string; sequence: number } | null
   selectedMonth: string
   onCategoriesChanged: () => void
+  onControlDialogChange: (dialog: TransactionControlDialog | null) => void
   onSearchStateChange: (isOpen: boolean, query: string) => void
   onTransactionsChanged: () => void
   onUncategorizedCountChange: (count: number) => void
@@ -118,14 +203,22 @@ export function TransactionsPanel({
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [splits, setSplits] = useState<TransactionSplit[]>([])
-  const [budgets, setBudgets] = useState<Budget[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [dataError, setDataError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [isSearchOpen, setIsSearchOpen] = useState(false)
-  const [scopeFilter, setScopeFilter] = useState<string | null>(null)
-  const [categoryFilters, setCategoryFilters] = useState<string[]>([])
-  const [sort, setSort] = useState<TransactionSort>('date')
+  const [timeRange, setTimeRange] =
+    useState<TransactionTimeRange>('current-month')
+  const [transactionFilters, setTransactionFilters] = useState<
+    TransactionFilter[]
+  >([])
+  const [draftTransactionFilters, setDraftTransactionFilters] = useState<
+    TransactionFilter[]
+  >([])
+  const [sort, setSort] = useState<TransactionSort>('newest')
+  const [controlDialog, setControlDialog] =
+    useState<TransactionControlDialog | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
   const [selectedTransactionId, setSelectedTransactionId] = useState<
     string | null
   >(null)
@@ -139,11 +232,16 @@ export function TransactionsPanel({
   const transactionButtonRefs = useRef(new Map<string, HTMLButtonElement>())
   const pickerSearchInputRef = useRef<HTMLInputElement>(null)
   const transactionSearchInputRef = useRef<HTMLInputElement>(null)
+  const panelRef = useRef<HTMLElement>(null)
   const searchOriginRef = useRef<HTMLElement | null>(null)
   const lastFocusedTransactionControlRef = useRef<HTMLElement | null>(null)
   const handledFocusRequestSequence = useRef(0)
   const ignoredUpdatesRef = useRef(new Map<string, PendingIgnoredUpdate>())
   const processingIgnoredUpdatesRef = useRef(false)
+  const controlDialogRef = useRef<HTMLElement>(null)
+  const controlDialogOriginRef = useRef<HTMLElement | null>(null)
+  const filterButtonRef = useRef<HTMLButtonElement>(null)
+  const pendingResultFocusRef = useRef<PendingResultFocus | null>(null)
 
   const refreshTransactions = useCallback(async () => {
     const generation = ++requestGeneration.current
@@ -155,7 +253,6 @@ export function TransactionsPanel({
       setTransactions(data.transactions)
       setCategories(data.categories)
       setSplits(data.splits)
-      setBudgets(data.budgets)
       if (!selectedTransactionIdRef.current && data.transactions[0]) {
         selectedTransactionIdRef.current = data.transactions[0].id
         setSelectedTransactionId(data.transactions[0].id)
@@ -234,71 +331,95 @@ export function TransactionsPanel({
     onSearchStateChange(isSearchOpen, searchQuery)
   }, [isSearchOpen, onSearchStateChange, searchQuery])
 
+  useEffect(() => {
+    onControlDialogChange(controlDialog)
+  }, [controlDialog, onControlDialogChange])
+
+  useEffect(() => {
+    if (!controlDialog) {
+      return
+    }
+    const animationFrame = window.requestAnimationFrame(() => {
+      const checkedOption = controlDialogRef.current?.querySelector<HTMLElement>(
+        '[data-control-checked="true"]',
+      )
+      const firstControl =
+        checkedOption ??
+        controlDialogRef.current?.querySelector<HTMLElement>('button:not(:disabled)')
+      firstControl?.focus({ preventScroll: true })
+    })
+    return () => window.cancelAnimationFrame(animationFrame)
+  }, [controlDialog])
+
   useEffect(
-    () => () => onSearchStateChange(false, ''),
-    [onSearchStateChange],
+    () => () => {
+      onSearchStateChange(false, '')
+      onControlDialogChange(null)
+    },
+    [onControlDialogChange, onSearchStateChange],
   )
 
-  const monthOptions = useMemo(
-    () =>
-      Array.from(
-        new Set(transactions.map((transaction) => monthKey(transaction.transaction_date))),
-      ).sort((left, right) => right.localeCompare(left)),
-    [transactions],
-  )
-  const scopeOptions = useMemo(
-    () => [
-      ...budgets.map((budget) => ({
-        key: `budget:${budget.id}`,
-        label: `${formatMonth(monthKey(budget.month))} budget`,
-        month: monthKey(budget.month),
-      })),
-      ...monthOptions.map((month) => ({
-        key: `month:${month}`,
-        label: formatMonth(month),
-        month,
-      })),
-    ],
-    [budgets, monthOptions],
-  )
-  const scopeByKey = useMemo(
-    () => new Map(scopeOptions.map((option) => [option.key, option])),
-    [scopeOptions],
-  )
+  useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect -- A month change starts the result set at its first page.
+    setCurrentPage(1)
+  }, [selectedMonth])
 
   const displayedTransactions = useMemo(() => {
     const normalizedSearch = searchQuery.trim().toLocaleLowerCase()
-    const activeMonth = scopeFilter
-      ? scopeByKey.get(scopeFilter)?.month
-      : undefined
+    const fieldSearch = normalizedSearch.match(
+      /^(merchant|account|category):\s*(.*)$/,
+    )
+    const categoryStateFilters = transactionFilters.filter(
+      (filter) => filter === 'categorized' || filter === 'uncategorized',
+    )
+    const inclusionFilters = transactionFilters.filter(
+      (filter) => filter === 'included' || filter === 'ignored',
+    )
     const filtered = transactions.filter((transaction) => {
+      const transactionMonth = monthKey(transaction.transaction_date)
+      if (!isInTimeRange(transactionMonth, selectedMonth, timeRange)) {
+        return false
+      }
+      const transactionSplits = splitsByTransaction.get(transaction.id) ?? []
+      const categoryNames = transactionSplits.map(
+        (split) => categoriesById.get(split.category_id)?.name ?? '',
+      )
+      const isCategorized = transactionSplits.length > 0
       if (
-        normalizedSearch &&
-        !transactionDescription(transaction)
-          .toLocaleLowerCase()
-          .includes(normalizedSearch)
+        categoryStateFilters.length === 1 &&
+        ((categoryStateFilters[0] === 'categorized') !== isCategorized)
       ) {
         return false
       }
       if (
-        activeMonth &&
-        activeMonth !== monthKey(transaction.transaction_date)
+        inclusionFilters.length === 1 &&
+        ((inclusionFilters[0] === 'ignored') !== transaction.is_ignored)
       ) {
         return false
       }
-      if (categoryFilters.length > 0) {
-        const transactionSplits = splitsByTransaction.get(transaction.id) ?? []
-        const matchesUncategorized =
-          categoryFilters.includes(uncategorizedFilter) &&
-          transactionSplits.length === 0
-        const matchesCategory = transactionSplits.some((split) =>
-          categoryFilters.includes(split.category_id),
-        )
-        if (!matchesUncategorized && !matchesCategory) {
-          return false
-        }
+      if (!normalizedSearch) {
+        return true
       }
-      return true
+      const searchValue = fieldSearch?.[2] ?? normalizedSearch
+      const matchesMerchant = transactionDescription(transaction)
+        .toLocaleLowerCase()
+        .includes(searchValue)
+      const matchesAccount = transaction.account_name
+        .toLocaleLowerCase()
+        .includes(searchValue)
+      const matchesCategory = categoryNames.some((name) =>
+        name.toLocaleLowerCase().includes(searchValue),
+      )
+      if (fieldSearch?.[1] === 'merchant') {
+        return matchesMerchant
+      }
+      if (fieldSearch?.[1] === 'account') {
+        return matchesAccount
+      }
+      if (fieldSearch?.[1] === 'category') {
+        return matchesCategory
+      }
+      return matchesMerchant || matchesAccount || matchesCategory
     })
 
     return [...filtered].sort((left, right) => {
@@ -307,20 +428,67 @@ export function TransactionsPanel({
           transactionDescription(right),
         )
       }
-      if (sort === 'amount') {
+      if (sort === 'amount-high') {
         return Math.abs(right.amount) - Math.abs(left.amount)
       }
-      return right.transaction_date.localeCompare(left.transaction_date)
+      if (sort === 'amount-low') {
+        return Math.abs(left.amount) - Math.abs(right.amount)
+      }
+      return sort === 'oldest'
+        ? left.transaction_date.localeCompare(right.transaction_date)
+        : right.transaction_date.localeCompare(left.transaction_date)
     })
   }, [
-    categoryFilters,
-    scopeByKey,
-    scopeFilter,
+    categoriesById,
     searchQuery,
+    selectedMonth,
     sort,
     splitsByTransaction,
+    timeRange,
+    transactionFilters,
     transactions,
   ])
+  const totalPages = Math.max(
+    1,
+    Math.ceil(displayedTransactions.length / transactionPageSize),
+  )
+  const displayedPage = Math.min(currentPage, totalPages)
+  const pageTransactions = useMemo(
+    () =>
+      displayedTransactions.slice(
+        (displayedPage - 1) * transactionPageSize,
+        displayedPage * transactionPageSize,
+      ),
+    [displayedPage, displayedTransactions],
+  )
+  const paginationItems = useMemo(() => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, index) => index + 1)
+    }
+    const pages = Array.from(
+      new Set([
+        1,
+        totalPages,
+        displayedPage - 1,
+        displayedPage,
+        displayedPage + 1,
+      ]),
+    )
+      .filter((page) => page >= 1 && page <= totalPages)
+      .sort((left, right) => left - right)
+    const items: Array<number | string> = []
+    for (const page of pages) {
+      const previousPage = items.at(-1)
+      if (
+        typeof previousPage === 'number' &&
+        page - previousPage > 1
+      ) {
+        items.push(`ellipsis-${previousPage}`)
+      }
+      items.push(page)
+    }
+    return items
+  }, [displayedPage, totalPages])
 
   const selectedTransaction =
     transactions.find((transaction) => transaction.id === selectedTransactionId) ??
@@ -343,6 +511,48 @@ export function TransactionsPanel({
       }
     })
   }, [])
+
+  useEffect(() => {
+    const pendingFocus = pendingResultFocusRef.current
+    if (!pendingFocus) {
+      return
+    }
+    if (selectedTransactionIdRef.current !== pendingFocus.transactionId) {
+      pendingResultFocusRef.current = null
+      return
+    }
+    const retainedTransaction = pageTransactions.find(
+      (transaction) => transaction.id === pendingFocus.transactionId,
+    )
+    const targetTransaction =
+      retainedTransaction ??
+      pageTransactions[
+        Math.min(pendingFocus.pageIndex, pageTransactions.length - 1)
+      ]
+    pendingResultFocusRef.current = null
+    if (currentPage !== displayedPage) {
+      // oxlint-disable-next-line react/set-state-in-effect -- A mutation can remove the final row from the final page, requiring a page clamp.
+      setCurrentPage(displayedPage)
+    }
+    if (targetTransaction) {
+      selectTransaction(targetTransaction)
+      focusTransaction(targetTransaction.id)
+      return
+    }
+    selectedTransactionIdRef.current = null
+    setSelectedTransactionId(null)
+    window.requestAnimationFrame(() => {
+      if (filterButtonRef.current) {
+        focusWithScrollComfort(filterButtonRef.current)
+      }
+    })
+  }, [
+    currentPage,
+    displayedPage,
+    focusTransaction,
+    pageTransactions,
+    selectTransaction,
+  ])
 
   useEffect(() => {
     if (
@@ -518,6 +728,15 @@ export function TransactionsPanel({
         })
       }
       setDataError(null)
+      pendingResultFocusRef.current = {
+        transactionId: transaction.id,
+        pageIndex: Math.max(
+          0,
+          pageTransactions.findIndex(
+            (candidate) => candidate.id === transaction.id,
+          ),
+        ),
+      }
       setTransactions((current) =>
         current.map((candidate) =>
           candidate.id === transaction.id
@@ -527,7 +746,31 @@ export function TransactionsPanel({
       )
       void processIgnoredUpdates()
     },
-    [processIgnoredUpdates],
+    [pageTransactions, processIgnoredUpdates],
+  )
+
+  const removeTransactionFilter = useCallback(
+    (filter: TransactionFilter) => {
+      const filterIndex = transactionFilters.indexOf(filter)
+      const remainingFilters = transactionFilters.filter(
+        (candidate) => candidate !== filter,
+      )
+      setTransactionFilters(remainingFilters)
+      setCurrentPage(1)
+      window.requestAnimationFrame(() => {
+        const nextFilter =
+          remainingFilters[Math.min(filterIndex, remainingFilters.length - 1)]
+        const nextControl = nextFilter
+          ? document.querySelector<HTMLElement>(
+              `[data-filter-value="${nextFilter}"]`,
+            )
+          : filterButtonRef.current
+        if (nextControl) {
+          focusWithScrollComfort(nextControl)
+        }
+      })
+    },
+    [transactionFilters],
   )
 
   useEffect(() => {
@@ -573,33 +816,78 @@ export function TransactionsPanel({
                 ? -1
                 : null
       if (direction !== null) {
-        if (displayedTransactions.length === 0) {
+        if (pageTransactions.length === 0) {
           return
         }
         event.preventDefault()
         const originTransactionId =
           focusedTransactionRow?.dataset.transactionId ?? selectedTransactionId
-        const currentIndex = displayedTransactions.findIndex(
+        const currentIndex = pageTransactions.findIndex(
           (transaction) => transaction.id === originTransactionId,
         )
+        if (currentIndex === 0 && direction === -1) {
+          const controls = Array.from(
+            panelRef.current?.querySelectorAll<HTMLElement>(
+              '[data-semantic-region="workspace"]',
+            ) ?? [],
+          ).filter(
+            (control) =>
+              !control.matches(':disabled') &&
+              control.getAttribute('aria-hidden') !== 'true' &&
+              control.getClientRects().length > 0,
+          )
+          const controlIndex = focusedTransactionRow
+            ? controls.indexOf(focusedTransactionRow)
+            : -1
+          const previousControl = controls[controlIndex - 1]
+          if (previousControl) {
+            focusWithScrollComfort(previousControl)
+          }
+          return
+        }
+        if (
+          currentIndex === pageTransactions.length - 1 &&
+          direction === 1
+        ) {
+          const paginationControl = panelRef.current?.querySelector<HTMLElement>(
+            '.transaction-pagination [data-semantic-region="workspace"]:not(:disabled)',
+          )
+          if (paginationControl) {
+            focusWithScrollComfort(paginationControl)
+          }
+          return
+        }
         const nextIndex =
           currentIndex === -1
             ? direction === 1
               ? 0
-              : displayedTransactions.length - 1
+              : pageTransactions.length - 1
             : Math.max(
                 0,
                 Math.min(
-                  displayedTransactions.length - 1,
+                  pageTransactions.length - 1,
                   currentIndex + direction,
                 ),
               )
-        const transaction = displayedTransactions[nextIndex]
+        const transaction = pageTransactions[nextIndex]
         if (transaction.id !== selectedTransactionId) {
           selectTransaction(transaction)
         }
         focusTransaction(transaction.id)
         return
+      }
+
+      const focusedFilter =
+        event.target instanceof HTMLElement
+          ? event.target.closest<HTMLButtonElement>('[data-filter-value]')
+          : null
+      if (key === 'd' && focusedFilter?.dataset.filterValue) {
+        const filter = focusedFilter.dataset.filterValue as TransactionFilter
+        if (transactionFilterOptions.some((option) => option.value === filter)) {
+          event.preventDefault()
+          removeTransactionFilter(filter)
+          return
+        }
       }
 
       if (key === 'c' && !event.ctrlKey && !event.shiftKey && selectedTransaction) {
@@ -618,15 +906,17 @@ export function TransactionsPanel({
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [
     closeSearch,
-    displayedTransactions,
     focusTransaction,
     isSearchOpen,
     openSearch,
     openCategoryPicker,
+    pageTransactions,
+    removeTransactionFilter,
     selectTransaction,
     selectedTransaction,
     selectedTransactionId,
     toggleTransactionIgnored,
+    transactionFilters,
   ])
 
   async function createCategory(name: string): Promise<Category> {
@@ -673,6 +963,17 @@ export function TransactionsPanel({
       if (error) {
         throw new Error(error.message)
       }
+      if (selectedTransactionIdRef.current === transaction.id) {
+        pendingResultFocusRef.current = {
+          transactionId: transaction.id,
+          pageIndex: Math.max(
+            0,
+            pageTransactions.findIndex(
+              (candidate) => candidate.id === transaction.id,
+            ),
+          ),
+        }
+      }
       const didRefresh = await refreshTransactions()
       if (!didRefresh) {
         throw new Error(
@@ -680,8 +981,12 @@ export function TransactionsPanel({
         )
       }
       onTransactionsChanged()
-      setEditingTransactionId(null)
-      focusTransaction(transaction.id)
+      setEditingTransactionId((current) =>
+        current === transaction.id ? null : current,
+      )
+    } catch (error) {
+      pendingResultFocusRef.current = null
+      throw error
     } finally {
       setIsSavingCategories(false)
     }
@@ -692,23 +997,102 @@ export function TransactionsPanel({
     focusTransaction(transactionId)
   }
 
-  function toggleFilter(
-    value: string,
-    setFilters: Dispatch<SetStateAction<string[]>>,
-  ) {
-    setFilters((current) =>
+  function toggleDraftFilter(value: TransactionFilter) {
+    setDraftTransactionFilters((current) =>
       current.includes(value)
         ? current.filter((filter) => filter !== value)
         : [...current, value],
     )
   }
 
-  const activeFilterCount = (scopeFilter ? 1 : 0) + categoryFilters.length
+  const closeControlDialog = useCallback(() => {
+    const origin = controlDialogOriginRef.current
+    controlDialogOriginRef.current = null
+    setControlDialog(null)
+    window.requestAnimationFrame(() => {
+      if (origin?.isConnected) {
+        focusWithScrollComfort(origin)
+      }
+    })
+  }, [])
+
+  function openControlDialog(
+    dialog: TransactionControlDialog,
+    origin: HTMLElement,
+  ) {
+    controlDialogOriginRef.current = origin
+    if (dialog === 'filter') {
+      setDraftTransactionFilters(transactionFilters)
+    }
+    setControlDialog(dialog)
+  }
+
+  function handleControlDialogKeyDown(
+    event: ReactKeyboardEvent<HTMLDivElement>,
+  ) {
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      closeControlDialog()
+      return
+    }
+    const key = event.key.toLocaleLowerCase()
+    if (!['h', 'j', 'k', 'l'].includes(key)) {
+      return
+    }
+    const controls = Array.from(
+      controlDialogRef.current?.querySelectorAll<HTMLButtonElement>(
+        'button:not(:disabled)',
+      ) ?? [],
+    )
+    if (controls.length === 0) {
+      return
+    }
+    event.preventDefault()
+    const activeControl =
+      document.activeElement instanceof HTMLButtonElement
+        ? document.activeElement
+        : null
+    const currentIndex = activeControl ? controls.indexOf(activeControl) : -1
+    const direction = key === 'h' || key === 'k' ? -1 : 1
+    const nextIndex =
+      currentIndex === -1
+        ? direction === 1
+          ? 0
+          : controls.length - 1
+        : (currentIndex + direction + controls.length) % controls.length
+    controls[nextIndex].focus({ preventScroll: true })
+  }
+
+  function selectTimeRange(value: TransactionTimeRange) {
+    setTimeRange(value)
+    setCurrentPage(1)
+    closeControlDialog()
+  }
+
+  function selectSort(value: TransactionSort) {
+    setSort(value)
+    setCurrentPage(1)
+    closeControlDialog()
+  }
+
+  function applyTransactionFilters() {
+    setTransactionFilters(draftTransactionFilters)
+    setCurrentPage(1)
+    closeControlDialog()
+  }
+
+  const activeFilterCount = transactionFilters.length
+  const timeRangeLabel =
+    timeRangeOptions.find((option) => option.value === timeRange)?.label ??
+    'Current month'
+  const sortLabel =
+    sortOptions.find((option) => option.value === sort)?.label ?? 'Newest first'
 
   return (
     <section
       className="page transactions-page transactions-page--terminal"
       onFocusCapture={rememberTransactionFocus}
+      ref={panelRef}
     >
       <header className="workspace-head workspace-head--compact">
         <div>
@@ -774,169 +1158,125 @@ export function TransactionsPanel({
             <h2 id="transactions-title">Every account, one queue</h2>
           </div>
         </div>
-        <div className="data-toolbar">
-          {isSearchOpen ? (
-            <label className="terminal-search" htmlFor="merchant-search">
-              <span aria-hidden="true">/</span>
-              <span className="sr-only">Search merchant name</span>
-              <input
-                data-semantic-id="transactions-search"
-                data-semantic-kind="search-input"
-                data-semantic-region="workspace"
-                data-status-action="search"
-                data-status-label="transactions / search"
-                id="merchant-search"
-                placeholder="Search merchant name..."
-                ref={transactionSearchInputRef}
-                type="search"
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                onKeyDown={handleSearchKeyDown}
-              />
-            </label>
-          ) : (
+        <div className="data-toolbar transaction-toolbar-v2">
+          <div className="transaction-toolbar-primary">
+            {isSearchOpen ? (
+              <label
+                className="terminal-search transaction-query-field"
+                htmlFor="merchant-search"
+              >
+                <span aria-hidden="true">/</span>
+                <span className="sr-only">
+                  Search merchant, account, or category
+                </span>
+                <input
+                  id="merchant-search"
+                  placeholder="Search merchant, account, or category"
+                  ref={transactionSearchInputRef}
+                  type="search"
+                  value={searchQuery}
+                  onChange={(event) => {
+                    setSearchQuery(event.target.value)
+                    setCurrentPage(1)
+                  }}
+                  onKeyDown={handleSearchKeyDown}
+                />
+              </label>
+            ) : (
+              <button
+                aria-keyshortcuts="/"
+                aria-label="Search merchant, account, or category"
+                className="terminal-button transaction-search-trigger"
+                tabIndex={-1}
+                type="button"
+                onMouseDown={() => rememberSearchOrigin(document.activeElement)}
+                onClick={(event) => openSearch(event.currentTarget)}
+              >
+                <kbd>/</kbd> Search merchant, account, or category
+              </button>
+            )}
             <button
-              aria-label="Search transactions"
-              className="terminal-button transaction-search-trigger"
+              className="terminal-button transaction-tool-button"
+              data-semantic-id="transactions-time"
+              data-semantic-kind="transaction-control"
+              data-semantic-region="workspace"
+              data-status-action="choose time range"
+              data-status-label={`transactions / time / ${timeRangeLabel.toLocaleLowerCase()}`}
               type="button"
-              onMouseDown={() => rememberSearchOrigin(document.activeElement)}
-              onClick={() => openSearch()}
+              onClick={(event) => openControlDialog('time', event.currentTarget)}
             >
-              <kbd>/</kbd> Search transactions
+              Time <span>{timeRangeLabel}</span>
             </button>
-          )}
+            <button
+              className="terminal-button transaction-tool-button"
+              data-semantic-id="transactions-filter"
+              data-semantic-kind="transaction-control"
+              data-semantic-region="workspace"
+              data-status-action="filter transactions"
+              data-status-label="transactions / filters"
+              ref={filterButtonRef}
+              type="button"
+              onClick={(event) => openControlDialog('filter', event.currentTarget)}
+            >
+              Filter <span>{activeFilterCount || 'None'}</span>
+            </button>
+            <button
+              className="terminal-button transaction-tool-button"
+              data-semantic-id="transactions-sort"
+              data-semantic-kind="transaction-control"
+              data-semantic-region="workspace"
+              data-status-action="sort transactions"
+              data-status-label={`transactions / sort / ${sortLabel.toLocaleLowerCase()}`}
+              type="button"
+              onClick={(event) => openControlDialog('sort', event.currentTarget)}
+            >
+              Sort <span>{sortLabel}</span>
+            </button>
+          </div>
+          <span className="transaction-result-count">
+            {displayedTransactions.length.toLocaleString()} results
+          </span>
           {activeFilterCount > 0 && (
             <div
-              className="active-filters toolbar-tokens"
+              className="transaction-active-filter-row"
               aria-label="Active filters"
             >
-              {scopeFilter && (
-                <FilterChip
-                  label={scopeByKey.get(scopeFilter)?.label ?? scopeFilter}
-                  semanticId={`transaction-filter-remove-${scopeFilter}`}
-                  onRemove={() => setScopeFilter(null)}
-                />
-              )}
-              {categoryFilters.map((filter) => (
-                <FilterChip
+              <span className="transaction-filter-label">Active</span>
+              {transactionFilters.map((filter) => (
+                <button
+                  className="filter-token"
+                  data-filter-value={filter}
+                  data-semantic-id={`transaction-filter-${filter}`}
+                  data-semantic-kind="filter-remove"
+                  data-semantic-region="workspace"
+                  data-status-action="edit filter; d removes"
+                  data-status-label={`transactions / filter / ${filterLabels[filter].toLocaleLowerCase()}`}
                   key={filter}
-                  label={
-                    filter === uncategorizedFilter
-                      ? 'Uncategorized'
-                      : categoriesById.get(filter)?.name ?? filter
+                  type="button"
+                  onClick={(event) =>
+                    openControlDialog('filter', event.currentTarget)
                   }
-                  semanticId={`transaction-filter-remove-${filter}`}
-                  onRemove={() => toggleFilter(filter, setCategoryFilters)}
-                />
+                >
+                  {filterLabels[filter]} <span aria-hidden="true">×</span>
+                </button>
               ))}
+              <button
+                className="transaction-clear-filters"
+                data-semantic-id="transaction-filter-clear"
+                data-semantic-kind="filter-clear"
+                data-semantic-region="workspace"
+                data-status-action="clear filters"
+                data-status-label="transactions / filters"
+                type="button"
+                onClick={() => {
+                  setTransactionFilters([])
+                  setCurrentPage(1)
+                }}
+              >
+                Clear all
+              </button>
             </div>
           )}
-          <div className="toolbar-group transaction-tools">
-            <details className="filter-wrap">
-              <summary
-                className="terminal-button pill-button"
-                data-semantic-id="transactions-filter"
-                data-semantic-kind="filter-summary"
-                data-semantic-region="workspace"
-                data-semantic-status-action="filter-transactions"
-                data-semantic-status-label="Transaction filters"
-              >
-                Filter{activeFilterCount ? ` · ${activeFilterCount}` : ''}
-              </summary>
-              <div className="popover filter-popover">
-                <h2>Budget or month</h2>
-                {scopeOptions.map((option) => (
-                  <label className="radio" key={option.key}>
-                    <input
-                      checked={scopeFilter === option.key}
-                      data-semantic-id={`transaction-scope-${option.key}`}
-                      data-semantic-kind="filter-option"
-                      data-semantic-region="workspace"
-                      data-semantic-status-action="filter-transactions"
-                      data-semantic-status-label={option.label}
-                      name="transaction-scope"
-                      type="radio"
-                      onChange={() => setScopeFilter(option.key)}
-                    />
-                    {option.label}
-                  </label>
-                ))}
-                <h2>Categories · match any</h2>
-                <label className="check">
-                  <input
-                    checked={categoryFilters.includes(uncategorizedFilter)}
-                    data-semantic-id="transaction-filter-uncategorized"
-                    data-semantic-kind="filter-option"
-                    data-semantic-region="workspace"
-                    data-semantic-status-action="filter-transactions"
-                    data-semantic-status-label="Uncategorized"
-                    type="checkbox"
-                    onChange={() =>
-                      toggleFilter(uncategorizedFilter, setCategoryFilters)
-                    }
-                  />
-                  Uncategorized
-                </label>
-                {categories.map((category) => (
-                  <label className="check" key={category.id}>
-                    <input
-                      checked={categoryFilters.includes(category.id)}
-                      data-semantic-id={`transaction-filter-category-${category.id}`}
-                      data-semantic-kind="filter-option"
-                      data-semantic-region="workspace"
-                      data-semantic-status-action="filter-transactions"
-                      data-semantic-status-label={category.name}
-                      type="checkbox"
-                      onChange={() =>
-                        toggleFilter(category.id, setCategoryFilters)
-                      }
-                    />
-                    {category.name}
-                  </label>
-                ))}
-              </div>
-            </details>
-            <details className="filter-wrap">
-              <summary
-                className="terminal-button pill-button"
-                data-semantic-id="transactions-sort"
-                data-semantic-kind="sort-summary"
-                data-semantic-region="workspace"
-                data-semantic-status-action="sort-transactions"
-                data-semantic-status-label="Transaction sort"
-              >
-                {sort === 'date'
-                  ? 'Newest first'
-                  : sort === 'merchant'
-                    ? 'Merchant A-Z'
-                    : 'Highest amount'}
-              </summary>
-              <div className="popover sort-popover">
-                {(
-                  [
-                    ['date', 'Date · newest'],
-                    ['merchant', 'Merchant · A-Z'],
-                    ['amount', 'Amount · highest'],
-                  ] as const
-                ).map(([value, label]) => (
-                  <label className="radio" key={value}>
-                    <input
-                      checked={sort === value}
-                      data-semantic-id={`transaction-sort-${value}`}
-                      data-semantic-kind="sort-option"
-                      data-semantic-region="workspace"
-                      data-semantic-status-action="sort-transactions"
-                      data-semantic-status-label={label}
-                      name="transaction-sort"
-                      type="radio"
-                      onChange={() => setSort(value)}
-                    />
-                    {label}
-                  </label>
-                ))}
-              </div>
-            </details>
-          </div>
         </div>
 
         <div className="transaction-column-head" aria-hidden="true">
@@ -956,7 +1296,7 @@ export function TransactionsPanel({
               No transactions match the current search and filters.
             </div>
           ) : (
-            displayedTransactions.map((transaction) => {
+            pageTransactions.map((transaction) => {
               const transactionSplits =
                 splitsByTransaction.get(transaction.id) ?? []
               const categoryNames = transactionSplits.map(
@@ -1057,7 +1397,7 @@ export function TransactionsPanel({
                         onClick={() => openCategoryPicker(transaction)}
                       >
                         {transactionSplits.length === 0 ? (
-                          '+ Categorize'
+                          'Select category...'
                         ) : (
                           <CategorySummary categoryNames={categoryNames} />
                         )}
@@ -1101,39 +1441,251 @@ export function TransactionsPanel({
             })
           )}
         </section>
+        {!isLoading && displayedTransactions.length > 0 && (
+          <nav className="transaction-pagination" aria-label="Transaction pages">
+            <span className="transaction-page-summary">
+              Showing{' '}
+              {((displayedPage - 1) * transactionPageSize + 1).toLocaleString()}
+              –
+              {Math.min(
+                displayedPage * transactionPageSize,
+                displayedTransactions.length,
+              ).toLocaleString()}{' '}
+              of {displayedTransactions.length.toLocaleString()}
+            </span>
+            <div className="transaction-page-controls">
+              <button
+                aria-label="Previous page"
+                className="terminal-button"
+                data-semantic-id="transactions-page-previous"
+                data-semantic-kind="pagination"
+                data-semantic-region="workspace"
+                data-status-action="previous page"
+                data-status-label="transactions / pages"
+                disabled={displayedPage === 1}
+                type="button"
+                onClick={() => setCurrentPage(displayedPage - 1)}
+              >
+                ←
+              </button>
+              {paginationItems.map((item) =>
+                typeof item === 'number' ? (
+                  <button
+                    aria-current={item === displayedPage ? 'page' : undefined}
+                    className={`terminal-button${
+                      item === displayedPage ? ' is-current' : ''
+                    }`}
+                    data-semantic-id={`transactions-page-${item}`}
+                    data-semantic-kind="pagination"
+                    data-semantic-region="workspace"
+                    data-status-action="go to page"
+                    data-status-label={`transactions / page ${item}`}
+                    key={item}
+                    type="button"
+                    onClick={() => setCurrentPage(item)}
+                  >
+                    {item}
+                  </button>
+                ) : (
+                  <span aria-hidden="true" key={item}>…</span>
+                ),
+              )}
+              <button
+                aria-label="Next page"
+                className="terminal-button"
+                data-semantic-id="transactions-page-next"
+                data-semantic-kind="pagination"
+                data-semantic-region="workspace"
+                data-status-action="next page"
+                data-status-label="transactions / pages"
+                disabled={displayedPage === totalPages}
+                type="button"
+                onClick={() => setCurrentPage(displayedPage + 1)}
+              >
+                →
+              </button>
+            </div>
+          </nav>
+        )}
       </section>
+      {controlDialog && (
+        <div
+          className="transaction-control-layer"
+          role="presentation"
+          onKeyDown={handleControlDialogKeyDown}
+        >
+          <section
+            aria-labelledby={`transaction-${controlDialog}-dialog-title`}
+            aria-modal="true"
+            className={`transaction-control-dialog transaction-${controlDialog}-dialog`}
+            ref={controlDialogRef}
+            role="dialog"
+          >
+            <header className="transaction-dialog-head">
+              <div>
+                <p className="eyebrow">Transactions</p>
+                <h2 id={`transaction-${controlDialog}-dialog-title`}>
+                  {controlDialog === 'time'
+                    ? 'Time range'
+                    : controlDialog === 'filter'
+                      ? 'Filter transactions'
+                      : 'Sort transactions'}
+                </h2>
+              </div>
+              <span>
+                {controlDialog === 'time'
+                  ? timeRangeLabel
+                  : controlDialog === 'filter'
+                    ? `${draftTransactionFilters.length} selected`
+                    : sortLabel}
+              </span>
+            </header>
+            {controlDialog === 'time' && (
+              <div className="transaction-time-options">
+                {timeRangeOptions.map((option) => {
+                  const isChecked = option.value === timeRange
+                  return (
+                    <button
+                      aria-checked={isChecked}
+                      className={`transaction-option${
+                        isChecked ? ' is-checked' : ''
+                      }`}
+                      data-control-checked={isChecked}
+                      data-semantic-id={`transaction-time-${option.value}`}
+                      data-semantic-kind="dialog-option"
+                      data-semantic-region="workspace"
+                      data-status-action="select and close"
+                      data-status-label={`transactions / time / ${option.label.toLocaleLowerCase()}`}
+                      key={option.value}
+                      role="radio"
+                      type="button"
+                      onClick={() => selectTimeRange(option.value)}
+                    >
+                      <i aria-hidden="true" />
+                      <span>
+                        <strong>{option.label}</strong>
+                        <small>{option.description}</small>
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+            {controlDialog === 'filter' && (
+              <div className="transaction-simple-filter-options">
+                {(['Category state', 'Inclusion status'] as const).map(
+                  (group, groupIndex) => (
+                    <section key={group}>
+                      <p className="eyebrow">{group}</p>
+                      {transactionFilterOptions
+                        .slice(groupIndex * 2, groupIndex * 2 + 2)
+                        .map((option) => {
+                          const isChecked = draftTransactionFilters.includes(
+                            option.value,
+                          )
+                          return (
+                            <button
+                              aria-checked={isChecked}
+                              className={`transaction-option${
+                                isChecked ? ' is-checked' : ''
+                              }`}
+                              data-control-checked={isChecked}
+                              data-semantic-id={`transaction-filter-option-${option.value}`}
+                              data-semantic-kind="dialog-option"
+                              data-semantic-region="workspace"
+                              data-status-action="toggle filter"
+                              data-status-label={`transactions / filter / ${option.label.toLocaleLowerCase()}`}
+                              key={option.value}
+                              role="checkbox"
+                              type="button"
+                              onClick={() => toggleDraftFilter(option.value)}
+                            >
+                              <i aria-hidden="true">{isChecked ? '✓' : ''}</i>
+                              <span>
+                                <strong>{option.label}</strong>
+                                <small>{option.description}</small>
+                              </span>
+                            </button>
+                          )
+                        })}
+                    </section>
+                  ),
+                )}
+              </div>
+            )}
+            {controlDialog === 'sort' && (
+              <div className="transaction-sort-options">
+                {sortOptions.map((option) => {
+                  const isChecked = option.value === sort
+                  return (
+                    <button
+                      aria-checked={isChecked}
+                      className={`transaction-option${
+                        isChecked ? ' is-checked' : ''
+                      }`}
+                      data-control-checked={isChecked}
+                      data-semantic-id={`transaction-sort-${option.value}`}
+                      data-semantic-kind="dialog-option"
+                      data-semantic-region="workspace"
+                      data-status-action="select and close"
+                      data-status-label={`transactions / sort / ${option.label.toLocaleLowerCase()}`}
+                      key={option.value}
+                      role="radio"
+                      type="button"
+                      onClick={() => selectSort(option.value)}
+                    >
+                      <i aria-hidden="true" />
+                      <span>
+                        <strong>{option.label}</strong>
+                        <small>{option.description}</small>
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+            {controlDialog === 'filter' && (
+              <footer className="transaction-dialog-actions">
+                <button
+                  className="terminal-button"
+                  data-semantic-id="transaction-filter-clear-draft"
+                  data-semantic-kind="dialog-action"
+                  data-semantic-region="workspace"
+                  type="button"
+                  onClick={() => setDraftTransactionFilters([])}
+                >
+                  Clear all
+                </button>
+                <span />
+                <button
+                  className="terminal-button"
+                  data-semantic-id="transaction-filter-cancel"
+                  data-semantic-kind="dialog-action"
+                  data-semantic-region="workspace"
+                  type="button"
+                  onClick={closeControlDialog}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="terminal-button terminal-button--primary"
+                  data-semantic-id="transaction-filter-apply"
+                  data-semantic-kind="dialog-action"
+                  data-semantic-region="workspace"
+                  type="button"
+                  onClick={applyTransactionFilters}
+                >
+                  Apply filters
+                </button>
+              </footer>
+            )}
+          </section>
+        </div>
+      )}
     </section>
   )
 }
 
 function CategorySummary({ categoryNames }: { categoryNames: string[] }) {
   return <span className="category-summary">{categoryNames.join(', ')}</span>
-}
-
-function FilterChip({
-  label,
-  semanticId,
-  onRemove,
-}: {
-  label: string
-  semanticId: string
-  onRemove: () => void
-}) {
-  return (
-    <span className="filter-token">
-      {label}
-      <button
-        aria-label={`Remove ${label} filter`}
-        data-semantic-id={semanticId}
-        data-semantic-kind="filter-remove"
-        data-semantic-region="workspace"
-        data-semantic-status-action="remove-transaction-filter"
-        data-semantic-status-label={label}
-        type="button"
-        onClick={onRemove}
-      >
-        &times;
-      </button>
-    </span>
-  )
 }
