@@ -2043,8 +2043,20 @@ input:focus-visible {
   }
 
   .hud-app .nav-item {
+    position: relative;
+    display: flex;
     min-width: 0;
-    padding-inline: 0.35rem;
+    justify-content: center;
+    padding: 0.65rem 0.2rem;
+    font-size: 0.62rem;
+    white-space: nowrap;
+  }
+
+  .hud-app .nav-item strong {
+    position: absolute;
+    top: 0.15rem;
+    right: 0.2rem;
+    font-size: 0.5rem;
   }
 
   .hud-app .workspace {
@@ -2081,8 +2093,16 @@ input:focus-visible {
     display: none;
   }
 
-  .hud-mobile-frame .statusline > div:last-child {
+  .hud-app .statusline {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .hud-app .statusline > div:last-child {
     display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
   }
 }
 
