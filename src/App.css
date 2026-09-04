@@ -2313,3 +2313,97 @@ summary:focus-visible {
 .authenticated-app.terminal-app.theme-light .pending-budget-category-combobox > input::placeholder {
   color: #5a5f78;
 }
+
+.authenticated-app.terminal-app:has(.reports-v2-overlay) > .statusline {
+  z-index: 21;
+}
+
+.reports-v2-donut--chart {
+  overflow: hidden;
+  background: transparent;
+}
+
+.reports-v2-donut--chart::before {
+  display: none;
+}
+
+.reports-v2-donut-graphic {
+  position: absolute;
+  inset: 0;
+}
+
+.reports-v2-donut--chart > span {
+  grid-area: 1 / 1;
+}
+
+.reports-v2-donut--chart.is-empty {
+  border: 1rem solid #292e42;
+}
+
+.reports-v2-empty,
+.reports-v2-variance-empty {
+  color: #787c99;
+  font-size: 0.65rem;
+}
+
+.reports-v2-empty {
+  padding: 0.5rem 0.45rem;
+}
+
+.reports-v2-variance-empty {
+  margin: 0;
+  padding: 1rem;
+}
+
+.reports-v2-variance-list li:focus-visible {
+  background: #292e42;
+  outline: 2px solid #7dcfff;
+  outline-offset: -2px;
+}
+
+.reports-v2-slice-row[aria-disabled="true"] {
+  cursor: default;
+}
+
+.reports-v2-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+}
+
+.reports-v2-overlay .reports-v2-modal {
+  max-height: calc(100dvh - 6rem);
+}
+
+.reports-v2-overlay .reports-v2-modal-body,
+.reports-v2-overlay .reports-v2-transactions {
+  overflow-y: auto;
+}
+
+.reports-v2-transaction-row.is-income > strong {
+  color: #9ece6a;
+}
+
+.authenticated-app.terminal-app.theme-light .reports-v2-donut--chart.is-empty {
+  border-color: #c4c7d0;
+}
+
+.authenticated-app.terminal-app.theme-light :is(.reports-v2-empty, .reports-v2-variance-empty) {
+  color: #5a5f78;
+}
+
+.authenticated-app.terminal-app.theme-light .reports-v2-variance-list li:focus-visible {
+  background: #dfe0e6;
+}
+
+@media (max-width: 34rem) {
+  .reports-v2-overlay {
+    padding: 0.5rem;
+  }
+
+  .reports-v2-overlay .reports-v2-modal {
+    width: 100%;
+    max-height: calc(100dvh - 4rem);
+    margin: 0;
+  }
+}
