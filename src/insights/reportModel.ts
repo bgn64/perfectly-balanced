@@ -269,10 +269,13 @@ function buildActualSlices({
 
   for (const split of splits) {
     const transaction = transactionsById.get(split.transaction_id)
-    if (!transaction || !directionMatches(split.amount, direction)) {
+    const allocation = allocationsByCategory.get(split.category_id)
+    const splitMatchesDirection = allocation
+      ? allocation.direction === direction
+      : directionMatches(split.amount, direction)
+    if (!transaction || !splitMatchesDirection) {
       continue
     }
-    const allocation = allocationsByCategory.get(split.category_id)
     const parent = getOrCreateSlice(
       values,
       groupId(allocation),

@@ -107,6 +107,34 @@ function getStatusContext(control: HTMLElement | null): StatusContext {
   }
 }
 
+function findNearestControlToLeft(
+  current: HTMLElement,
+  candidates: HTMLElement[],
+): HTMLElement | null {
+  const currentRect = current.getBoundingClientRect()
+  const currentCenterX = (currentRect.left + currentRect.right) / 2
+  const currentCenterY = (currentRect.top + currentRect.bottom) / 2
+
+  return (
+    candidates
+      .map((control) => {
+        const rect = control.getBoundingClientRect()
+        return {
+          control,
+          centerX: (rect.left + rect.right) / 2,
+          centerY: (rect.top + rect.bottom) / 2,
+        }
+      })
+      .filter(({ centerX }) => centerX < currentCenterX - 4)
+      .sort(
+        (left, right) =>
+          Math.abs(left.centerY - currentCenterY) -
+            Math.abs(right.centerY - currentCenterY) ||
+          right.centerX - left.centerX,
+      )[0]?.control ?? null
+  )
+}
+
 function App({ appName }: AppProps) {
   const { isLoading, initializationError, session, user } = useAuth()
 
@@ -708,7 +736,22 @@ function AuthenticatedShell({
         spatialDirection,
       )
       if (!nextControl && key === 'h' && region === 'workspace') {
+        const nearestIncomeSlice =
+          focusedControl.dataset.semanticKind === 'report-slice' &&
+          focusedControl.dataset.semanticId?.startsWith(
+            'report-slice-spending-',
+          )
+            ? findNearestControlToLeft(
+                focusedControl,
+                workspaceControls.filter((control) =>
+                  control.dataset.semanticId?.startsWith(
+                    'report-slice-income-',
+                  ),
+                ),
+              )
+            : null
         nextControl =
+          nearestIncomeSlice ??
           findSpatialTarget(focusedControl, sidebarControls, 'left') ??
           sidebarControls.find((control) =>
             control.matches('.nav-item.is-active'),

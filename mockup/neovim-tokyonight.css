@@ -5026,6 +5026,7 @@ body.review-page > .review-frame {
 }
 
 .reports-v2-variance {
+  --reports-v2-variance-columns: minmax(9rem, 1fr) minmax(8rem, 0.8fr) minmax(12rem, 0.9fr) 5.5rem;
   overflow: hidden;
   border: 1px solid #3b4261;
   border-radius: 0.4rem;
@@ -5058,9 +5059,25 @@ body.review-page > .review-frame {
   list-style: none;
 }
 
+.reports-v2-variance-columns {
+  display: grid;
+  grid-template-columns: var(--reports-v2-variance-columns);
+  gap: 1rem;
+  padding: 0.45rem 1rem;
+  border-bottom: 1px solid #292e42;
+  color: #565f89;
+  font-size: 0.56rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.reports-v2-variance-columns span:last-child {
+  text-align: right;
+}
+
 .reports-v2-variance-list li {
   display: grid;
-  grid-template-columns: minmax(9rem, 1fr) minmax(8rem, 0.8fr) minmax(8rem, 0.8fr) auto;
+  grid-template-columns: var(--reports-v2-variance-columns);
   align-items: center;
   gap: 1rem;
   padding: 0.65rem 1rem;
@@ -5303,11 +5320,20 @@ body.review-page > .review-frame {
     gap: 0.3rem 0.75rem;
   }
 
+  .reports-v2-variance-columns {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .reports-v2-variance-columns span:nth-child(2),
+  .reports-v2-variance-columns span:nth-child(3) {
+    display: none;
+  }
+
   .reports-v2-variance-list small {
     grid-column: 1;
   }
 
-  .reports-v2-variance-list li > strong {
+  .reports-v2-variance-list li > strong:last-child {
     grid-column: 2;
     grid-row: 1 / span 2;
   }
