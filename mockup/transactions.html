@@ -45,19 +45,19 @@
       <section class="review-frame" id="proposed-queue">
         <header class="review-frame__head">
           <div><p class="eyebrow">Proposed / queue</p><h2>Paginated results with reachable controls</h2></div>
-          <p class="review-frame__meta">25 rows per page · semantic order is Time → Filter → Sort → rows → paginator · Search opens only with <kbd>/</kbd> or direct click</p>
+          <p class="review-frame__meta">Clicking Transactions leaves focus on the Transactions nav item. Enter or <kbd>l</kbd> moves into the workspace; the result queue is never auto-focused on view change.</p>
         </header>
         <div class="review-frame__viewport">
           <div class="authenticated-app terminal-app command-closed screen-app theme-dark">
             <header class="titlebar"><button class="brand" type="button"><span class="brand-mark">pb</span><span>perfectly-balanced</span></button><p>September 2026 · Personal budget</p><div class="theme-switcher" role="group" aria-label="Theme"><input checked id="theme-dark" name="proposed-queue-theme" type="radio" /><label for="theme-dark">Dark</label><input id="theme-light" name="proposed-queue-theme" type="radio" /><label for="theme-light">Light</label></div><details class="profile"><summary><span>D</span>dev</summary></details></header>
-            <aside class="sidebar" aria-label="Application navigation"><nav class="main-nav"><button class="nav-item" type="button"><span>Budget</span></button><button class="nav-item is-active" aria-current="page" type="button"><span>Transactions</span><strong>18</strong></button><button class="nav-item" type="button"><span>Reports</span></button></nav></aside>
+            <aside class="sidebar" aria-label="Application navigation"><nav class="main-nav"><button class="nav-item" type="button"><span>Budget</span></button><button class="nav-item is-active is-focused" aria-current="page" type="button"><span>Transactions</span><strong>18</strong></button><button class="nav-item" type="button"><span>Reports</span></button></nav></aside>
             <main class="workspace">
               <section class="page transactions-page transactions-page--terminal">
                 <header class="workspace-head workspace-head--compact"><div><p class="eyebrow">Transaction stream / all accounts</p><h1>Transactions</h1><p class="subtle">Review and categorize imported activity.</p></div><span class="terminal-pill terminal-pill--warning">18 uncategorized</span></header>
                 <section class="summary" aria-label="Transaction overview"><div><span>Active activity</span><strong>143</strong></div><div><span>September activity</span><strong>87</strong></div><div><span>Categorized</span><strong class="available">125</strong></div><div><span>Needs review</span><strong class="warning">18</strong></div></section>
                 <section class="budget-table transaction-table" aria-labelledby="proposed-queue-title">
                   <div class="table-head"><div><p class="eyebrow">Imported activity</p><h2 id="proposed-queue-title">All transactions</h2></div></div>
-                  <div class="data-toolbar transaction-toolbar-v2"><div class="transaction-toolbar-primary"><button aria-keyshortcuts="/" class="terminal-button transaction-search-trigger" tabindex="-1" type="button"><kbd>/</kbd> Search merchant, account, or category</button><button class="terminal-button transaction-tool-button" type="button">Time <span>Current month</span></button><button class="terminal-button transaction-tool-button is-selected" type="button">Filter <span>None</span></button><button class="terminal-button transaction-tool-button" type="button">Sort <span>Newest first</span></button></div><span class="transaction-result-count">87 results</span></div>
+                  <div class="data-toolbar transaction-toolbar-v2"><div class="transaction-toolbar-primary"><button aria-keyshortcuts="/" class="terminal-button transaction-search-trigger" tabindex="-1" type="button"><kbd>/</kbd> Search merchant, account, or category</button><button class="terminal-button transaction-tool-button" type="button">Time <span>Current month</span></button><button class="terminal-button transaction-tool-button" type="button">Filter <span>None</span></button><button class="terminal-button transaction-tool-button" type="button">Sort <span>Newest first</span></button></div><span class="transaction-result-count">87 results</span></div>
                   <div class="transaction-column-head" aria-hidden="true"><span>Transaction</span><span>Category</span><span>Amount</span></div>
                   <section class="transactions">
                     <div class="transaction-row-simple"><button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Northstar Market</strong><span>Sep 30 · Local Checking</span></span></button><div class="transaction-category-cell"><button class="category-chip" type="button"><span class="category-summary">Groceries</span></button></div><strong class="transaction-amount negative">-$86.24</strong></div>
@@ -71,7 +71,7 @@
                 </section>
               </section>
             </main>
-            <footer class="statusline"><div><strong>NAVIGATE</strong><span>transactions / filter</span><span>focus 6 of 38</span></div><div><span><kbd>Enter</kbd> open filters</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span><span><kbd>/</kbd> search</span></div></footer>
+            <footer class="statusline"><div><strong>NAVIGATE</strong><span>transactions / navigation</span><span>focus 2 of 34</span></div><div><span><kbd>Enter</kbd> select</span><span><kbd>l</kbd> enter workspace</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span><span><kbd>/</kbd> search</span></div></footer>
           </div>
         </div>
       </section>

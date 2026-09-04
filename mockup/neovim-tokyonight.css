@@ -443,6 +443,81 @@ h3 {
   color: #c0caf5;
 }
 
+.month-jump-controls {
+  display: flex;
+  align-items: stretch;
+  gap: 0.4rem;
+}
+
+.month-jump-controls button {
+  display: grid;
+  grid-template-columns: auto minmax(6.5rem, auto);
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.65rem;
+  border: 1px solid #414868;
+  border-radius: 0.3rem;
+  padding: 0.4rem 0.6rem;
+  background: #24283b;
+  color: #a9b1d6;
+  font: inherit;
+  text-align: left;
+}
+
+.month-jump-controls button:last-child {
+  grid-template-columns: minmax(6.5rem, auto) auto;
+  text-align: right;
+}
+
+.month-jump-controls button > span:not([aria-hidden]) {
+  display: grid;
+  gap: 0.1rem;
+}
+
+.month-jump-controls small {
+  color: #787c99;
+  font-size: 0.56rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.month-jump-controls strong {
+  color: #c0caf5;
+  font-size: 0.68rem;
+}
+
+.month-jump-controls button:hover,
+.month-jump-controls button:focus-visible {
+  border-color: #7aa2f7;
+  background: #292e42;
+  outline: none;
+}
+
+.terminal-app:has(#theme-light:checked) .month-jump-controls button,
+.terminal-app.theme-light .month-jump-controls button {
+  border-color: #a1a6b5;
+  background: #dfe0e6;
+  color: #343b58;
+}
+
+.terminal-app:has(#theme-light:checked) .month-jump-controls small,
+.terminal-app.theme-light .month-jump-controls small {
+  color: #5a5f78;
+}
+
+.terminal-app:has(#theme-light:checked) .month-jump-controls strong,
+.terminal-app.theme-light .month-jump-controls strong {
+  color: #343b58;
+}
+
+.terminal-app:has(#theme-light:checked) .month-jump-controls button:hover,
+.terminal-app:has(#theme-light:checked) .month-jump-controls button:focus-visible,
+.terminal-app.theme-light .month-jump-controls button:hover,
+.terminal-app.theme-light .month-jump-controls button:focus-visible {
+  border-color: #34548a;
+  background: #d5d6db;
+}
+
 .summary {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -3160,6 +3235,15 @@ button.filter-token.is-selected {
   background: #1a1b26;
 }
 
+.empty-terminal--streamlined {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.empty-terminal--streamlined .empty-terminal__copy {
+  min-height: 23rem;
+  align-items: flex-start;
+}
+
 .month-list {
   display: grid;
   gap: 0.35rem;
@@ -4637,6 +4721,8 @@ body.review-page > .review-frame {
 }
 
 @media (max-width: 34rem) {
+  :is(#streamlined-month, #streamlined-empty) .frame-screen > .terminal-app,
+  #streamlined-report > .terminal-app,
   :is(#proposed-queue, #proposed-sort, #proposed-active-filters, #proposed-triage-before, #proposed-triage-after, #proposed-page) .review-frame__viewport > .terminal-app,
   :is(#ignore-action, #ignored-result) .review-frame__viewport > .terminal-app,
   #ignored-excluded > .terminal-app,
@@ -4645,6 +4731,20 @@ body.review-page > .review-frame {
     min-width: 0;
     height: calc(100% - 1rem);
     margin: 0.5rem;
+  }
+
+  .month-jump-controls {
+    width: 100%;
+  }
+
+  .month-jump-controls button {
+    min-width: 0;
+    flex: 1 1 0;
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .month-jump-controls button:last-child {
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 
   .transaction-control-layer {

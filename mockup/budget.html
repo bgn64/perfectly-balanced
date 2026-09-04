@@ -18,6 +18,8 @@
       </div>
       <div class="review-nav__states">
         <strong>Budget states</strong>
+        <a href="#streamlined-month">Streamlined month</a>
+        <a href="#streamlined-empty">Streamlined empty</a>
         <a href="#startup">Startup</a>
         <a href="#current">Current month</a>
         <a href="#copy-previous">Copy previous</a>
@@ -45,6 +47,36 @@
     </nav>
 
     <main class="review-stack">
+      <section id="streamlined-month" class="review-frame">
+        <header class="review-frame__head">
+          <div><span class="review-frame__id">Proposed</span><h1>One month-navigation surface</h1></div>
+          <p class="review-frame__note">The sidebar is view navigation only. Destination-aware Previous and Next buttons show exactly which month each action opens; clicking Budget leaves focus on Budget.</p>
+        </header>
+        <div class="frame-screen streamlined-navigation-preview">
+          <div class="authenticated-app terminal-app command-closed theme-dark">
+            <header class="titlebar"><button class="brand" type="button"><span class="brand-mark">pb</span><span>perfectly-balanced</span></button><p>August 2026 &middot; Personal budget</p><div class="theme-switcher" role="group" aria-label="Theme"><input checked id="streamlined-budget-dark" name="streamlined-budget-theme" type="radio" /><label for="streamlined-budget-dark">Dark</label><input id="streamlined-budget-light" name="streamlined-budget-theme" type="radio" /><label for="streamlined-budget-light">Light</label></div><details class="profile"><summary><span>D</span>dev</summary></details></header>
+            <aside class="sidebar" aria-label="Application navigation"><nav class="main-nav"><button class="nav-item is-active is-focused" aria-current="page" type="button"><span>Budget</span></button><button class="nav-item" type="button"><span>Transactions</span><strong>1</strong></button><button class="nav-item" type="button"><span>Reports</span></button></nav></aside>
+            <main class="workspace"><header class="workspace-head"><div><p class="eyebrow">Budget / 2026 / 08</p><h1>August 2026</h1><p class="subtitle">Plan with the keyboard. Review with a glance.</p></div><nav class="month-jump-controls" aria-label="Month navigation"><button type="button"><span aria-hidden="true">&larr;</span><span><small>Previous month</small><strong>July 2026</strong></span></button><button type="button"><span><small>Next month</small><strong>September 2026</strong></span><span aria-hidden="true">&rarr;</span></button></nav></header><section class="summary"><div><span>Available</span><strong class="available">$557.50</strong></div><div><span>Planned</span><strong>$725</strong></div><div><span>Spent</span><strong class="spent">$167.50</strong></div><div><span>Uncategorized</span><strong class="warning">1 transaction</strong></div></section><section class="budget-table"><div class="table-head"><div><p class="eyebrow">Monthly plan</p><h2>Categories</h2></div></div><div class="column-head"><span>Category</span><span>Planned</span><span>Spent</span><span>Remaining</span></div><section class="budget-group"><header class="budget-subsection-head"><h3><span>&#8964;</span> Income</h3><strong>$7,000</strong></header><div class="budget-row budget-row--sectioned"><span class="category-name">Ben Pay <button class="direction-tag" type="button">Income</button></span><button class="amount-cell" type="button">$7,000</button><span class="spent">$7,000</span><span class="available">$0</span></div></section><section class="budget-group"><header class="budget-subsection-head"><h3><span>&#8964;</span> Food</h3><strong>$650</strong></header><div class="budget-row budget-row--sectioned"><span class="category-name">Groceries <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$400</button><span class="spent">$125.50</span><span class="available">$274.50</span></div><div class="budget-row budget-row--sectioned"><span class="category-name">Restaurants <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$250</button><span class="spent">$42</span><span class="available">$208</span></div></section></section></main>
+            <footer class="statusline"><div><strong>NAVIGATE</strong><span>budget / navigation</span><span>focus 1 of 8</span></div><div><span><kbd>Enter</kbd> select</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span><span><kbd>:</kbd> command</span></div></footer>
+          </div>
+        </div>
+      </section>
+
+      <section id="streamlined-empty" class="review-frame">
+        <header class="review-frame__head">
+          <div><span class="review-frame__id">Proposed</span><h2>Empty month without duplicate navigation</h2></div>
+          <p class="review-frame__note">Month movement stays in the destination-aware header controls. The empty state uses its full width for the two meaningful actions; Nearby months is removed.</p>
+        </header>
+        <div class="frame-screen streamlined-navigation-preview">
+          <div class="authenticated-app terminal-app command-closed theme-dark">
+            <header class="titlebar"><button class="brand" type="button"><span class="brand-mark">pb</span><span>perfectly-balanced</span></button><p>September 2026 &middot; Personal budget</p><div class="theme-switcher" role="group" aria-label="Theme"><input checked id="streamlined-empty-dark" name="streamlined-empty-theme" type="radio" /><label for="streamlined-empty-dark">Dark</label><input id="streamlined-empty-light" name="streamlined-empty-theme" type="radio" /><label for="streamlined-empty-light">Light</label></div><details class="profile"><summary><span>D</span>dev</summary></details></header>
+            <aside class="sidebar" aria-label="Application navigation"><nav class="main-nav"><button class="nav-item is-active is-focused" aria-current="page" type="button"><span>Budget</span></button><button class="nav-item" type="button"><span>Transactions</span><strong>3</strong></button><button class="nav-item" type="button"><span>Reports</span></button></nav></aside>
+            <main class="workspace"><header class="workspace-head"><div><p class="eyebrow">Budget / 2026 / 09</p><h1>September 2026</h1><p class="subtitle">Plan with the keyboard. Review with a glance.</p></div><nav class="month-jump-controls" aria-label="Month navigation"><button type="button"><span aria-hidden="true">&larr;</span><span><small>Previous month</small><strong>August 2026</strong></span></button><button type="button"><span><small>Next month</small><strong>October 2026</strong></span><span aria-hidden="true">&rarr;</span></button></nav></header><section class="screen-panel empty-terminal empty-terminal--streamlined"><div class="empty-terminal__copy"><p class="eyebrow">Buffer empty</p><h2>Create the September 2026 budget.</h2><p>Start empty or reuse last month&rsquo;s structure and planned amounts.</p><div class="empty-budget-actions"><button class="terminal-button terminal-button--primary" type="button">+ Create empty September budget</button><button class="terminal-button empty-budget-copy" type="button">Copy August 2026 budget</button></div></div></section></main>
+            <footer class="statusline"><div><strong>NAVIGATE</strong><span>budget / navigation</span><span>focus 1 of 7</span></div><div><span><kbd>Enter</kbd> select</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span><span><kbd>:</kbd> command</span></div></footer>
+          </div>
+        </div>
+      </section>
+
       <section id="startup" class="review-frame">
         <header class="review-frame__head">
           <div><span class="review-frame__id">01</span><h1>Startup loading</h1></div>

@@ -16,7 +16,6 @@ import {
   currentMonth,
   formatMonth,
   isTextEntryTarget,
-  shiftMonth,
 } from './finance/utils.ts'
 import { InsightsPanel } from './insights/InsightsPanel.tsx'
 import { getSupabaseClient } from './lib/supabase.ts'
@@ -383,6 +382,7 @@ function AuthenticatedShell({
   const workspaceShellRef = useRef<HTMLDivElement>(null)
   const commandInputRef = useRef<HTMLInputElement>(null)
   const previousFocusRef = useRef<HTMLElement | null>(null)
+  const pendingViewFocusRef = useRef<AppView | null>(null)
   const handleTransactionsChanged = useCallback(() => {
     setBudgetActivityRevision((revision) => revision + 1)
   }, [])
@@ -413,21 +413,28 @@ function AuthenticatedShell({
     .join('')
     .slice(0, 2)
     .toUpperCase()
-  const adjacentMonths = [
-    shiftMonth(selectedMonth, -1),
-    selectedMonth,
-    shiftMonth(selectedMonth, 1),
-  ]
-
-  const navigateToView = useCallback((view: AppView) => {
-    setActiveView(view)
-  }, [])
   const focusWorkspaceControl = useCallback((control: HTMLElement) => {
     focusWithScrollComfort(control)
     if (control.dataset.semanticKind === 'transaction-row') {
       control.click()
     }
   }, [])
+  const navigateToView = useCallback((view: AppView) => {
+    pendingViewFocusRef.current = view
+    setActiveView(view)
+  }, [])
+  useEffect(() => {
+    if (pendingViewFocusRef.current !== activeView) {
+      return
+    }
+    pendingViewFocusRef.current = null
+    const navItem = workspaceShellRef.current?.querySelector<HTMLElement>(
+      `[data-semantic-id="nav-${activeView}"]`,
+    )
+    if (navItem) {
+      focusWorkspaceControl(navItem)
+    }
+  }, [activeView, focusWorkspaceControl])
   const focusBudgetRow = useCallback(
     (allocationId: string) => {
       window.requestAnimationFrame(() => {
@@ -823,23 +830,6 @@ function AuthenticatedShell({
               </button>
             ))}
           </nav>
-          <section className="sidebar-section" aria-labelledby="months-title">
-            <h2 id="months-title">Months</h2>
-            {adjacentMonths.map((month) => (
-              <button
-                className={month === selectedMonth ? 'is-current' : ''}
-                data-semantic-id={`sidebar-month-${month}`}
-                data-semantic-region="sidebar"
-                data-status-action="select month"
-                data-status-label={`budget / ${formatMonth(month)}`}
-                key={month}
-                type="button"
-                onClick={() => setSelectedMonth(month)}
-              >
-                {formatMonth(month)}
-              </button>
-            ))}
-          </section>
         </aside>
 
         <main className="workspace">
@@ -1102,26 +1092,6 @@ function AuthenticatedShell({
             </button>
           ))}
         </nav>
-        {activeView === 'insights' && (
-          <section className="sidebar-section" aria-labelledby="report-range-title">
-            <h2 id="report-range-title">Report range</h2>
-            {[selectedMonth, shiftMonth(selectedMonth, -1)].map((month) => (
-              <button
-                className={month === selectedMonth ? 'is-current' : ''}
-                data-semantic-id={`report-month-${month}`}
-                data-semantic-region="sidebar"
-                data-status-action="select month"
-                data-status-label={`reports / ${formatMonth(month)}`}
-                key={month}
-                type="button"
-                onClick={() => setSelectedMonth(month)}
-              >
-                {formatMonth(month)}
-              </button>
-            ))}
-            <span>{selectedMonth.slice(0, 4)} year to date</span>
-          </section>
-        )}
       </aside>
 
       <main className="workspace">
