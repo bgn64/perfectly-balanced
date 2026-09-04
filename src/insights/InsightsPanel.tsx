@@ -1,9 +1,18 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type RefObject,
+} from 'react'
+import { Cell, Pie, PieChart, ResponsiveContainer } from 'recharts'
 import type {
   Budget,
   BudgetAllocation,
   BudgetDirection,
   BudgetSubsection,
+  Category,
   Transaction,
   TransactionSplit,
 } from '../finance/types.ts'
@@ -15,31 +24,67 @@ import {
 } from '../finance/utils.ts'
 import { collectPages } from '../finance/query.ts'
 import { getSupabaseClient } from '../lib/supabase.ts'
+import { focusWithScrollComfort } from '../navigation/focus.ts'
+import {
+  buildReportModel,
+  type ReportChartModel,
+  type ReportItemSlice,
+  type ReportMode,
+  type ReportSlice,
+  type ReportVarianceItem,
+} from './reportModel.ts'
 
 interface InsightsData {
   budgets: Budget[]
   budget: Budget | null
   subsections: BudgetSubsection[]
   allocations: BudgetAllocation[]
+  categories: Category[]
   transactions: Transaction[]
   splits: TransactionSplit[]
 }
 
-interface InsightSlice {
-  id: string
-  label: string
-  value: number
+export interface InsightsInteraction {
+  mode: 'drilldown' | 'transactions'
+  hasParent: boolean
+  canOpenTransactions: boolean
 }
 
-interface VarianceItem {
-  id: string
-  name: string
-  planned: number
-  spent: number
-  variance: number
+type ReportModal =
+  | {
+      kind: 'breakdown'
+      slice: ReportSlice
+      direction: BudgetDirection
+    }
+  | {
+      kind: 'transactions'
+      slice: ReportSlice
+      item: ReportItemSlice | null
+      direction: BudgetDirection
+      hasParent: boolean
+    }
+  | null
+
+const reportModes: ReadonlyArray<{ value: ReportMode; label: string }> = [
+  { value: 'all', label: 'All' },
+  { value: 'planned', label: 'Planned' },
+  { value: 'categorized', label: 'Categorized' },
+]
+
+function reportSliceSemanticId(
+  direction: BudgetDirection,
+  sliceId: string,
+): string {
+  return `report-slice-${direction}-${sliceId}`
 }
 
-const chartColors = ['#7aa2f7', '#bb9af7', '#e0af68', '#f7768e', '#7dcfff']
+function reportItemSemanticId(
+  direction: BudgetDirection,
+  sliceId: string,
+  itemId: string,
+): string {
+  return `report-item-${direction}-${sliceId}-${itemId}`
+}
 
 async function queryInsights(month: string): Promise<InsightsData> {
   const client = getSupabaseClient()
@@ -80,7 +125,8 @@ async function queryInsights(month: string): Promise<InsightsData> {
   )
   const transactionIdSet = new Set(transactionIds)
 
-  const [subsectionsResult, allocationsResult, splits] = await Promise.all([
+  const [subsectionsResult, allocationsResult, categoriesResult, splits] =
+    await Promise.all([
     budget
       ? client
           .from('budget_subsections')
@@ -97,6 +143,7 @@ async function queryInsights(month: string): Promise<InsightsData> {
           .eq('budget_id', budget.id)
           .order('position')
       : Promise.resolve({ data: [], error: null }),
+    client.from('categories').select('id, name').order('name'),
     transactionIds.length > 0
       ? collectPages((afterId, limit) => {
           let query = client
@@ -110,9 +157,13 @@ async function queryInsights(month: string): Promise<InsightsData> {
           return query
         })
       : Promise.resolve([]),
-  ])
+    ])
 
-  for (const result of [subsectionsResult, allocationsResult]) {
+  for (const result of [
+    subsectionsResult,
+    allocationsResult,
+    categoriesResult,
+  ]) {
     if (result.error) {
       throw new Error(result.error.message)
     }
@@ -127,6 +178,7 @@ async function queryInsights(month: string): Promise<InsightsData> {
       budgeted_amount: Number(allocation.budgeted_amount),
       actual_amount: Number(allocation.actual_amount),
     })) as BudgetAllocation[],
+    categories: categoriesResult.data ?? [],
     transactions: normalizedTransactions,
     splits: splits
       .filter((split) => transactionIdSet.has(split.transaction_id))
@@ -142,27 +194,31 @@ export function InsightsPanel({
   activityRevision,
   selectedMonth,
   onMonthChange,
-  onOpenTransaction,
-  onOpenTransactions,
+  onInteractionChange,
 }: {
   categoriesRevision: number
   activityRevision: number
   selectedMonth: string
   onMonthChange: (month: string) => void
-  onOpenTransaction: (transactionId: string) => void
-  onOpenTransactions: () => void
+  onInteractionChange: (interaction: InsightsInteraction | null) => void
 }) {
   const [data, setData] = useState<InsightsData>({
     budgets: [],
     budget: null,
     subsections: [],
     allocations: [],
+    categories: [],
     transactions: [],
     splits: [],
   })
+  const [mode, setMode] = useState<ReportMode>('all')
+  const [modal, setModal] = useState<ReportModal>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const requestGeneration = useRef(0)
+  const modalRef = useRef<HTMLElement>(null)
+  const reportOriginIdRef = useRef<string | null>(null)
+  const pendingModalFocusIdRef = useRef<string | null>(null)
 
   const loadInsights = useCallback(async () => {
     const generation = ++requestGeneration.current
@@ -196,116 +252,146 @@ export function InsightsPanel({
     }
   }, [activityRevision, categoriesRevision, loadInsights])
 
-  const allocationsByCategory = useMemo(
+  const report = useMemo(
     () =>
-      new Map(
-        data.allocations.map((allocation) => [
-          allocation.category_id,
-          allocation,
-        ]),
-      ),
-    [data.allocations],
-  )
-  const activeTransactions = useMemo(
-    () => data.transactions.filter((transaction) => !transaction.is_ignored),
-    [data.transactions],
-  )
-  const activeTransactionIds = useMemo(
-    () => new Set(activeTransactions.map((transaction) => transaction.id)),
-    [activeTransactions],
-  )
-  const activeSplits = useMemo(
-    () =>
-      data.splits.filter((split) => activeTransactionIds.has(split.transaction_id)),
-    [activeTransactionIds, data.splits],
-  )
-  const ignoredTransactionIds = useMemo(
-    () =>
-      data.transactions
-        .filter((transaction) => transaction.is_ignored)
-        .map((transaction) => transaction.id),
-    [data.transactions],
-  )
-  const transactionIdsWithSplits = useMemo(
-    () => new Set(activeSplits.map((split) => split.transaction_id)),
-    [activeSplits],
-  )
-  const spendingSlices = useMemo(
-    () =>
-      buildSlices({
-        direction: 'spending',
+      buildReportModel({
+        mode,
+        allocations: data.allocations,
         subsections: data.subsections,
-        transactions: activeTransactions,
-        splits: activeSplits,
-        allocationsByCategory,
-        transactionIdsWithSplits,
+        categories: data.categories,
+        transactions: data.transactions,
+        splits: data.splits,
       }),
-    [
-      allocationsByCategory,
-      data.subsections,
-      activeSplits,
-      activeTransactions,
-      transactionIdsWithSplits,
-    ],
+    [data, mode],
   )
-  const incomeSlices = useMemo(
-    () =>
-      buildSlices({
-        direction: 'income',
-        subsections: data.subsections,
-        transactions: activeTransactions,
-        splits: activeSplits,
-        allocationsByCategory,
-        transactionIdsWithSplits,
-      }),
-    [
-      allocationsByCategory,
-      data.subsections,
-      activeSplits,
-      activeTransactions,
-      transactionIdsWithSplits,
-    ],
+
+  const closeModal = useCallback(() => {
+    if (!modal) {
+      return
+    }
+    if (modal.kind === 'transactions' && modal.hasParent) {
+      const item = modal.item
+      if (item) {
+        pendingModalFocusIdRef.current = reportItemSemanticId(
+          modal.direction,
+          modal.slice.id,
+          item.id,
+        )
+      }
+      setModal({
+        kind: 'breakdown',
+        slice: modal.slice,
+        direction: modal.direction,
+      })
+      return
+    }
+
+    const originId = reportOriginIdRef.current
+    setModal(null)
+    window.requestAnimationFrame(() => {
+      const origin = originId ? document.getElementById(originId) : null
+      if (origin) {
+        focusWithScrollComfort(origin)
+      }
+    })
+  }, [modal])
+
+  useEffect(() => {
+    onInteractionChange(
+      modal
+        ? {
+            mode: modal.kind === 'breakdown' ? 'drilldown' : 'transactions',
+            hasParent:
+              modal.kind === 'transactions' ? modal.hasParent : false,
+            canOpenTransactions:
+              modal.kind === 'breakdown' && mode !== 'planned',
+          }
+        : null,
+    )
+  }, [modal, mode, onInteractionChange])
+
+  useEffect(
+    () => () => onInteractionChange(null),
+    [onInteractionChange],
   )
-  const overBudget = data.allocations
-    .filter((allocation) => allocation.direction === 'spending')
-    .map(toVarianceItem)
-    .filter((item) => item.variance > 0)
-    .sort((left, right) => right.variance - left.variance)
-  const underBudget = data.allocations
-    .filter((allocation) => allocation.direction === 'spending')
-    .map(toVarianceItem)
-    .filter((item) => item.variance < 0)
-    .sort((left, right) => left.variance - right.variance)
-  const received = activeTransactions
-    .filter((transaction) => transaction.amount > 0)
-    .reduce((sum, transaction) => sum + transaction.amount, 0)
-  const spent = activeTransactions
-    .filter((transaction) => transaction.amount < 0)
-    .reduce((sum, transaction) => sum + Math.abs(transaction.amount), 0)
-  const plannedSpending = data.allocations
-    .filter((allocation) => allocation.direction === 'spending')
-    .reduce(
-      (sum, allocation) => sum + Math.abs(allocation.budgeted_amount),
-      0,
-    )
-  const plannedIncome = data.allocations
-    .filter((allocation) => allocation.direction === 'income')
-    .reduce(
-      (sum, allocation) => sum + Math.abs(allocation.budgeted_amount),
-      0,
-    )
-  const uncategorizedTransactionCount = activeTransactions.filter(
-    (transaction) => !transactionIdsWithSplits.has(transaction.id),
-  ).length
+
+  useEffect(() => {
+    if (!modal) {
+      return
+    }
+    const animationFrame = window.requestAnimationFrame(() => {
+      const pendingId = pendingModalFocusIdRef.current
+      pendingModalFocusIdRef.current = null
+      const target = pendingId
+        ? document.getElementById(pendingId)
+        : modalRef.current?.querySelector<HTMLElement>(
+            '[data-report-autofocus="true"]',
+          )
+      if (target) {
+        focusWithScrollComfort(target)
+      }
+    })
+    return () => window.cancelAnimationFrame(animationFrame)
+  }, [modal])
+
+  useEffect(() => {
+    if (!modal) {
+      return
+    }
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        closeModal()
+      }
+    }
+    window.addEventListener('keydown', handleEscape)
+    return () => window.removeEventListener('keydown', handleEscape)
+  }, [closeModal, modal])
+
+  function openSlice(
+    direction: BudgetDirection,
+    slice: ReportSlice,
+    origin: HTMLElement,
+  ) {
+    reportOriginIdRef.current = origin.id
+    if (slice.kind === 'uncategorized') {
+      setModal({
+        kind: 'transactions',
+        slice,
+        item: null,
+        direction,
+        hasParent: false,
+      })
+      return
+    }
+    setModal({ kind: 'breakdown', slice, direction })
+  }
+
+  function openItem(
+    direction: BudgetDirection,
+    slice: ReportSlice,
+    item: ReportItemSlice,
+  ) {
+    if (mode === 'planned') {
+      return
+    }
+    setModal({
+      kind: 'transactions',
+      slice,
+      item,
+      direction,
+      hasParent: true,
+    })
+  }
 
   return (
-    <section className="page insights-page insights-page--terminal">
+    <section className="page insights-page insights-page--terminal reports-v2-page">
       <header className="workspace-head workspace-head--compact">
         <div>
           <p className="eyebrow">Reports / {selectedMonth.replace('-', ' / ')}</p>
           <h1>{formatMonth(selectedMonth)} at a glance</h1>
           <p className="subtitle">
-            A compact readout of how this month is tracking against your plan.
+            Compare income and spending, then drill into any legend row.
           </p>
         </div>
         <nav className="month-jump-controls" aria-label="Month navigation">
@@ -352,317 +438,459 @@ export function InsightsPanel({
         </section>
       ) : (
         <>
-          <section className="summary" aria-label={`${formatMonth(selectedMonth)} report summary`}>
+          <div className="reports-v2-modebar">
             <div>
-              <span>Received</span>
-              <strong className="available">{formatDisplayMoney(received)}</strong>
+              <p className="eyebrow">Report mode</p>
+              <p className="subtle">The selected mode applies to both charts.</p>
             </div>
-            <div>
-              <span>Spent</span>
-              <strong className="spent">{formatDisplayMoney(spent)}</strong>
-            </div>
-            <div>
-              <span>Still available</span>
-              <strong className="available">
-                {formatDisplayMoney(plannedSpending - spent)}
-              </strong>
-            </div>
-            <div>
-              <span>Needs review</span>
-              <strong className="warning">
-                {uncategorizedTransactionCount} transaction
-                {uncategorizedTransactionCount === 1 ? '' : 's'}
-              </strong>
-            </div>
-          </section>
-
-          {ignoredTransactionIds.length > 0 && (
-            <aside
-              className="ignored-report-notice"
-              aria-label="Ignored report activity"
+            <div
+              aria-label="Report mode"
+              className="reports-v2-switch"
+              role="group"
             >
-              <span className="terminal-pill terminal-pill--muted">
-                {ignoredTransactionIds.length} ignored
-              </span>
-              <span>Excluded from report totals</span>
-              <button
-                className="terminal-button"
-                type="button"
-                onClick={() => onOpenTransaction(ignoredTransactionIds[0])}
-              >
-                View transaction{ignoredTransactionIds.length === 1 ? '' : 's'}
-              </button>
-            </aside>
-          )}
+              {reportModes.map((option) => (
+                <button
+                  aria-pressed={mode === option.value}
+                  className={mode === option.value ? 'is-selected' : ''}
+                  data-semantic-id={`report-mode-${option.value}`}
+                  data-semantic-kind="report-mode"
+                  data-semantic-region="workspace"
+                  data-status-action="select"
+                  data-status-label={`reports / mode / ${option.label.toLocaleLowerCase()}`}
+                  key={option.value}
+                  type="button"
+                  onClick={() => setMode(option.value)}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </div>
 
           <section
-            className="report-grid"
-            aria-label={`${formatMonth(selectedMonth)} reports`}
+            className="reports-v2-charts"
+            aria-label="Income and spending charts"
           >
-            <BreakdownCard
-              eyebrow="Spending breakdown"
-              heading={`Where the ${formatDisplayMoney(spent)} went`}
-              slices={spendingSlices}
-              total={spent}
-              wide
+            <ReportChart
+              chart={report.income}
+              mode={mode}
+              plannedTotal={report.totals.plannedIncome}
+              onOpenSlice={openSlice}
             />
-            <IncomeCard
-              plannedIncome={plannedIncome}
-              received={received}
-              slices={incomeSlices}
+            <ReportChart
+              chart={report.spending}
+              mode={mode}
+              plannedTotal={report.totals.plannedSpending}
+              onOpenSlice={openSlice}
             />
-            <VarianceCard direction="over" items={overBudget} />
-            <VarianceCard direction="under" items={underBudget} />
-            <section className="report-card report-card--review">
-              <header className="report-card__head">
-                <div>
-                  <p className="eyebrow">Review queue</p>
-                  <h2>Uncategorized activity</h2>
-                </div>
-                <strong className="warning">{uncategorizedTransactionCount}</strong>
-              </header>
-              <div className="report-card__body">
-                <p className="detail-note">
-                  {ignoredTransactionIds.length > 0
-                    ? 'Uncategorized spending remains visible in active totals.'
-                    : 'Uncategorized spending remains visible in every total so reports never conceal it.'}
-                </p>
-                <button
-                  className="terminal-button"
-                  data-semantic-id="report-review-queue"
-                  data-semantic-region="workspace"
-                  data-status-action="open"
-                  data-status-label="reports / transaction queue"
-                  type="button"
-                  onClick={onOpenTransactions}
-                >
-                  Open transaction queue
-                </button>
-              </div>
-            </section>
+          </section>
+
+          <section
+            aria-label="Budget variance rankings"
+            className="reports-v2-variance-stack"
+          >
+            <VarianceRanking direction="over" items={report.overBudget} />
+            <VarianceRanking direction="under" items={report.underBudget} />
           </section>
         </>
+      )}
+
+      {modal && (
+        <div className="transaction-control-layer reports-v2-overlay">
+          <ReportModalView
+            modal={modal}
+            modalRef={modalRef}
+            mode={mode}
+            onClose={closeModal}
+            onOpenItem={openItem}
+          />
+        </div>
       )}
     </section>
   )
 }
 
-function BreakdownCard({
-  eyebrow,
-  heading,
-  slices,
-  total,
-  wide = false,
+function ReportChart({
+  chart,
+  mode,
+  plannedTotal,
+  onOpenSlice,
 }: {
-  eyebrow: string
-  heading: string
-  slices: InsightSlice[]
-  total: number
-  wide?: boolean
+  chart: ReportChartModel
+  mode: ReportMode
+  plannedTotal: number
+  onOpenSlice: (
+    direction: BudgetDirection,
+    slice: ReportSlice,
+    origin: HTMLElement,
+  ) => void
 }) {
+  const directionLabel = chart.direction === 'income' ? 'Income' : 'Spending'
+  const heading = `${mode[0].toLocaleUpperCase()}${mode.slice(1)} ${directionLabel.toLocaleLowerCase()}`
+
   return (
-    <section className={`report-card${wide ? ' report-card--wide' : ''}`}>
-      <header className="report-card__head">
+    <article className="reports-v2-chart-card">
+      <header className="reports-v2-chart-head">
         <div>
-          <p className="eyebrow">{eyebrow}</p>
+          <p className="eyebrow">{directionLabel}</p>
           <h2>{heading}</h2>
         </div>
-        <strong>{formatDisplayMoney(total)}</strong>
+        <strong>{chartComparison(chart, mode, plannedTotal)}</strong>
       </header>
-      <div className="report-card__body donut-report">
-        {slices.length === 0 ? (
-          <p className="detail-note">No activity for this month.</p>
+      <div className="reports-v2-donut-slot">
+        <ReportDonut
+          label={directionLabel}
+          slices={chart.slices}
+          total={chart.total}
+        />
+      </div>
+      <div
+        aria-label={`${directionLabel} slices`}
+        className="reports-v2-legend"
+      >
+        <p>{mode === 'planned' ? `${directionLabel} plan` : `${directionLabel} slices`}</p>
+        {chart.slices.length === 0 ? (
+          <span className="reports-v2-empty">No activity for this month.</span>
         ) : (
-          <>
-            <ReportDonut slices={slices} total={total} />
-            <BarList slices={slices} />
-          </>
+          chart.slices.map((slice) => {
+            const semanticId = reportSliceSemanticId(chart.direction, slice.id)
+            return (
+              <button
+                aria-haspopup="dialog"
+                className={`reports-v2-slice-row${
+                  slice.kind === 'uncategorized' ? ' is-uncategorized' : ''
+                }`}
+                data-semantic-id={semanticId}
+                data-semantic-kind="report-slice"
+                data-semantic-region="workspace"
+                data-status-action={
+                  slice.kind === 'uncategorized'
+                    ? 'open transactions'
+                    : 'open breakdown'
+                }
+                data-status-label={`reports / ${chart.direction} / ${slice.label.toLocaleLowerCase()}`}
+                id={semanticId}
+                key={slice.id}
+                type="button"
+                onClick={(event) =>
+                  onOpenSlice(chart.direction, slice, event.currentTarget)
+                }
+              >
+                <i aria-hidden="true" style={{ background: slice.color }} />
+                <span>{slice.label}</span>
+                <strong>{formatDisplayMoney(slice.value)}</strong>
+              </button>
+            )
+          })
         )}
       </div>
-    </section>
+    </article>
   )
 }
 
-function IncomeCard({
-  plannedIncome,
-  received,
-  slices,
-}: {
-  plannedIncome: number
-  received: number
-  slices: InsightSlice[]
-}) {
-  const progress =
-    plannedIncome === 0 ? 0 : Math.min(100, (received / plannedIncome) * 100)
-
-  return (
-    <section className="report-card">
-      <header className="report-card__head">
-        <div>
-          <p className="eyebrow">Income</p>
-          <h2>Progress to plan</h2>
-        </div>
-        <strong className="available">{Math.round(progress)}%</strong>
-      </header>
-      <div className="report-card__body">
-        {slices.length === 0 ? (
-          <p className="detail-note">No income activity for this month.</p>
-        ) : (
-          <BarList slices={slices} />
-        )}
-      </div>
-    </section>
-  )
+function chartComparison(
+  chart: ReportChartModel,
+  mode: ReportMode,
+  plannedTotal: number,
+): string {
+  if (mode !== 'all') {
+    return formatDisplayMoney(chart.total)
+  }
+  const difference = chart.total - plannedTotal
+  if (chart.direction === 'income') {
+    return difference === 0
+      ? 'On plan'
+      : `${formatDisplayMoney(difference, 'USD', true)} vs plan`
+  }
+  if (difference === 0) {
+    return 'On plan'
+  }
+  return `${formatDisplayMoney(Math.abs(difference))} ${
+    difference > 0 ? 'over' : 'under'
+  } plan`
 }
 
 function ReportDonut({
+  label,
   slices,
   total,
 }: {
-  slices: InsightSlice[]
+  label: string
+  slices: ReadonlyArray<{ id: string; color: string; value: number }>
   total: number
 }) {
-  const stops = slices.map((slice, index) => {
-    const start =
-      (slices
-        .slice(0, index)
-        .reduce((sum, candidate) => sum + candidate.value, 0) /
-        total) *
-      100
-    const end = start + (slice.value / total) * 100
-    return `${chartColors[index % chartColors.length]} ${start}% ${end}%`
-  })
-
   return (
     <div
-      aria-label={`Total ${formatDisplayMoney(total)}`}
-      className="donut-chart"
+      aria-label={`${label} total ${formatDisplayMoney(total)}`}
+      className={`reports-v2-donut reports-v2-donut--chart${
+        slices.length === 0 ? ' is-empty' : ''
+      }`}
       role="img"
-      style={{ background: `conic-gradient(${stops.join(', ')})` }}
     >
-      <span>{formatDisplayMoney(total)}</span>
+      {slices.length > 0 && (
+        <div aria-hidden="true" className="reports-v2-donut-graphic">
+          <ResponsiveContainer height="100%" width="100%">
+            <PieChart accessibilityLayer={false}>
+              <Pie
+                cx="50%"
+                cy="50%"
+                data={slices}
+                dataKey="value"
+                innerRadius="58%"
+                isAnimationActive={false}
+                outerRadius="96%"
+                stroke="none"
+              >
+                {slices.map((slice) => (
+                  <Cell fill={slice.color} key={slice.id} />
+                ))}
+              </Pie>
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+      <span>
+        <small>{label}</small>
+        <strong>{formatDisplayMoney(total)}</strong>
+      </span>
     </div>
   )
 }
 
-function BarList({ slices }: { slices: InsightSlice[] }) {
-  const maximum = Math.max(...slices.map((slice) => slice.value), 1)
-
-  return (
-    <ul className="bar-list">
-      {slices.map((slice, index) => (
-        <li key={slice.id}>
-          <span>{slice.label}</span>
-          <span className="bar-track">
-            <i
-              style={{
-                background: chartColors[index % chartColors.length],
-                width: `${(slice.value / maximum) * 100}%`,
-              }}
-            />
-          </span>
-          <strong>{formatDisplayMoney(slice.value)}</strong>
-        </li>
-      ))}
-    </ul>
-  )
-}
-
-function buildSlices({
-  direction,
-  subsections,
-  transactions,
-  splits,
-  allocationsByCategory,
-  transactionIdsWithSplits,
+function ReportModalView({
+  modal,
+  modalRef,
+  mode,
+  onClose,
+  onOpenItem,
 }: {
-  direction: BudgetDirection
-  subsections: BudgetSubsection[]
-  transactions: Transaction[]
-  splits: TransactionSplit[]
-  allocationsByCategory: Map<string, BudgetAllocation>
-  transactionIdsWithSplits: Set<string>
-}): InsightSlice[] {
-  const values = new Map<string, InsightSlice>()
-  const subsectionNames = new Map(
-    subsections.map((subsection) => [subsection.id, subsection.name]),
-  )
+  modal: Exclude<ReportModal, null>
+  modalRef: RefObject<HTMLElement | null>
+  mode: ReportMode
+  onClose: () => void
+  onOpenItem: (
+    direction: BudgetDirection,
+    slice: ReportSlice,
+    item: ReportItemSlice,
+  ) => void
+}) {
+  const directionLabel = modal.direction === 'income' ? 'Income' : 'Spending'
+  const modalTitleId = `report-${modal.kind}-title`
 
-  function add(id: string, label: string, amount: number) {
-    const current = values.get(id)
-    values.set(id, {
-      id,
-      label,
-      value: (current?.value ?? 0) + Math.abs(amount),
-    })
-  }
-
-  for (const split of splits) {
-    if (
-      (direction === 'income' && split.amount <= 0) ||
-      (direction === 'spending' && split.amount >= 0)
-    ) {
-      continue
-    }
-    const allocation = allocationsByCategory.get(split.category_id)
-    const id = allocation
-      ? allocation.subsection_id ?? 'unsectioned'
-      : 'not-budgeted'
-    add(
-      id,
-      allocation?.subsection_id
-        ? subsectionNames.get(allocation.subsection_id) ?? 'Subsection'
-        : allocation
-          ? 'Unsectioned'
-          : 'Not budgeted',
-      split.amount,
+  if (modal.kind === 'breakdown') {
+    return (
+      <section
+        aria-labelledby={modalTitleId}
+        aria-modal="true"
+        className="reports-v2-modal"
+        ref={modalRef}
+        role="dialog"
+      >
+        <header className="reports-v2-modal-head">
+          <div>
+            <p className="eyebrow">
+              {directionLabel} / {modal.slice.label}
+            </p>
+            <h2 id={modalTitleId}>{modal.slice.label} budget items</h2>
+          </div>
+          <span>{formatDisplayMoney(modal.slice.value)}</span>
+        </header>
+        <div className="reports-v2-modal-body">
+          <ReportDonut
+            label={modal.slice.label}
+            slices={modal.slice.items}
+            total={modal.slice.value}
+          />
+          <div
+            aria-label={`${modal.slice.label} budget-item slices`}
+            className="reports-v2-legend"
+          >
+            <p>Budget-item slices</p>
+            {modal.slice.items.length === 0 ? (
+              <span className="reports-v2-empty">No budget items in this slice.</span>
+            ) : (
+              modal.slice.items.map((item, index) => {
+                const semanticId = reportItemSemanticId(
+                  modal.direction,
+                  modal.slice.id,
+                  item.id,
+                )
+                return (
+                  <button
+                    aria-disabled={mode === 'planned'}
+                    aria-haspopup={mode === 'planned' ? undefined : 'dialog'}
+                    className="reports-v2-slice-row"
+                    data-report-autofocus={index === 0 ? 'true' : undefined}
+                    data-semantic-id={semanticId}
+                    data-semantic-kind="report-item"
+                    data-semantic-region="workspace"
+                    data-status-action={
+                      mode === 'planned'
+                        ? 'view allocation'
+                        : 'open transactions'
+                    }
+                    data-status-label={`reports / ${modal.direction} / ${modal.slice.label.toLocaleLowerCase()} / ${item.label.toLocaleLowerCase()}`}
+                    id={semanticId}
+                    key={item.id}
+                    type="button"
+                    onClick={() =>
+                      onOpenItem(modal.direction, modal.slice, item)
+                    }
+                  >
+                    <i aria-hidden="true" style={{ background: item.color }} />
+                    <span>{item.label}</span>
+                    <strong>{formatDisplayMoney(item.value)}</strong>
+                  </button>
+                )
+              })
+            )}
+          </div>
+        </div>
+        <footer className="reports-v2-modal-foot">
+          <span>
+            {modal.slice.items.length} budget item
+            {modal.slice.items.length === 1 ? '' : 's'}
+          </span>
+          <button
+            className="terminal-button"
+            data-report-autofocus={
+              modal.slice.items.length === 0 ? 'true' : undefined
+            }
+            data-semantic-id="report-breakdown-close"
+            data-semantic-region="workspace"
+            data-status-action="close"
+            data-status-label="reports / breakdown"
+            type="button"
+            onClick={onClose}
+          >
+            Close
+          </button>
+        </footer>
+      </section>
     )
   }
 
-  for (const transaction of transactions) {
-    if (
-      transactionIdsWithSplits.has(transaction.id) ||
-      (direction === 'income' && transaction.amount <= 0) ||
-      (direction === 'spending' && transaction.amount >= 0)
-    ) {
-      continue
-    }
-    add('uncategorized', 'Uncategorized', transaction.amount)
-  }
+  const transactions = modal.item?.transactions ?? modal.slice.transactions
+  const sliceLabel = modal.item?.label ?? modal.slice.label
+  const total = transactions.reduce(
+    (sum, transaction) => sum + transaction.amount,
+    0,
+  )
 
-  return Array.from(values.values())
-    .filter((slice) => slice.value > 0)
-    .sort((left, right) => right.value - left.value)
+  return (
+    <section
+      aria-labelledby={modalTitleId}
+      aria-modal="true"
+      className="reports-v2-modal"
+      ref={modalRef}
+      role="dialog"
+    >
+      <header className="reports-v2-modal-head">
+        <div>
+          <p className="eyebrow">
+            {directionLabel} / {modal.slice.label}
+            {modal.item ? ` / ${modal.item.label}` : ''}
+          </p>
+          <h2 id={modalTitleId}>
+            {modal.slice.kind === 'uncategorized'
+              ? 'Transactions needing review'
+              : 'Transactions in this slice'}
+          </h2>
+        </div>
+        <span>
+          {transactions.length} transaction{transactions.length === 1 ? '' : 's'} /{' '}
+          {formatDisplayMoney(total)}
+        </span>
+      </header>
+      <div
+        aria-label={`${sliceLabel} transactions`}
+        className="reports-v2-transactions"
+        role="list"
+      >
+        {transactions.length === 0 ? (
+          <p className="reports-v2-empty">No included transactions in this slice.</p>
+        ) : (
+          transactions.map((transaction, index) => (
+            <div
+              aria-label={`${transaction.name}, ${formatDisplayMoney(transaction.amount)}`}
+              className={`reports-v2-transaction-row is-${modal.direction}`}
+              data-report-autofocus={index === 0 ? 'true' : undefined}
+              data-semantic-id={`report-transaction-${transaction.id}`}
+              data-semantic-kind="report-transaction"
+              data-semantic-region="workspace"
+              data-status-action="inspect"
+              data-status-label={`reports / transaction / ${transaction.name.toLocaleLowerCase()}`}
+              key={transaction.id}
+              role="listitem"
+              tabIndex={0}
+            >
+              <span>
+                <strong>{transaction.name}</strong>
+                <small>
+                  {formatReportDate(transaction.transactionDate)} /{' '}
+                  {transaction.accountName}
+                </small>
+              </span>
+              <strong>
+                {formatDisplayMoney(
+                  modal.direction === 'income'
+                    ? transaction.amount
+                    : -transaction.amount,
+                  'USD',
+                  modal.direction === 'income',
+                )}
+              </strong>
+            </div>
+          ))
+        )}
+      </div>
+      <footer className="reports-v2-modal-foot">
+        <span className={modal.slice.kind === 'uncategorized' ? 'warning' : ''}>
+          {modal.slice.kind === 'uncategorized'
+            ? 'Category required'
+            : 'Read-only / included activity'}
+        </span>
+        <button
+          className="terminal-button"
+          data-report-autofocus={transactions.length === 0 ? 'true' : undefined}
+          data-semantic-id="report-transactions-close"
+          data-semantic-region="workspace"
+          data-status-action={modal.hasParent ? 'back' : 'close'}
+          data-status-label="reports / transactions"
+          type="button"
+          onClick={onClose}
+        >
+          {modal.hasParent ? 'Back' : 'Close'}
+        </button>
+      </footer>
+    </section>
+  )
 }
 
-function toVarianceItem(allocation: BudgetAllocation): VarianceItem {
-  const planned = Math.abs(allocation.budgeted_amount)
-  const spent = Math.max(0, -allocation.actual_amount)
-  return {
-    id: allocation.allocation_id,
-    name: allocation.category_name,
-    planned,
-    spent,
-    variance: spent - planned,
-  }
+function formatReportDate(date: string): string {
+  return new Intl.DateTimeFormat(undefined, {
+    day: 'numeric',
+    month: 'short',
+  }).format(new Date(`${date}T00:00:00`))
 }
 
-function VarianceCard({
+function VarianceRanking({
   direction,
   items,
 }: {
   direction: 'over' | 'under'
-  items: VarianceItem[]
+  items: ReportVarianceItem[]
 }) {
   const isOver = direction === 'over'
-  const visible = items.slice(0, 3)
 
   return (
-    <section className="report-card">
-      <header className="report-card__head">
+    <section className="reports-v2-variance">
+      <header className="reports-v2-variance-head">
         <div>
-          <p className="eyebrow">Plan variance</p>
-          <h2>{isOver ? 'Over budget' : 'Under budget'}</h2>
+          <p className="eyebrow">
+            {isOver ? 'Needs attention' : 'Room remaining'}
+          </p>
+          <h2>{isOver ? 'Most over budget' : 'Most under budget'}</h2>
         </div>
         <span
           className={`terminal-pill ${
@@ -672,31 +900,36 @@ function VarianceCard({
           {items.length} item{items.length === 1 ? '' : 's'}
         </span>
       </header>
-      <div className="report-card__body">
-        {visible.length === 0 ? (
-          <p className="detail-note">
-            No {direction}-budget spending items.
-          </p>
-        ) : (
-          <ol className="variance-list">
-            {visible.map((item) => (
-              <li key={item.id}>
-                <span>
-                  {item.name}
-                  <small>
-                    {formatDisplayMoney(item.spent)} spent ·{' '}
-                    {formatDisplayMoney(item.planned)} planned
-                  </small>
-                </span>
-                <strong className={isOver ? 'is-over' : 'is-under'}>
-                  {isOver ? '+' : ''}
-                  {formatDisplayMoney(Math.abs(item.variance))}
-                </strong>
-              </li>
-            ))}
-          </ol>
-        )}
-      </div>
+      {items.length === 0 ? (
+        <p className="reports-v2-variance-empty">
+          No {direction}-budget spending items.
+        </p>
+      ) : (
+        <ol className="reports-v2-variance-list">
+          {items.map((item) => (
+            <li
+              data-semantic-id={`report-variance-${direction}-${item.id}`}
+              data-semantic-kind="report-variance"
+              data-semantic-region="workspace"
+              data-status-action="view"
+              data-status-label={`reports / ${direction} budget / ${item.name.toLocaleLowerCase()}`}
+              key={item.id}
+              tabIndex={0}
+            >
+              <strong>{item.name}</strong>
+              <span>{item.groupName}</span>
+              <small>
+                {formatDisplayMoney(item.actual)} spent /{' '}
+                {formatDisplayMoney(item.planned)} planned
+              </small>
+              <strong className={isOver ? 'is-over' : 'is-under'}>
+                {isOver ? '+' : ''}
+                {formatDisplayMoney(Math.abs(item.variance))}
+              </strong>
+            </li>
+          ))}
+        </ol>
+      )}
     </section>
   )
 }

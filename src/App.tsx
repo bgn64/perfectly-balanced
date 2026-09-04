@@ -17,7 +17,10 @@ import {
   formatMonth,
   isTextEntryTarget,
 } from './finance/utils.ts'
-import { InsightsPanel } from './insights/InsightsPanel.tsx'
+import {
+  InsightsPanel,
+  type InsightsInteraction,
+} from './insights/InsightsPanel.tsx'
 import { getSupabaseClient } from './lib/supabase.ts'
 import { focusWithScrollComfort } from './navigation/focus.ts'
 import {
@@ -358,6 +361,8 @@ function AuthenticatedShell({
   const [transactionControlDialog, setTransactionControlDialog] = useState<
     'time' | 'filter' | 'sort' | null
   >(null)
+  const [insightsInteraction, setInsightsInteraction] =
+    useState<InsightsInteraction | null>(null)
   const [commandQuery, setCommandQuery] = useState('go')
   const [theme, setTheme] = useState<WorkspaceTheme>(readInitialTheme)
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
@@ -1117,9 +1122,8 @@ function AuthenticatedShell({
             activityRevision={budgetActivityRevision}
             categoriesRevision={categoriesRevision}
             selectedMonth={selectedMonth}
+            onInteractionChange={setInsightsInteraction}
             onMonthChange={setSelectedMonth}
-            onOpenTransaction={openTransaction}
-            onOpenTransactions={() => navigateToView('transactions')}
           />
         )}
       </main>
@@ -1133,7 +1137,11 @@ function AuthenticatedShell({
                 : transactionControlDialog
                   ? transactionControlDialog.toLocaleUpperCase()
                 : 'EDIT'
-              : 'REPORT'}
+              : insightsInteraction?.mode === 'drilldown'
+                ? 'DRILLDOWN'
+                : insightsInteraction?.mode === 'transactions'
+                  ? 'TRANSACTIONS'
+                  : 'REPORT'}
           </strong>
           <span>
             {activeView === 'transactions'
@@ -1142,7 +1150,9 @@ function AuthenticatedShell({
                 : transactionControlDialog
                   ? `transactions / ${transactionControlDialog}`
                 : 'transaction / category'
-              : `${formatMonth(selectedMonth)} / all accounts`}
+              : insightsInteraction
+                ? statusContext.label
+                : `${formatMonth(selectedMonth)} / all accounts`}
           </span>
         </div>
         <div>
@@ -1171,11 +1181,28 @@ function AuthenticatedShell({
                 <span><kbd>esc</kbd> cancel</span>
               </>
             )
+          ) : insightsInteraction?.mode === 'drilldown' ? (
+            <>
+              {(insightsInteraction.canOpenTransactions ||
+                statusContext.action === 'close') && (
+                <span><kbd>Enter</kbd> {statusContext.action}</span>
+              )}
+              <span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span>
+              <span><kbd>Esc</kbd> close</span>
+            </>
+          ) : insightsInteraction?.mode === 'transactions' ? (
+            <>
+              <span><kbd>j</kbd><kbd>k</kbd> focus</span>
+              <span>
+                <kbd>Esc</kbd> {insightsInteraction.hasParent ? 'back' : 'close'}
+              </span>
+            </>
           ) : (
             <>
-              <span><kbd>h</kbd><kbd>l</kbd> change month</span>
-              <span><kbd>tab</kbd> focus card</span>
-              <span><kbd>enter</kbd> drill down</span>
+              {statusContext.action !== 'view' && (
+                <span><kbd>Enter</kbd> {statusContext.action}</span>
+              )}
+              <span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span>
             </>
           )}
         </div>
