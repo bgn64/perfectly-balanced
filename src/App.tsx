@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type FormEvent,
@@ -43,7 +44,8 @@ import {
 } from './settings/model.ts'
 import { TransactionsPanel } from './transactions/TransactionsPanel.tsx'
 import './App.css'
-import '../mockup/neovim-tokyonight.css'
+import './terminal.css'
+import './theme.css'
 
 interface AppProps {
   appName: string
@@ -843,6 +845,10 @@ function AuthenticatedShell({
     window.localStorage.setItem(themePreferenceKey, themePreference)
   }, [themePreference])
 
+  useLayoutEffect(() => {
+    document.documentElement.dataset.theme = theme
+  }, [theme])
+
   useEffect(() => {
     const media = window.matchMedia('(prefers-color-scheme: light)')
     const updatePreference = () => setSystemPrefersLight(media.matches)
@@ -1160,7 +1166,7 @@ function AuthenticatedShell({
     <div
       className={`authenticated-app terminal-app${
         isCommandPaletteOpen ? '' : ' command-closed'
-      }${activeView === 'budgets' ? '' : ' screen-app'} hud-app theme-${theme}`}
+      }${activeView === 'budgets' ? '' : ' screen-app'} hud-app`}
       ref={workspaceShellRef}
     >
       <AuthenticatedTitlebar
