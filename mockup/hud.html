@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Perfectly Balanced - Authenticated HUD review</title>
+    <link rel="stylesheet" href="neovim-tokyonight.css" />
+  </head>
+  <body class="review-page">
+    <nav class="review-nav" aria-label="Mockup review navigation">
+      <strong>Perfectly Balanced review</strong>
+      <span class="review-nav__group">
+        <a href="budget.html">Budget</a>
+        <a href="transactions.html">Transactions</a>
+        <a href="reports.html">Reports</a>
+        <a aria-current="page" href="hud.html">HUD</a>
+      </span>
+      <span class="review-nav__group">
+        <a href="#hud-overview">Chrome</a>
+        <a href="#hud-settings">Settings</a>
+        <a href="#hud-profile-shortcut">Profile shortcut</a>
+        <a href="#hud-account-states">Account states</a>
+        <a href="#hud-disconnect">Disconnect</a>
+        <a href="#hud-connection-error">Connection error</a>
+        <a href="#hud-text-entry">Text entry</a>
+        <a href="#hud-mobile">Mobile</a>
+        <a href="#hud-light">Light</a>
+      </span>
+    </nav>
+
+    <section class="review-frame" id="hud-overview" aria-labelledby="hud-overview-title">
+      <header class="review-frame__head">
+        <div><p class="eyebrow">Authenticated chrome</p><h2 id="hud-overview-title">Quiet titlebar, complete navigation</h2></div>
+        <p>Theme leaves the titlebar. Settings becomes a first-class destination in the sidebar, while the identity chip is a shortcut to Account settings.</p>
+      </header>
+      <div class="terminal-app command-closed screen-app theme-dark hud-app">
+        <header class="titlebar hud-titlebar">
+          <button class="brand" type="button"><span class="brand-mark" aria-hidden="true">pb</span><span>perfectly-balanced</span></button>
+          <button class="hud-identity" type="button"><span>D</span><span><strong>dev</strong><small>Account settings</small></span></button>
+        </header>
+        <aside class="sidebar hud-sidebar" aria-label="Application navigation">
+          <nav class="main-nav">
+            <button class="nav-item is-active is-focused" aria-current="page" type="button"><span>Budget</span></button>
+            <button class="nav-item" type="button"><span>Transactions</span><strong>1</strong></button>
+            <button class="nav-item" type="button"><span>Reports</span></button>
+          </nav>
+          <nav class="main-nav hud-utility-nav" aria-label="Settings navigation">
+            <button class="nav-item" type="button"><span>Settings</span></button>
+          </nav>
+        </aside>
+        <main class="workspace">
+          <section class="page insights-page insights-page--terminal">
+            <header class="workspace-head workspace-head--compact"><div><p class="eyebrow">Budget / 2026 / 08</p><h1>August 2026</h1><p class="subtitle">Plan with the keyboard. Review with a glance.</p></div><nav class="month-jump-controls" aria-label="Month navigation"><button type="button"><span aria-hidden="true">&larr;</span><span><small>Previous month</small><strong>July 2026</strong></span></button><button type="button"><span><small>Next month</small><strong>September 2026</strong></span><span aria-hidden="true">&rarr;</span></button></nav></header>
+            <section class="summary"><div><span>Available</span><strong class="available">$557.50</strong></div><div><span>Planned</span><strong>$725</strong></div><div><span>Spent</span><strong class="spent">$167.50</strong></div><div><span>Uncategorized</span><strong class="warning">1 transaction</strong></div></section>
+            <section class="budget-table"><div class="table-head"><div><p class="eyebrow">Monthly plan</p><h2>Categories</h2></div></div><div class="column-head"><span>Category</span><span>Planned</span><span>Spent / Received</span><span>Remaining</span></div><section class="budget-group"><header class="budget-subsection-head"><h3><span>&#8964;</span> Food</h3><strong>$650</strong></header><div class="budget-row budget-row--sectioned"><span class="category-name">Groceries <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$400</button><span>$125.50</span><span class="available">$274.50</span></div><div class="budget-row budget-row--sectioned"><span class="category-name">Restaurants <button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$250</button><span>$42</span><span class="available">$208</span></div></section></section>
+          </section>
+        </main>
+        <footer class="statusline"><div><strong>NAVIGATE</strong><span>budget / navigation</span></div><div><span><kbd>Enter</kbd> open budget</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span><span><kbd>:</kbd> command</span></div></footer>
+      </div>
+    </section>
+
+    <section class="review-frame" id="hud-account-states" aria-labelledby="hud-account-states-title">
+      <header class="review-frame__head">
+        <div><p class="eyebrow">Account loading and empty states</p><h2 id="hud-account-states-title">The Settings page remains stable while data changes</h2></div>
+        <p>The account section keeps its geometry while loading, then offers the same navigable Plaid action when no institutions are connected.</p>
+      </header>
+      <div class="hud-state-grid theme-dark">
+        <section class="hud-settings-section" aria-busy="true"><header><div><p class="eyebrow">Data sources</p><h2>Banks and accounts</h2></div><button class="terminal-button terminal-button--primary" disabled type="button">+ Add via Plaid</button></header><div class="hud-account-state"><span class="hud-loading-line"></span><span class="hud-loading-line hud-loading-line--short"></span><small>Loading connections...</small></div></section>
+        <section class="hud-settings-section"><header><div><p class="eyebrow">Data sources</p><h2>Banks and accounts</h2></div><button class="terminal-button terminal-button--primary is-focused" type="button">+ Add via Plaid</button></header><div class="hud-account-state"><strong>No banks connected</strong><small>Connect an institution to import account activity.</small></div></section>
+        <footer class="statusline"><div><strong>SETTINGS</strong><span>settings / accounts / add</span></div><div><span><kbd>Enter</kbd> add via Plaid</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span></div></footer>
+      </div>
+    </section>
+
+    <section class="review-frame" id="hud-disconnect" aria-labelledby="hud-disconnect-title">
+      <header class="review-frame__head">
+        <div><p class="eyebrow">Plaid handoff and confirmation</p><h2 id="hud-disconnect-title">Focused modal states preserve context</h2></div>
+        <p>Plaid launch blocks duplicate actions. Disconnect requires an explicit confirmation and Escape restores focus to the institution row.</p>
+      </header>
+      <div class="hud-state-grid theme-dark">
+        <div class="hud-modal-preview"><section class="hud-modal" aria-labelledby="hud-plaid-title" aria-modal="true" role="dialog"><header><div><p class="eyebrow">Banks and accounts</p><h2 id="hud-plaid-title">Opening Plaid</h2></div><span class="terminal-pill">Connecting</span></header><div class="hud-modal-body"><strong>Preparing a secure connection...</strong><small>Plaid will open when the link token is ready.</small></div></section></div>
+        <div class="hud-modal-preview"><section class="hud-modal" aria-labelledby="hud-disconnect-dialog-title" aria-modal="true" role="dialog"><header><div><p class="eyebrow">Local Bank</p><h2 id="hud-disconnect-dialog-title">Disconnect this institution?</h2></div><span class="terminal-pill terminal-pill--danger">Destructive</span></header><div class="hud-modal-body"><strong>Imported history will remain available.</strong><small>The institution will stop syncing until it is connected again.</small></div><footer><button class="terminal-button" type="button">Keep connection</button><button class="terminal-button terminal-button--danger is-focused" type="button">Disconnect</button></footer></section></div>
+        <footer class="statusline"><div><strong>CONFIRM</strong><span>settings / accounts / local bank / disconnect</span></div><div><span><kbd>h</kbd><kbd>l</kbd> choose</span><span><kbd>Enter</kbd> confirm</span><span><kbd>Esc</kbd> cancel</span></div></footer>
+      </div>
+    </section>
+
+    <section class="review-frame" id="hud-action-failure" aria-labelledby="hud-action-failure-title">
+      <header class="review-frame__head"><div><p class="eyebrow">Recoverable failure</p><h2 id="hud-action-failure-title">Errors stay beside the affected account</h2></div><p>The failed action remains available for retry, focus stays on it, and unrelated institutions remain usable.</p></header>
+      <div class="hud-focused-preview theme-dark"><p class="form-message form-message--error" role="alert">We could not check Local Bank for available transactions. Try again.</p><section class="hud-settings-section"><header><div><p class="eyebrow">Data sources</p><h2>Banks and accounts</h2></div><button class="terminal-button terminal-button--primary" type="button">+ Add via Plaid</button></header><div class="hud-connection-list"><article class="hud-connection is-focused is-attention"><span class="hud-bank-mark" aria-hidden="true">LB</span><div><strong>Local Bank</strong><small>Checking and credit card &middot; Sync failed</small></div><span class="terminal-pill terminal-pill--danger">Error</span><button class="terminal-button terminal-button--primary" type="button">Try again</button></article></div></section><footer class="statusline"><div><strong>ACCOUNTS</strong><span>settings / accounts / local bank</span></div><div><span><kbd>Enter</kbd> try again</span><span><kbd>d</kbd> disconnect</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span></div></footer></div>
+    </section>
+
+    <section class="review-frame" id="hud-settings" aria-labelledby="hud-settings-title">
+      <header class="review-frame__head">
+        <div><p class="eyebrow">Settings destination</p><h2 id="hud-settings-title">Appearance, institutions, and account</h2></div>
+        <p>Settings is pinned to the bottom of the desktop sidebar and remains reachable through normal spatial navigation. Theme, Plaid connections, and sign out live on one stable page.</p>
+      </header>
+      <div class="terminal-app command-closed screen-app theme-dark hud-app">
+        <header class="titlebar hud-titlebar"><button class="brand" type="button"><span class="brand-mark" aria-hidden="true">pb</span><span>perfectly-balanced</span></button><button class="hud-identity" type="button"><span>D</span><span><strong>dev</strong><small>dev@example.test</small></span></button></header>
+        <aside class="sidebar hud-sidebar" aria-label="Application navigation"><nav class="main-nav"><button class="nav-item" type="button"><span>Budget</span></button><button class="nav-item" type="button"><span>Transactions</span><strong>1</strong></button><button class="nav-item" type="button"><span>Reports</span></button></nav><nav class="main-nav hud-utility-nav" aria-label="Settings navigation"><button class="nav-item is-active" aria-current="page" type="button"><span>Settings</span></button></nav></aside>
+        <main class="workspace">
+          <section class="page hud-settings-page">
+            <header class="workspace-head workspace-head--compact"><div><p class="eyebrow">Settings</p><h1>Settings</h1><p class="subtitle">Manage appearance, connected accounts, and your session.</p></div></header>
+            <section class="hud-settings-section"><header><div><p class="eyebrow">Appearance</p><h2>Theme</h2></div><span>Applied immediately</span></header><div class="hud-setting-row"><div><strong>Color theme</strong><small>Use the dark or light app palette.</small></div><div class="hud-theme-control" role="group" aria-label="Color theme"><button class="is-selected is-focused" type="button">Dark</button><button type="button">Light</button><button type="button">System</button></div></div></section>
+            <section class="hud-settings-section"><header><div><p class="eyebrow">Data sources</p><h2>Banks and accounts</h2></div><button class="terminal-button terminal-button--primary" type="button">+ Add via Plaid</button></header><div class="hud-connection-list"><article class="hud-connection"><span class="hud-bank-mark" aria-hidden="true">LB</span><div><strong>Local Bank</strong><small>Checking and credit card &middot; Synced 4 minutes ago</small></div><span class="terminal-pill terminal-pill--ok">Active</span><button class="terminal-button" type="button">Sync now</button></article><article class="hud-connection"><span class="hud-bank-mark" aria-hidden="true">SI</span><div><strong>Sample Investments</strong><small>Brokerage &middot; Synced yesterday</small></div><span class="terminal-pill terminal-pill--ok">Active</span><button class="terminal-button" type="button">Sync now</button></article></div></section>
+            <section class="hud-settings-section"><header><div><p class="eyebrow">Account</p><h2>Session</h2></div></header><div class="hud-setting-row"><div><strong>dev@example.test</strong><small>Signed in as dev</small></div><button class="terminal-button" type="button">Sign out</button></div></section>
+          </section>
+        </main>
+        <footer class="statusline"><div><strong>SETTINGS</strong><span>settings / appearance / dark</span></div><div><span><kbd>Enter</kbd> select theme</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span></div></footer>
+      </div>
+    </section>
+
+    <section class="review-frame" id="hud-profile-shortcut" aria-labelledby="hud-profile-shortcut-title">
+      <header class="review-frame__head">
+        <div><p class="eyebrow">Identity shortcut</p><h2 id="hud-profile-shortcut-title">Profile opens Account settings directly</h2></div>
+        <p>The top-right identity is a single navigable button, not a popover. Activating it opens Settings at Account; Sign out exists only in that section.</p>
+      </header>
+      <div class="terminal-app command-closed screen-app theme-dark hud-app">
+        <header class="titlebar hud-titlebar"><button class="brand" type="button"><span class="brand-mark" aria-hidden="true">pb</span><span>perfectly-balanced</span></button><button class="hud-identity is-focused" type="button"><span>D</span><span><strong>dev</strong><small>Account settings</small></span></button></header>
+        <aside class="sidebar hud-sidebar" aria-label="Application navigation"><nav class="main-nav"><button class="nav-item" type="button"><span>Budget</span></button><button class="nav-item" type="button"><span>Transactions</span><strong>1</strong></button><button class="nav-item" type="button"><span>Reports</span></button></nav><nav class="main-nav hud-utility-nav" aria-label="Settings navigation"><button class="nav-item is-active" aria-current="page" type="button"><span>Settings</span></button></nav></aside>
+        <main class="workspace"><section class="page hud-settings-page"><header class="workspace-head workspace-head--compact"><div><p class="eyebrow">Settings / Account</p><h1>Account</h1><p class="subtitle">Review your signed-in identity and end this session.</p></div></header><section class="hud-settings-section hud-account-section"><header><div><p class="eyebrow">Account</p><h2>Session</h2></div></header><div class="hud-setting-row"><div><strong>dev@example.test</strong><small>Signed in as dev</small></div><button class="terminal-button" type="button">Sign out</button></div></section></section></main>
+        <footer class="statusline"><div><strong>NAVIGATE</strong><span>account / profile shortcut</span></div><div><span><kbd>Enter</kbd> open Account settings</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span></div></footer>
+      </div>
+    </section>
+
+    <section class="review-frame" id="hud-connection-error" aria-labelledby="hud-connection-error-title">
+      <header class="review-frame__head">
+        <div><p class="eyebrow">Connection attention state</p><h2 id="hud-connection-error-title">Reconnect without leaving Settings</h2></div>
+        <p>Connection health is visible where accounts are managed. The focused institution advertises only actions valid for that state.</p>
+      </header>
+      <div class="hud-focused-preview theme-dark">
+        <section class="hud-settings-section"><header><div><p class="eyebrow">Data sources</p><h2>Banks and accounts</h2></div><button class="terminal-button terminal-button--primary" type="button">+ Add via Plaid</button></header><div class="hud-connection-list"><article class="hud-connection is-focused is-attention"><span class="hud-bank-mark" aria-hidden="true">LB</span><div><strong>Local Bank</strong><small>Checking and credit card &middot; Login required</small></div><span class="terminal-pill terminal-pill--danger">Reconnect</span><button class="terminal-button terminal-button--primary" type="button">Repair link</button></article><article class="hud-connection"><span class="hud-bank-mark" aria-hidden="true">SI</span><div><strong>Sample Investments</strong><small>Brokerage &middot; Synced yesterday</small></div><span class="terminal-pill terminal-pill--ok">Active</span><button class="terminal-button" type="button">Sync now</button></article></div></section>
+        <footer class="statusline"><div><strong>ACCOUNTS</strong><span>settings / institutions / local bank</span></div><div><span><kbd>Enter</kbd> repair link</span><span><kbd>d</kbd> disconnect</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span></div></footer>
+      </div>
+    </section>
+
+    <section class="review-frame" id="hud-text-entry" aria-labelledby="hud-text-entry-title">
+      <header class="review-frame__head">
+        <div><p class="eyebrow">Context-sensitive statusline</p><h2 id="hud-text-entry-title">Text input owns the keyboard</h2></div>
+        <p>When search has focus, navigation and row shortcuts disappear. The statusline shows every action that remains valid and nothing else.</p>
+      </header>
+      <div class="hud-focused-preview theme-dark"><section class="budget-table transaction-table"><div class="table-head"><div><p class="eyebrow">Imported activity</p><h2>Every account, one queue</h2></div></div><div class="data-toolbar"><label class="terminal-search transaction-query-field is-focused"><span>/</span><input aria-label="Search merchant, account, or category" value="merchant:cedar" /></label><div class="toolbar-group transaction-tools"><button class="terminal-button" type="button">Time</button><button class="terminal-button" type="button">Filter</button><button class="terminal-button" type="button">Sort</button></div></div><div class="transactions"><div class="transaction-row-simple"><button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Cedar Cafe</strong><span>Aug 8 &middot; Local Credit Card</span></span></button><div class="transaction-category-cell"><button class="category-chip" type="button">Restaurants</button></div><strong class="transaction-amount negative">-$42</strong></div></div></section><footer class="statusline"><div><strong>SEARCH</strong><span>merchant:cedar</span></div><div><span><kbd>Enter</kbd> focus first result</span><span><kbd>Esc</kbd> clear and return</span></div></footer></div>
+    </section>
+
+    <section class="review-frame" id="hud-mobile" aria-labelledby="hud-mobile-title">
+      <header class="review-frame__head"><div><p class="eyebrow">Mobile HUD</p><h2 id="hud-mobile-title">Settings remains a primary destination</h2></div><p>The four destinations share the compact navigation row. Connected institutions collapse into readable action rows without horizontal overflow.</p></header>
+      <div class="hud-mobile-frame"><div class="terminal-app command-closed screen-app theme-dark hud-app"><header class="titlebar hud-titlebar"><button class="brand" type="button"><span class="brand-mark" aria-hidden="true">pb</span><span>perfectly-balanced</span></button><button class="hud-identity" type="button"><span>D</span><span><strong>dev</strong></span></button></header><aside class="sidebar hud-sidebar"><nav class="main-nav"><button class="nav-item" type="button"><span>Budget</span></button><button class="nav-item" type="button"><span>Transactions</span><strong>1</strong></button><button class="nav-item" type="button"><span>Reports</span></button><button class="nav-item is-active" type="button"><span>Settings</span></button></nav></aside><main class="workspace"><section class="page hud-settings-page"><header class="workspace-head"><div><p class="eyebrow">Settings</p><h1>Settings</h1></div></header><section class="hud-settings-section"><header><div><p class="eyebrow">Appearance</p><h2>Theme</h2></div></header><div class="hud-setting-row"><div><strong>Color theme</strong><small>Applied immediately.</small></div><div class="hud-theme-control"><button class="is-selected" type="button">Dark</button><button type="button">Light</button><button type="button">System</button></div></div></section><section class="hud-settings-section"><header><div><p class="eyebrow">Data sources</p><h2>Banks and accounts</h2></div><button class="terminal-button terminal-button--primary" type="button">+ Plaid</button></header><div class="hud-connection-list"><article class="hud-connection"><span class="hud-bank-mark">LB</span><div><strong>Local Bank</strong><small>2 accounts &middot; Active</small></div><button class="terminal-button" type="button">Sync</button></article></div></section></section></main><footer class="statusline"><div><strong>SETTINGS</strong><span>settings / accounts / add</span></div><div><span><kbd>Enter</kbd> add via Plaid</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span></div></footer></div></div>
+    </section>
+
+    <section class="review-frame" id="hud-light" aria-labelledby="hud-light-title">
+      <header class="review-frame__head"><div><p class="eyebrow">Light theme</p><h2 id="hud-light-title">The same settings hierarchy in light mode</h2></div><p>Moving theme into Settings keeps the titlebar calm without making appearance harder to find.</p></header>
+      <div class="hud-focused-preview theme-light"><section class="hud-settings-section"><header><div><p class="eyebrow">Appearance</p><h2>Theme</h2></div><span>Applied immediately</span></header><div class="hud-setting-row"><div><strong>Color theme</strong><small>Use the dark or light app palette.</small></div><div class="hud-theme-control"><button type="button">Dark</button><button class="is-selected is-focused" type="button">Light</button><button type="button">System</button></div></div></section><footer class="statusline"><div><strong>SETTINGS</strong><span>settings / appearance / light</span></div><div><span><kbd>Enter</kbd> select theme</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span></div></footer></div>
+    </section>
+  </body>
+</html>

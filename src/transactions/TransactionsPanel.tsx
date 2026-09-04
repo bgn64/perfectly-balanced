@@ -1164,7 +1164,7 @@ export function TransactionsPanel({
                   data-semantic-id={`transaction-filter-${filter}`}
                   data-semantic-kind="filter-remove"
                   data-semantic-region="workspace"
-                  data-status-action="edit filter; d removes"
+                  data-status-action="edit filters"
                   data-status-label={`transactions / filter / ${filterLabels[filter].toLocaleLowerCase()}`}
                   key={filter}
                   type="button"
@@ -1244,7 +1244,11 @@ export function TransactionsPanel({
                     }
                   }}
                   tabIndex={0}
-                  onFocus={() => selectTransaction(transaction)}
+                  onFocus={(event) => {
+                    if (event.target === event.currentTarget) {
+                      selectTransaction(transaction)
+                    }
+                  }}
                   onClick={(event) => {
                     if (event.target === event.currentTarget) {
                       selectTransaction(transaction)
@@ -1289,9 +1293,9 @@ export function TransactionsPanel({
                       semanticContext={{
                         createAction: 'create-transaction-category',
                         idPrefix: `transaction-category-picker-${transaction.id}`,
-                        inputAction: 'search-transaction-categories',
-                        optionAction: 'select-transaction-category',
-                        statusLabel: transactionDescription(transaction),
+                        inputAction: 'search categories',
+                        optionAction: 'select category',
+                        statusLabel: `transaction / ${transactionDescription(transaction)} / category`,
                       }}
                       onCreate={createCategory}
                       onCancel={() => cancelCategoryPicker(transaction.id)}
@@ -1308,10 +1312,10 @@ export function TransactionsPanel({
                         className={`category-chip${
                           transactionSplits.length === 0 ? ' empty' : ''
                         }`}
-                        data-semantic-status-action={
-                          isUsd ? 'edit-transaction-categories' : 'category-unavailable'
+                        data-status-action={
+                          isUsd ? 'edit categories' : 'category unavailable'
                         }
-                        data-semantic-status-label={transactionDescription(transaction)}
+                        data-status-label={transactionDescription(transaction)}
                         data-transaction-id={transaction.id}
                         disabled={!isUsd}
                         type="button"

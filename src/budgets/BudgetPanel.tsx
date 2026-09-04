@@ -1686,9 +1686,6 @@ export function BudgetPanel({
                   <i className="selection-caret">›</i>
                   Add first budget line item
                 </span>
-                <span className="first-budget-item__hint">
-                  <kbd>Enter</kbd> or <kbd>n</kbd>
-                </span>
               </button>
             )}
             {displayedTopLevelEntries.map((entry, index) => (

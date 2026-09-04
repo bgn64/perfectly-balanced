@@ -1,0 +1,644 @@
+:root,
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --theme-accent: #7aa2f7;
+  --theme-accent-strong: #7dcfff;
+  --theme-accent-fill: #3d59a1;
+  --theme-on-accent: #fff;
+  --theme-canvas: #16161e;
+  --theme-shell: #1a1b26;
+  --theme-chrome: #1f2335;
+  --theme-surface: #1f2335;
+  --theme-surface-raised: #24283b;
+  --theme-selection: #292e42;
+  --theme-border: #3b4261;
+  --theme-border-subtle: #292e42;
+  --theme-border-strong: #565f89;
+  --theme-control-border: #414868;
+  --theme-text: #c0caf5;
+  --theme-text-secondary: #a9b1d6;
+  --theme-text-muted: #787c99;
+  --theme-text-faint: #565f89;
+  --theme-positive: #9ece6a;
+  --theme-negative: #f7768e;
+  --theme-warning: #e0af68;
+  --theme-secondary: #bb9af7;
+  --theme-overlay: rgb(10 11 18 / 76%);
+  --theme-shadow: 0 1.5rem 4.5rem rgb(0 0 0 / 35%);
+  --theme-dialog-shadow: 0 1.5rem 4rem rgb(0 0 0 / 48%);
+  --theme-lift-shadow: 0 0.45rem 0.8rem rgb(0 0 0 / 32%);
+  --theme-grid: rgb(122 162 247 / 3%);
+  --theme-status-text: #1a1b26;
+  --theme-status-key-border: rgb(26 27 38 / 25%);
+  --theme-status-key-background: rgb(26 27 38 / 15%);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --theme-accent: #34548a;
+  --theme-accent-strong: #34548a;
+  --theme-accent-fill: #34548a;
+  --theme-on-accent: #e9e9ed;
+  --theme-canvas: #d5d6db;
+  --theme-shell: #e9e9ed;
+  --theme-chrome: #d5d6db;
+  --theme-surface: #e9e9ed;
+  --theme-surface-raised: #dfe0e6;
+  --theme-selection: #dfe0e6;
+  --theme-border: #a1a6b5;
+  --theme-border-subtle: #c4c7d0;
+  --theme-border-strong: #858a9b;
+  --theme-control-border: #a1a6b5;
+  --theme-text: #343b58;
+  --theme-text-secondary: #4c526b;
+  --theme-text-muted: #5a5f78;
+  --theme-text-faint: #73788e;
+  --theme-positive: #33635c;
+  --theme-negative: #8c4351;
+  --theme-warning: #8f5e15;
+  --theme-secondary: #5a4a78;
+  --theme-overlay: rgb(52 59 88 / 42%);
+  --theme-shadow: 0 1.5rem 4.5rem rgb(52 59 88 / 18%);
+  --theme-dialog-shadow: 0 1.5rem 4rem rgb(52 59 88 / 24%);
+  --theme-lift-shadow: 0 0.45rem 0.8rem rgb(52 59 88 / 18%);
+  --theme-grid: rgb(52 84 138 / 5%);
+  --theme-status-text: #e9e9ed;
+  --theme-status-key-border: rgb(233 233 237 / 45%);
+  --theme-status-key-background: rgb(233 233 237 / 18%);
+}
+
+body {
+  background:
+    linear-gradient(var(--theme-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--theme-grid) 1px, transparent 1px),
+    var(--theme-canvas);
+}
+
+.authenticated-app.terminal-app {
+  --accent: var(--theme-accent);
+  --faint: var(--theme-text-faint);
+  --highlight: var(--theme-selection);
+  --ink: var(--theme-text);
+  --line: var(--theme-border);
+  --muted: var(--theme-text-muted);
+  --negative: var(--theme-negative);
+  --positive: var(--theme-positive);
+  --soft: var(--theme-surface-raised);
+  --surface: var(--theme-surface);
+  border-color: var(--theme-border);
+  background: var(--theme-shell);
+  color: var(--theme-text);
+  box-shadow: var(--theme-shadow);
+}
+
+.authenticated-app.terminal-app :is(h1, h2, h3) {
+  color: var(--theme-text);
+}
+
+.authenticated-app.terminal-app :is(.titlebar, .sidebar, .command-panel) {
+  border-color: var(--theme-border);
+  background: var(--theme-chrome);
+  color: var(--theme-text-secondary);
+}
+
+.authenticated-app.terminal-app .workspace {
+  background: var(--theme-shell);
+  color: var(--theme-text);
+  scrollbar-color: var(--theme-border) var(--theme-shell);
+}
+
+.authenticated-app.terminal-app :is(.brand, .hud-identity) {
+  color: var(--theme-text);
+}
+
+.authenticated-app.terminal-app .brand-mark {
+  background: var(--theme-accent);
+  color: var(--theme-shell);
+}
+
+.authenticated-app.terminal-app .hud-identity > span:first-child {
+  background: var(--theme-secondary);
+  color: var(--theme-shell);
+}
+
+.authenticated-app.terminal-app :is(.hud-identity small, .subtitle, .subtle) {
+  color: var(--theme-text-muted);
+}
+
+.authenticated-app.terminal-app :is(.nav-item, .direction-tag) {
+  color: var(--theme-accent);
+}
+
+.authenticated-app.terminal-app :is(.nav-item:hover, .nav-item:focus-visible, .nav-item.is-focused, .nav-item.is-active) {
+  background: var(--theme-selection);
+  color: var(--theme-text);
+}
+
+.authenticated-app.terminal-app .hud-utility-nav {
+  border-color: var(--theme-border);
+}
+
+.authenticated-app.terminal-app .statusline {
+  background: var(--theme-accent);
+  color: var(--theme-status-text);
+}
+
+.authenticated-app.terminal-app .statusline strong {
+  background: var(--theme-secondary);
+  color: var(--theme-status-text);
+}
+
+.authenticated-app.terminal-app .statusline kbd {
+  border-color: var(--theme-status-key-border);
+  background: var(--theme-status-key-background);
+  color: var(--theme-status-text);
+}
+
+.authenticated-app.terminal-app .eyebrow {
+  color: var(--theme-accent);
+}
+
+.authenticated-app.terminal-app :is(.month-jump-controls button, .terminal-button, .terminal-pill, .direction-tag, .amount-cell) {
+  border-color: var(--theme-border);
+  background: var(--theme-surface-raised);
+  color: var(--theme-text-secondary);
+}
+
+.authenticated-app.terminal-app :is(.month-jump-controls button:hover, .month-jump-controls button:focus-visible, .terminal-button:hover, .terminal-button:focus-visible, .amount-cell:hover, .amount-cell:focus-visible) {
+  border-color: var(--theme-accent);
+  background: var(--theme-selection);
+  color: var(--theme-text);
+}
+
+.authenticated-app.terminal-app .month-jump-controls small {
+  color: var(--theme-text-muted);
+}
+
+.authenticated-app.terminal-app .month-jump-controls strong {
+  color: var(--theme-text);
+}
+
+.authenticated-app.terminal-app .terminal-button--primary {
+  border-color: var(--theme-accent);
+  background: var(--theme-accent);
+  color: var(--theme-shell);
+}
+
+.authenticated-app.terminal-app :is(.summary, .budget-table, .screen-panel, .ignored-report-notice) {
+  border-color: var(--theme-border);
+  background: var(--theme-surface);
+  color: var(--theme-text);
+}
+
+.authenticated-app.terminal-app :is(.summary > div, .table-head, .screen-panel__head) {
+  border-color: var(--theme-border);
+}
+
+.authenticated-app.terminal-app :is(.summary span, .column-head, .detail-note, .empty-state, .empty-terminal p) {
+  color: var(--theme-text-muted);
+}
+
+.authenticated-app.terminal-app .column-head {
+  border-color: var(--theme-border-subtle);
+}
+
+.authenticated-app.terminal-app .available {
+  color: var(--theme-positive);
+}
+
+.authenticated-app.terminal-app .spent,
+.authenticated-app.terminal-app .negative {
+  color: var(--theme-negative);
+}
+
+.authenticated-app.terminal-app .positive {
+  color: var(--theme-positive);
+}
+
+.authenticated-app.terminal-app .warning {
+  color: var(--theme-warning);
+}
+
+.authenticated-app.terminal-app .budget-group,
+.authenticated-app.terminal-app .budget-row {
+  border-color: var(--theme-border-subtle);
+  background: var(--theme-surface);
+  color: var(--theme-text-secondary);
+}
+
+.authenticated-app.terminal-app .budget-subsection-head {
+  border-color: var(--theme-border);
+  background: var(--theme-surface-raised);
+  color: var(--theme-text);
+}
+
+.authenticated-app.terminal-app :is(.budget-row:hover, .budget-row:focus-visible, .budget-row.is-selected, .budget-subsection-head.is-selected) {
+  background: var(--theme-selection);
+  color: var(--theme-text);
+}
+
+.authenticated-app.terminal-app .budget-row--sectioned .category-name::before {
+  color: var(--theme-text-faint);
+}
+
+.authenticated-app.terminal-app .budget-row > :is(.activity-cell, .remaining-cell) {
+  color: var(--theme-text);
+}
+
+.authenticated-app.terminal-app .budget-row--over-spending > :is(.activity-cell, .remaining-cell) {
+  color: var(--theme-negative);
+}
+
+.authenticated-app.terminal-app .budget-row--over-income > :is(.activity-cell, .remaining-cell) {
+  color: var(--theme-positive);
+}
+
+.authenticated-app.terminal-app :is(.pending-budget-name-input, .pending-budget-category-combobox > input, .amount-cell--editing, .combo-menu) {
+  border-color: var(--theme-accent-strong);
+  background: var(--theme-shell);
+  color: var(--theme-text);
+}
+
+.authenticated-app.terminal-app :is(.pending-budget-name-input::placeholder, .pending-budget-category-combobox > input::placeholder, .combo-empty) {
+  color: var(--theme-text-muted);
+}
+
+.authenticated-app.terminal-app .combo-menu {
+  border-color: var(--theme-border-strong);
+  box-shadow: var(--theme-dialog-shadow);
+}
+
+.authenticated-app.terminal-app .combo-option {
+  background: var(--theme-surface);
+  color: var(--theme-text-secondary);
+}
+
+.authenticated-app.terminal-app :is(.combo-option:hover, .combo-option:focus-visible, .combo-option.highlighted) {
+  background: var(--theme-selection);
+  color: var(--theme-text);
+}
+
+.authenticated-app.terminal-app .budget-action-layer {
+  background: var(--theme-overlay);
+}
+
+.authenticated-app.terminal-app :is(.budget-action-dialog, .budget-action-choice) {
+  border-color: var(--theme-border);
+  background: var(--theme-surface-raised);
+  color: var(--theme-text-secondary);
+}
+
+.authenticated-app.terminal-app .budget-action-dialog {
+  background: var(--theme-shell);
+  box-shadow: var(--theme-dialog-shadow);
+}
+
+.authenticated-app.terminal-app .budget-action-dialog > p {
+  color: var(--theme-text-muted);
+}
+
+.authenticated-app.terminal-app .budget-action-choice.is-selected {
+  border-color: var(--theme-accent-strong);
+  background: var(--theme-selection);
+  color: var(--theme-text);
+}
+
+.authenticated-app.terminal-app :is(.data-toolbar, .transaction-column-head, .transaction-pagination) {
+  border-color: var(--theme-border-subtle);
+  color: var(--theme-text-muted);
+}
+
+.authenticated-app.terminal-app :is(.terminal-search, .terminal-search input, .transaction-inline-editor .inline-input) {
+  border-color: var(--theme-border);
+  background: var(--theme-shell);
+  color: var(--theme-text);
+}
+
+.authenticated-app.terminal-app :is(.terminal-search:focus-within, .terminal-search input:focus) {
+  border-color: var(--theme-accent-strong);
+  box-shadow: 0 0 0 1px var(--theme-accent);
+}
+
+.authenticated-app.terminal-app :is(.transaction-result-count, .transaction-filter-label, .transaction-page-summary) {
+  color: var(--theme-text-muted);
+}
+
+.authenticated-app.terminal-app :is(.filter-token, .category-chip, .transaction-state-button) {
+  border-color: var(--theme-border);
+  background: var(--theme-surface-raised);
+  color: var(--theme-accent);
+}
+
+.authenticated-app.terminal-app :is(.transaction-tool-button.is-selected, .filter-token.is-selected, .transaction-page-controls .terminal-button.is-current) {
+  border-color: var(--theme-accent);
+  background: var(--theme-selection);
+  color: var(--theme-text);
+  box-shadow: inset 0 0 0 1px var(--theme-accent);
+}
+
+.authenticated-app.terminal-app .transaction-page-controls .terminal-button.is-current {
+  background: var(--theme-accent);
+  color: var(--theme-shell);
+}
+
+.authenticated-app.terminal-app .transaction-row-simple {
+  border-color: var(--theme-border-subtle);
+  background: var(--theme-surface);
+  color: var(--theme-text);
+}
+
+.authenticated-app.terminal-app :is(.transaction-row-simple:hover, .transaction-row-simple:focus-visible, .transaction-row-simple:focus-within, .transaction-row-simple.is-selected) {
+  background: var(--theme-selection);
+  color: var(--theme-text);
+}
+
+.authenticated-app.terminal-app .transaction-row-simple__name strong {
+  color: var(--theme-text);
+}
+
+.authenticated-app.terminal-app .transaction-row-simple__name span {
+  color: var(--theme-text-muted);
+}
+
+.authenticated-app.terminal-app .transaction-category-cell .category-chip {
+  border-color: transparent;
+  background: transparent;
+  color: var(--theme-accent);
+}
+
+.authenticated-app.terminal-app .transaction-category-cell .category-chip.empty {
+  color: var(--theme-text-muted);
+}
+
+.authenticated-app.terminal-app .transaction-category-cell .category-chip:is(:hover, :focus-visible) {
+  border-color: var(--theme-accent);
+  background: var(--theme-selection);
+}
+
+.authenticated-app.terminal-app .transaction-state-button.is-ignored {
+  color: var(--theme-warning);
+}
+
+.authenticated-app.terminal-app .transaction-row-simple.is-ignored :is(.transaction-row-simple__name strong, .transaction-amount) {
+  color: var(--theme-text-muted);
+}
+
+.authenticated-app.terminal-app :is(.transaction-category-editor, .category-search-input, .category-search-menu) {
+  border-color: var(--theme-border);
+  background: var(--theme-surface);
+  color: var(--theme-text);
+}
+
+.authenticated-app.terminal-app .category-search-menu button {
+  color: var(--theme-text);
+}
+
+.authenticated-app.terminal-app :is(.category-search-menu button:hover, .category-search-menu button:focus-visible, .category-search-menu .is-highlighted) {
+  background: var(--theme-selection);
+  color: var(--theme-text);
+}
+
+.authenticated-app.terminal-app .transaction-inline-editor--live {
+  border-color: var(--theme-border);
+  background: var(--theme-shell);
+}
+
+.authenticated-app.terminal-app .transaction-table .detail-panel {
+  border-color: var(--theme-border);
+  background: var(--theme-shell);
+  box-shadow: var(--theme-dialog-shadow);
+}
+
+.authenticated-app.terminal-app .transaction-control-layer {
+  background: var(--theme-overlay);
+}
+
+.authenticated-app.terminal-app .transaction-control-dialog {
+  border-color: var(--theme-border-strong);
+  background: var(--theme-surface);
+  color: var(--theme-text);
+  box-shadow: var(--theme-dialog-shadow);
+}
+
+.authenticated-app.terminal-app :is(.transaction-dialog-head, .transaction-dialog-actions) {
+  border-color: var(--theme-border);
+}
+
+.authenticated-app.terminal-app :is(.transaction-dialog-head h2, .transaction-option strong) {
+  color: var(--theme-text);
+}
+
+.authenticated-app.terminal-app :is(.transaction-dialog-head > span, .transaction-option small) {
+  color: var(--theme-text-muted);
+}
+
+.authenticated-app.terminal-app .transaction-option {
+  color: var(--theme-text);
+}
+
+.authenticated-app.terminal-app :is(.transaction-option:focus-visible, .transaction-option.is-selected) {
+  border-color: var(--theme-accent);
+  background: var(--theme-selection);
+}
+
+.authenticated-app.terminal-app .transaction-option i {
+  border-color: var(--theme-border);
+}
+
+.authenticated-app.terminal-app :is(.reports-v2-modebar, .reports-v2-switch, .reports-v2-chart-card, .reports-v2-variance, .reports-v2-modal) {
+  border-color: var(--theme-border);
+  background: var(--theme-surface);
+  color: var(--theme-text);
+}
+
+.authenticated-app.terminal-app :is(.reports-v2-modebar .subtle, .reports-v2-chart-head > strong, .reports-v2-legend > p, .reports-v2-modal-head > span, .reports-v2-modal-foot > span, .reports-v2-transaction-row small, .reports-v2-empty, .reports-v2-variance-empty) {
+  color: var(--theme-text-muted);
+}
+
+.authenticated-app.terminal-app .reports-v2-switch {
+  background: var(--theme-shell);
+}
+
+.authenticated-app.terminal-app .reports-v2-switch button {
+  color: var(--theme-text-muted);
+}
+
+.authenticated-app.terminal-app .reports-v2-switch button.is-selected {
+  background: var(--theme-accent);
+  color: var(--theme-shell);
+}
+
+.authenticated-app.terminal-app :is(.reports-v2-chart-head, .reports-v2-legend, .reports-v2-variance-head, .reports-v2-variance-columns, .reports-v2-modal-head, .reports-v2-modal-foot) {
+  border-color: var(--theme-border-subtle);
+}
+
+.authenticated-app.terminal-app :is(.reports-v2-chart-head h2, .reports-v2-donut strong, .reports-v2-slice-row strong, .reports-v2-modal-head h2) {
+  color: var(--theme-text);
+}
+
+.authenticated-app.terminal-app :is(.reports-v2-donut small, .reports-v2-variance-columns) {
+  color: var(--theme-text-faint);
+}
+
+.authenticated-app.terminal-app .reports-v2-donut::before {
+  background: var(--theme-surface);
+}
+
+.authenticated-app.terminal-app .reports-v2-donut--chart.is-empty {
+  border-color: var(--theme-border-subtle);
+}
+
+.authenticated-app.terminal-app .reports-v2-slice-row {
+  color: var(--theme-text-secondary);
+}
+
+.authenticated-app.terminal-app :is(.reports-v2-slice-row:hover, .reports-v2-slice-row:focus-visible, .reports-v2-slice-row.is-focused, .reports-v2-transaction-row:hover, .reports-v2-transaction-row:focus-visible, .reports-v2-transaction-row.is-focused, .reports-v2-variance-list li:focus-visible) {
+  background: var(--theme-selection);
+  color: var(--theme-text);
+}
+
+.authenticated-app.terminal-app .reports-v2-slice-row.is-uncategorized {
+  color: var(--theme-warning);
+}
+
+.authenticated-app.terminal-app .reports-v2-variance-list li,
+.authenticated-app.terminal-app .reports-v2-transaction-row {
+  border-color: var(--theme-border-subtle);
+  color: var(--theme-text-secondary);
+}
+
+.authenticated-app.terminal-app .reports-v2-variance-list .is-over,
+.authenticated-app.terminal-app .reports-v2-transaction-row.is-spending > strong {
+  color: var(--theme-negative);
+}
+
+.authenticated-app.terminal-app .reports-v2-variance-list .is-under,
+.authenticated-app.terminal-app .reports-v2-transaction-row.is-income > strong {
+  color: var(--theme-positive);
+}
+
+.authenticated-app.terminal-app .reports-v2-overlay {
+  background: var(--theme-overlay);
+}
+
+.authenticated-app.terminal-app .reports-v2-modal {
+  border-color: var(--theme-border-strong);
+  box-shadow: var(--theme-dialog-shadow);
+}
+
+.authenticated-app.terminal-app .hud-settings-section {
+  border-color: var(--theme-border);
+  background: var(--theme-surface);
+  color: var(--theme-text);
+}
+
+.authenticated-app.terminal-app .hud-settings-section > header {
+  border-color: var(--theme-border-subtle);
+}
+
+.authenticated-app.terminal-app .hud-settings-section h2,
+.authenticated-app.terminal-app :is(.hud-setting-row strong, .hud-connection strong, .hud-account-state strong) {
+  color: var(--theme-text);
+}
+
+.authenticated-app.terminal-app :is(.hud-settings-section > header > span, .hud-setting-row small, .hud-connection small, .hud-account-state, .hud-modal-body small) {
+  color: var(--theme-text-muted);
+}
+
+.authenticated-app.terminal-app .hud-theme-control {
+  border-color: var(--theme-border);
+  background: var(--theme-shell);
+}
+
+.authenticated-app.terminal-app .hud-theme-control button {
+  color: var(--theme-text-muted);
+}
+
+.authenticated-app.terminal-app .hud-theme-control button.is-selected {
+  background: var(--theme-accent);
+  color: var(--theme-shell);
+}
+
+.authenticated-app.terminal-app .hud-theme-control button:focus-visible {
+  border-color: var(--theme-accent-strong);
+}
+
+.authenticated-app.terminal-app .hud-connection {
+  border-color: var(--theme-border-subtle);
+}
+
+.authenticated-app.terminal-app .hud-connection:focus-within {
+  background: var(--theme-selection);
+}
+
+.authenticated-app.terminal-app .hud-bank-mark {
+  background: var(--theme-accent);
+  color: var(--theme-shell);
+}
+
+.authenticated-app.terminal-app .hud-loading-line {
+  background: var(--theme-selection);
+}
+
+.authenticated-app.terminal-app .hud-modal {
+  border-color: var(--theme-border-strong);
+  background: var(--theme-surface);
+  color: var(--theme-text);
+  box-shadow: var(--theme-dialog-shadow);
+}
+
+.authenticated-app.terminal-app .hud-modal > :is(header, footer) {
+  border-color: var(--theme-border);
+}
+
+.authenticated-app.terminal-app .hud-modal :is(h2, strong) {
+  color: var(--theme-text);
+}
+
+.authenticated-app.terminal-app .terminal-button--danger {
+  border-color: var(--theme-negative);
+  color: var(--theme-negative);
+}
+
+.authenticated-app.terminal-app .terminal-pill--ok {
+  color: var(--theme-positive);
+}
+
+.authenticated-app.terminal-app .terminal-pill--warning {
+  color: var(--theme-warning);
+}
+
+.authenticated-app.terminal-app .terminal-pill--danger {
+  color: var(--theme-negative);
+}
+
+.authenticated-app.terminal-app .terminal-pill--muted {
+  color: var(--theme-text-muted);
+}
+
+.authenticated-app.terminal-app .form-message--error {
+  border-color: color-mix(in srgb, var(--theme-negative) 45%, transparent);
+  background: color-mix(in srgb, var(--theme-negative) 10%, transparent);
+  color: var(--theme-negative);
+}
+
+.authenticated-app.terminal-app .form-message--success {
+  border-color: color-mix(in srgb, var(--theme-positive) 45%, transparent);
+  background: color-mix(in srgb, var(--theme-positive) 10%, transparent);
+  color: var(--theme-positive);
+}
+
+.authenticated-app.terminal-app :is(.command-input, .command-list) {
+  border-color: var(--theme-border);
+  background: var(--theme-shell);
+  color: var(--theme-text);
+}
+
+.authenticated-app.terminal-app .command-input input {
+  color: var(--theme-text);
+}
+
+.authenticated-app.terminal-app :is(.command-list li:hover, .command-list li.is-highlighted) {
+  background: var(--theme-selection);
+  color: var(--theme-text);
+}

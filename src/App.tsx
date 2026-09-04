@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type FormEvent,
@@ -14,7 +15,6 @@ import {
 import { getClientConfiguration } from './config.ts'
 import {
   currentMonth,
-  formatMonth,
   isTextEntryTarget,
 } from './finance/utils.ts'
 import {
@@ -23,25 +23,42 @@ import {
 } from './insights/InsightsPanel.tsx'
 import { getSupabaseClient } from './lib/supabase.ts'
 import { focusWithScrollComfort } from './navigation/focus.ts'
+import { Statusline } from './navigation/Statusline.tsx'
 import {
   findSpatialTarget,
   type SpatialDirection,
 } from './navigation/spatial.ts'
+import {
+  buildNavigationStatus,
+  textEntryStatus,
+  type StatusPresentation,
+} from './navigation/status.ts'
+import {
+  SettingsPanel,
+  type SettingsFocusRequest,
+  type SettingsInteraction,
+} from './settings/SettingsPanel.tsx'
+import {
+  resolveTheme,
+  type ThemePreference,
+} from './settings/model.ts'
 import { TransactionsPanel } from './transactions/TransactionsPanel.tsx'
 import './App.css'
-import '../mockup/neovim-tokyonight.css'
+import './terminal.css'
+import './theme.css'
 
 interface AppProps {
   appName: string
 }
 
-type AppView = 'budgets' | 'transactions' | 'insights'
-type SemanticRegion = 'sidebar' | 'workspace'
-type WorkspaceTheme = 'dark' | 'light'
+type AppView = 'budgets' | 'transactions' | 'insights' | 'settings'
+type SemanticRegion = 'header' | 'sidebar' | 'workspace'
 
 interface StatusContext {
   action: string
   label: string
+  semanticKind: string | null
+  isTextEntry: boolean
 }
 
 interface AmountEditRequest {
@@ -65,14 +82,16 @@ const navigationItems: ReadonlyArray<{
 
 const themePreferenceKey = 'perfectly-balanced.theme'
 
-function readInitialTheme(): WorkspaceTheme {
+function readInitialThemePreference(): ThemePreference {
   const savedTheme = window.localStorage.getItem(themePreferenceKey)
-  if (savedTheme === 'dark' || savedTheme === 'light') {
+  if (
+    savedTheme === 'dark' ||
+    savedTheme === 'light' ||
+    savedTheme === 'system'
+  ) {
     return savedTheme
   }
-  return window.matchMedia('(prefers-color-scheme: light)').matches
-    ? 'light'
-    : 'dark'
+  return 'system'
 }
 
 function getSemanticControls(
@@ -100,10 +119,17 @@ function getSemanticControls(
     )
 }
 
-function getStatusContext(control: HTMLElement | null): StatusContext {
+function getStatusContext(
+  control: HTMLElement | null,
+  activeElement: Element | null,
+  semanticNode: HTMLElement | null,
+): StatusContext {
   return {
     action: control?.dataset.statusAction ?? 'activate',
     label: control?.dataset.statusLabel ?? 'budget',
+    semanticKind:
+      semanticNode?.dataset.semanticKind ?? control?.dataset.semanticKind ?? null,
+    isTextEntry: isTextEntryTarget(activeElement),
   }
 }
 
@@ -132,6 +158,283 @@ function findNearestControlToLeft(
             Math.abs(right.centerY - currentCenterY) ||
           right.centerX - left.centerX,
       )[0]?.control ?? null
+  )
+}
+
+function buildAuthenticatedStatus({
+  activeView,
+  budgetKeyboardInteraction,
+  commandQuery,
+  insightsInteraction,
+  isCommandPaletteOpen,
+  isTransactionSearchOpen,
+  settingsInteraction,
+  statusContext,
+  transactionControlDialog,
+  transactionSearchQuery,
+}: {
+  activeView: AppView
+  budgetKeyboardInteraction: BudgetKeyboardInteraction | null
+  commandQuery: string
+  insightsInteraction: InsightsInteraction | null
+  isCommandPaletteOpen: boolean
+  isTransactionSearchOpen: boolean
+  settingsInteraction: SettingsInteraction | null
+  statusContext: StatusContext
+  transactionControlDialog: 'time' | 'filter' | 'sort' | null
+  transactionSearchQuery: string
+}): StatusPresentation {
+  if (budgetKeyboardInteraction) {
+    const mode =
+      budgetKeyboardInteraction.mode === 'confirm-delete'
+        ? 'CONFIRM'
+        : budgetKeyboardInteraction.mode === 'choose-create'
+          ? 'CREATE'
+          : budgetKeyboardInteraction.mode === 'name-entry' ||
+              budgetKeyboardInteraction.mode === 'choose-category'
+            ? 'NAME'
+            : budgetKeyboardInteraction.mode === 'rename-entry'
+              ? 'RENAME'
+              : budgetKeyboardInteraction.mode === 'saving-move'
+                ? 'SAVING'
+                : 'MOVE'
+    const shortcuts =
+      budgetKeyboardInteraction.mode === 'saving-move'
+        ? []
+        : budgetKeyboardInteraction.mode === 'confirm-delete' ||
+            budgetKeyboardInteraction.mode === 'choose-create'
+          ? [
+              { keys: ['j', 'k'], label: 'choose' },
+              { keys: ['Enter'], label: 'confirm' },
+              { keys: ['Esc'], label: 'cancel' },
+            ]
+          : budgetKeyboardInteraction.mode === 'name-entry' ||
+              budgetKeyboardInteraction.mode === 'rename-entry'
+            ? [
+                { keys: ['Enter'], label: 'save' },
+                { keys: ['Esc'], label: 'cancel' },
+              ]
+            : budgetKeyboardInteraction.mode === 'choose-category'
+              ? [
+                  { keys: ['Ctrl+N', 'Ctrl+P'], label: 'choose' },
+                  { keys: ['Enter'], label: 'select' },
+                  { keys: ['Esc'], label: 'cancel' },
+                ]
+              : [
+                  { keys: ['j', 'k'], label: 'position' },
+                  { keys: ['p'], label: 'place' },
+                  { keys: ['Esc'], label: 'cancel' },
+                ]
+    return {
+      mode,
+      label: budgetKeyboardInteraction.label,
+      shortcuts,
+    }
+  }
+
+  if (isCommandPaletteOpen) {
+    return textEntryStatus('COMMAND', commandQuery || 'command', [
+      { keys: ['Esc'], label: 'close' },
+    ])
+  }
+
+  if (settingsInteraction) {
+    if (settingsInteraction.mode === 'confirm') {
+      return {
+        mode: 'CONFIRM',
+        label: settingsInteraction.label,
+        shortcuts: [
+          { keys: ['h', 'l'], label: 'choose' },
+          { keys: ['Enter'], label: 'confirm' },
+          { keys: ['Esc'], label: 'cancel' },
+        ],
+      }
+    }
+    if (settingsInteraction.mode === 'connecting') {
+      return {
+        mode: 'CONNECT',
+        label: settingsInteraction.label,
+        shortcuts: [{ keys: ['Esc'], label: 'cancel' }],
+      }
+    }
+    return {
+      mode: 'ACCOUNTS',
+      label: settingsInteraction.label,
+      shortcuts: [],
+    }
+  }
+
+  if (activeView === 'transactions' && isTransactionSearchOpen) {
+    return textEntryStatus('SEARCH', transactionSearchQuery || 'search', [
+      { keys: ['Enter'], label: 'focus first result' },
+      { keys: ['Esc'], label: 'clear and return' },
+    ])
+  }
+
+  if (activeView === 'transactions' && transactionControlDialog) {
+    return {
+      mode: transactionControlDialog.toLocaleUpperCase(),
+      label: `transactions / ${transactionControlDialog}`,
+      shortcuts: [
+        { keys: ['h', 'j', 'k', 'l'], label: 'focus' },
+        ...(transactionControlDialog === 'filter'
+          ? [{ keys: ['Space'], label: 'toggle' }]
+          : []),
+        { keys: ['Enter'], label: 'activate' },
+        { keys: ['Esc'], label: 'close' },
+      ],
+    }
+  }
+
+  if (activeView === 'insights' && insightsInteraction) {
+    if (insightsInteraction.mode === 'transactions') {
+      return {
+        mode: 'TRANSACTIONS',
+        label: statusContext.label,
+        shortcuts: [
+          { keys: ['j', 'k'], label: 'focus' },
+          {
+            keys: ['Esc'],
+            label: insightsInteraction.hasParent ? 'back' : 'close',
+          },
+        ],
+      }
+    }
+    return {
+      mode: 'DRILLDOWN',
+      label: statusContext.label,
+      shortcuts: [
+        ...(insightsInteraction.canOpenTransactions ||
+        statusContext.action === 'close'
+          ? [{ keys: ['Enter'], label: statusContext.action }]
+          : []),
+        { keys: ['h', 'j', 'k', 'l'], label: 'focus' },
+        { keys: ['Esc'], label: 'close' },
+      ],
+    }
+  }
+
+  if (statusContext.isTextEntry) {
+    if (statusContext.semanticKind === 'category-picker-search') {
+      return textEntryStatus('CATEGORY', statusContext.label, [
+        { keys: ['Ctrl+N', 'Ctrl+P'], label: 'choose' },
+        { keys: ['Enter'], label: 'select' },
+        { keys: ['Esc'], label: 'cancel' },
+      ])
+    }
+    const canCommit = statusContext.action.startsWith('save')
+    return textEntryStatus(
+      'INPUT',
+      statusContext.label,
+      canCommit
+        ? [
+            { keys: ['Enter'], label: statusContext.action },
+            { keys: ['Esc'], label: 'cancel' },
+          ]
+        : [],
+    )
+  }
+
+  return buildNavigationStatus({
+    view: activeView,
+    action: statusContext.action,
+    label: statusContext.label,
+    semanticKind: statusContext.semanticKind,
+    isTextEntry: false,
+  })
+}
+
+function AuthenticatedTitlebar({
+  appName,
+  email,
+  initials,
+  onOpenAccount,
+  onOpenBudget,
+}: {
+  appName: string
+  email: string
+  initials: string
+  onOpenAccount: () => void
+  onOpenBudget: () => void
+}) {
+  return (
+    <header className="titlebar hud-titlebar">
+      <button
+        className="brand"
+        data-semantic-id="header-brand"
+        data-semantic-kind="header-brand"
+        data-semantic-region="header"
+        data-status-action="open budget"
+        data-status-label="application / budget"
+        type="button"
+        onClick={onOpenBudget}
+      >
+        <span className="brand-mark" aria-hidden="true">pb</span>
+        <span>{appName.toLocaleLowerCase().replace(/\s+/g, '-')}</span>
+      </button>
+      <button
+        aria-label={`Account settings for ${email}`}
+        className="hud-identity"
+        data-semantic-id="header-account"
+        data-semantic-kind="header-account"
+        data-semantic-region="header"
+        data-status-action="open Account settings"
+        data-status-label="account / profile shortcut"
+        type="button"
+        onClick={onOpenAccount}
+      >
+        <span>{initials || 'PB'}</span>
+        <span>
+          <strong>{email.split('@')[0]}</strong>
+          <small>Account settings</small>
+        </span>
+      </button>
+    </header>
+  )
+}
+
+function AuthenticatedSidebar({
+  activeView,
+  focusedSemanticId,
+  uncategorizedTransactionCount,
+  onNavigate,
+}: {
+  activeView: AppView
+  focusedSemanticId: string | null
+  uncategorizedTransactionCount: number
+  onNavigate: (view: AppView) => void
+}) {
+  function navigationButton(item: { view: AppView; label: string }) {
+    return (
+      <button
+        aria-current={activeView === item.view ? 'page' : undefined}
+        className={`nav-item${activeView === item.view ? ' is-active' : ''}${
+          focusedSemanticId === `nav-${item.view}` ? ' is-focused' : ''
+        }`}
+        data-semantic-id={`nav-${item.view}`}
+        data-semantic-kind="navigation"
+        data-semantic-region="sidebar"
+        data-status-action={`open ${item.label.toLocaleLowerCase()}`}
+        data-status-label={`${item.label.toLocaleLowerCase()} / navigation`}
+        key={item.view}
+        type="button"
+        onClick={() => onNavigate(item.view)}
+      >
+        <span>{item.label}</span>
+        {item.view === 'transactions' && (
+          <strong>{uncategorizedTransactionCount}</strong>
+        )}
+      </button>
+    )
+  }
+
+  return (
+    <aside className="sidebar hud-sidebar" aria-label="Application navigation">
+      <nav className="main-nav">{navigationItems.map(navigationButton)}</nav>
+      <nav className="main-nav hud-utility-nav" aria-label="Settings navigation">
+        {navigationButton({ view: 'settings', label: 'Settings' })}
+      </nav>
+    </aside>
   )
 }
 
@@ -391,8 +694,17 @@ function AuthenticatedShell({
   >(null)
   const [insightsInteraction, setInsightsInteraction] =
     useState<InsightsInteraction | null>(null)
+  const [settingsInteraction, setSettingsInteraction] =
+    useState<SettingsInteraction | null>(null)
+  const [settingsFocusRequest, setSettingsFocusRequest] =
+    useState<SettingsFocusRequest | null>(null)
   const [commandQuery, setCommandQuery] = useState('go')
-  const [theme, setTheme] = useState<WorkspaceTheme>(readInitialTheme)
+  const [themePreference, setThemePreference] =
+    useState<ThemePreference>(readInitialThemePreference)
+  const [systemPrefersLight, setSystemPrefersLight] = useState(() =>
+    window.matchMedia('(prefers-color-scheme: light)').matches,
+  )
+  const theme = resolveTheme(themePreference, systemPrefersLight)
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
   const [isAmountEditorOpen, setIsAmountEditorOpen] = useState(false)
   const [amountEditRequest, setAmountEditRequest] =
@@ -406,11 +718,11 @@ function AuthenticatedShell({
   const [focusedSemanticId, setFocusedSemanticId] = useState<string | null>(
     'nav-budgets',
   )
-  const [focusedWorkspaceControl, setFocusedWorkspaceControl] = useState(1)
-  const [workspaceControlCount, setWorkspaceControlCount] = useState(18)
   const [statusContext, setStatusContext] = useState<StatusContext>({
-    action: 'select',
+    action: 'view',
     label: 'budget / navigation',
+    semanticKind: null,
+    isTextEntry: false,
   })
   const workspaceShellRef = useRef<HTMLDivElement>(null)
   const commandInputRef = useRef<HTMLInputElement>(null)
@@ -454,7 +766,18 @@ function AuthenticatedShell({
   }, [])
   const navigateToView = useCallback((view: AppView) => {
     pendingViewFocusRef.current = view
+    setSettingsFocusRequest(null)
+    setIsCommandPaletteOpen(false)
     setActiveView(view)
+  }, [])
+  const openAccountSettings = useCallback(() => {
+    pendingViewFocusRef.current = null
+    setSettingsFocusRequest((current) => ({
+      section: 'account',
+      sequence: (current?.sequence ?? 0) + 1,
+    }))
+    setIsCommandPaletteOpen(false)
+    setActiveView('settings')
   }, [])
   useEffect(() => {
     if (pendingViewFocusRef.current !== activeView) {
@@ -519,8 +842,19 @@ function AuthenticatedShell({
   }, [])
 
   useEffect(() => {
-    window.localStorage.setItem(themePreferenceKey, theme)
+    window.localStorage.setItem(themePreferenceKey, themePreference)
+  }, [themePreference])
+
+  useLayoutEffect(() => {
+    document.documentElement.dataset.theme = theme
   }, [theme])
+
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-color-scheme: light)')
+    const updatePreference = () => setSystemPrefersLight(media.matches)
+    media.addEventListener('change', updatePreference)
+    return () => media.removeEventListener('change', updatePreference)
+  }, [])
 
   useEffect(() => {
     const root = workspaceShellRef.current
@@ -529,10 +863,6 @@ function AuthenticatedShell({
     }
     let animationFrame = 0
     const updateFocusStatus = () => {
-      const controls = [
-        ...getSemanticControls(root, 'sidebar'),
-        ...getSemanticControls(root, 'workspace'),
-      ]
       const activeElement = document.activeElement
       const activeControl =
         activeElement instanceof HTMLElement
@@ -542,14 +872,10 @@ function AuthenticatedShell({
         activeElement instanceof HTMLElement
           ? activeElement.closest<HTMLElement>('[data-semantic-id]')
           : null
-      setWorkspaceControlCount(controls.length)
-      setFocusedWorkspaceControl(
-        activeControl && controls.includes(activeControl)
-          ? controls.indexOf(activeControl) + 1
-          : 1,
-      )
       setFocusedSemanticId(activeSemanticNode?.dataset.semanticId ?? null)
-      setStatusContext(getStatusContext(activeControl))
+      setStatusContext(
+        getStatusContext(activeControl, activeElement, activeSemanticNode),
+      )
     }
     const scheduleFocusStatusUpdate = () => {
       window.cancelAnimationFrame(animationFrame)
@@ -627,6 +953,7 @@ function AuthenticatedShell({
       }
       const sidebarControls = getSemanticControls(root, 'sidebar')
       const workspaceControls = getSemanticControls(root, 'workspace')
+      const headerControls = getSemanticControls(root, 'header')
       const activeElement = document.activeElement
       const focusedControl =
         activeElement instanceof HTMLElement
@@ -708,9 +1035,21 @@ function AuthenticatedShell({
         return
       }
 
+      if (
+        event.key === 'Enter' &&
+        document.activeElement === focusedControl &&
+        focusedControl.dataset.semanticKind === 'transaction-row'
+      ) {
+        event.preventDefault()
+        focusedControl.click()
+        return
+      }
+
       const region = focusedControl?.dataset.semanticRegion
       const controls =
-        region === 'sidebar'
+        region === 'header'
+          ? headerControls
+          : region === 'sidebar'
           ? sidebarControls
           : region === 'workspace'
             ? workspaceControls
@@ -762,6 +1101,18 @@ function AuthenticatedShell({
           findSpatialTarget(focusedControl, workspaceControls, 'right') ??
           workspaceControls[0] ??
           null
+      } else if (
+        !nextControl &&
+        key === 'k' &&
+        (region === 'sidebar' || region === 'workspace')
+      ) {
+        nextControl = findSpatialTarget(focusedControl, headerControls, 'up')
+      } else if (!nextControl && key === 'j' && region === 'header') {
+        nextControl = findSpatialTarget(
+          focusedControl,
+          [...sidebarControls, ...workspaceControls],
+          'down',
+        )
       }
 
       if (nextControl) {
@@ -798,94 +1149,48 @@ function AuthenticatedShell({
     }
   }
 
-  if (activeView === 'budgets') {
-    return (
-      <div
-        className={`authenticated-app terminal-app${
-          isCommandPaletteOpen ? '' : ' command-closed'
-        } theme-${theme}`}
-        ref={workspaceShellRef}
-      >
-        <header className="titlebar">
-          <button
-            className="brand"
-            type="button"
-            onClick={() => navigateToView('budgets')}
-          >
-            <span className="brand-mark" aria-hidden="true">pb</span>
-            <span>{appName.toLocaleLowerCase().replace(/\s+/g, '-')}</span>
-          </button>
-          <p>{formatMonth(selectedMonth)} · Personal budget</p>
-          <div className="theme-switcher" role="group" aria-label="Theme">
-            <input
-              checked={theme === 'dark'}
-              id="theme-dark"
-              name="theme"
-              type="radio"
-              onChange={() => setTheme('dark')}
-            />
-            <label htmlFor="theme-dark">Dark</label>
-            <input
-              checked={theme === 'light'}
-              id="theme-light"
-              name="theme"
-              type="radio"
-              onChange={() => setTheme('light')}
-            />
-            <label htmlFor="theme-light">Light</label>
-          </div>
-          <details className="profile">
-            <summary>
-              <span>{initials || 'PB'}</span>
-              {email.split('@')[0]}
-            </summary>
-            <div className="account-popover">
-              <strong>{email}</strong>
-              <button
-                className="button button--secondary"
-                disabled={isSigningOut}
-                type="button"
-                onClick={() => void handleSignOut()}
-              >
-                {isSigningOut ? 'Signing out...' : 'Sign out'}
-              </button>
-            </div>
-          </details>
-        </header>
+  const statusPresentation = buildAuthenticatedStatus({
+    activeView,
+    budgetKeyboardInteraction,
+    commandQuery,
+    insightsInteraction,
+    isCommandPaletteOpen,
+    isTransactionSearchOpen,
+    settingsInteraction,
+    statusContext,
+    transactionControlDialog,
+    transactionSearchQuery,
+  })
 
-        <aside className="sidebar" aria-label="Application navigation">
-          <nav className="main-nav">
-            {navigationItems.map((item) => (
-              <button
-                aria-current={activeView === item.view ? 'page' : undefined}
-                className={`nav-item${
-                  activeView === item.view ? ' is-active' : ''
-                }${
-                  focusedSemanticId === `nav-${item.view}` ? ' is-focused' : ''
-                }`}
-                data-semantic-id={`nav-${item.view}`}
-                data-semantic-region="sidebar"
-                data-status-action="select"
-                data-status-label={`budget / ${item.label.toLocaleLowerCase()}`}
-                key={item.view}
-                type="button"
-                onClick={() => navigateToView(item.view)}
-              >
-                <span>{item.label}</span>
-                {item.view === 'transactions' && (
-                  <strong>{uncategorizedTransactionCount}</strong>
-                )}
-              </button>
-            ))}
-          </nav>
-        </aside>
+  return (
+    <div
+      className={`authenticated-app terminal-app${
+        isCommandPaletteOpen ? '' : ' command-closed'
+      }${activeView === 'budgets' ? '' : ' screen-app'} hud-app`}
+      ref={workspaceShellRef}
+    >
+      <AuthenticatedTitlebar
+        appName={appName}
+        email={email}
+        initials={initials}
+        onOpenAccount={openAccountSettings}
+        onOpenBudget={() => navigateToView('budgets')}
+      />
 
-        <main className="workspace">
-          {signOutError && (
-            <p className="form-message form-message--error" role="alert">
-              {signOutError}
-            </p>
-          )}
+      <AuthenticatedSidebar
+        activeView={activeView}
+        focusedSemanticId={focusedSemanticId}
+        uncategorizedTransactionCount={uncategorizedTransactionCount}
+        onNavigate={navigateToView}
+      />
+
+      <main className="workspace">
+        {signOutError && activeView !== 'settings' && (
+          <p className="form-message form-message--error" role="alert">
+            {signOutError}
+          </p>
+        )}
+        {activeView === 'budgets' && (
           <BudgetPanel
             activityRevision={budgetActivityRevision}
             amountEditRequest={amountEditRequest}
@@ -905,248 +1210,6 @@ function AuthenticatedShell({
             onAmountEditorOpenChange={setIsAmountEditorOpen}
             onMonthChange={setSelectedMonth}
           />
-        </main>
-
-        {isCommandPaletteOpen && (
-          <aside className="command-panel" aria-label="Command">
-            <div className="command-panel__head">
-              <h2>Command</h2>
-            </div>
-            <label className="command-input">
-              <span aria-hidden="true">:</span>
-              <input
-                ref={commandInputRef}
-                aria-label="Command"
-                value={commandQuery}
-                onChange={(event) => setCommandQuery(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Escape') {
-                    event.preventDefault()
-                    closeCommandPalette()
-                  }
-                }}
-              />
-            </label>
-            <ul className="command-list">
-              <li className="is-highlighted">
-                <button
-                  data-status-action="open"
-                  data-status-label="command / transactions"
-                  type="button"
-                  onClick={() => navigateToView('transactions')}
-                >
-                  Go to transactions
-                </button>
-              </li>
-              <li>
-                <button
-                  data-status-action="open"
-                  data-status-label="command / reports"
-                  type="button"
-                  onClick={() => navigateToView('insights')}
-                >
-                  Go to reports
-                </button>
-              </li>
-              <li>
-                <button
-                  data-status-action="focus"
-                  data-status-label="command / category"
-                  type="button"
-                  onClick={() => {
-                    closeCommandPalette()
-                    window.requestAnimationFrame(() => {
-                      const firstBudgetEntry = document.querySelector<HTMLElement>(
-                        '.budget-table [data-semantic-kind="budget-row"], .budget-table [data-semantic-kind="budget-subsection"]',
-                      )
-                      const categoryTarget =
-                        firstBudgetEntry ?? document.getElementById('budget-heading')
-                      if (categoryTarget) {
-                        focusWithScrollComfort(categoryTarget)
-                      }
-                    })
-                  }}
-                >
-                  Go to category
-                </button>
-              </li>
-            </ul>
-          </aside>
-        )}
-
-        <footer className="statusline">
-          {budgetKeyboardInteraction ? (
-            <>
-              <div>
-                <strong>
-                  {budgetKeyboardInteraction.mode === 'confirm-delete'
-                    ? 'CONFIRM'
-                    : budgetKeyboardInteraction.mode === 'choose-create'
-                      ? 'CREATE'
-                      : budgetKeyboardInteraction.mode === 'name-entry' ||
-                          budgetKeyboardInteraction.mode === 'choose-category'
-                        ? 'NAME'
-                          : budgetKeyboardInteraction.mode === 'rename-entry'
-                            ? 'RENAME'
-                            : budgetKeyboardInteraction.mode === 'saving-move'
-                              ? 'SAVING'
-                          : 'MOVE'}
-                </strong>
-                <span>{budgetKeyboardInteraction.label}</span>
-              </div>
-              <div>
-                {(budgetKeyboardInteraction.mode === 'confirm-delete' ||
-                  budgetKeyboardInteraction.mode === 'choose-create') && (
-                  <>
-                    <span><kbd>j</kbd><kbd>k</kbd> choose</span>
-                    <span><kbd>Enter</kbd> confirm</span>
-                  </>
-                )}
-                {(budgetKeyboardInteraction.mode === 'name-entry' ||
-                  budgetKeyboardInteraction.mode === 'rename-entry') && (
-                  <span><kbd>Enter</kbd> save</span>
-                )}
-                {budgetKeyboardInteraction.mode === 'choose-category' && (
-                  <>
-                    <span><kbd>Ctrl+N</kbd><kbd>Ctrl+P</kbd> choose</span>
-                    <span><kbd>Enter</kbd> select</span>
-                  </>
-                )}
-                {budgetKeyboardInteraction.mode === 'moving' && (
-                  <>
-                    <span><kbd>j</kbd><kbd>k</kbd> position</span>
-                    <span><kbd>p</kbd> place</span>
-                  </>
-                )}
-                {budgetKeyboardInteraction.mode === 'saving-move' && (
-                  <span>Saving placement...</span>
-                )}
-                {budgetKeyboardInteraction.mode !== 'saving-move' && (
-                  <span><kbd>Esc</kbd> cancel</span>
-                )}
-              </div>
-            </>
-          ) : (
-            <>
-              <div>
-                <strong>NAVIGATE</strong>
-                <span>{statusContext.label}</span>
-                <span>focus {focusedWorkspaceControl} of {workspaceControlCount}</span>
-              </div>
-              <div>
-                {statusContext.action !== 'amount' &&
-                  statusContext.action !== 'subsection' && (
-                    <span><kbd>Enter</kbd> {statusContext.action}</span>
-                  )}
-                {statusContext.action === 'amount' && (
-                  <>
-                    <span><kbd>a</kbd> amount</span>
-                    <span><kbd>t</kbd> direction</span>
-                  </>
-                )}
-                {(statusContext.action === 'amount' ||
-                  statusContext.action === 'subsection') && (
-                  <>
-                    <span><kbd>n</kbd> new</span>
-                    <span><kbd>r</kbd> rename</span>
-                    <span><kbd>d</kbd> delete</span>
-                    <span><kbd>x</kbd> move</span>
-                  </>
-                )}
-                <span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span>
-                <span><kbd>:</kbd> command</span>
-              </div>
-            </>
-          )}
-        </footer>
-      </div>
-    )
-  }
-
-  return (
-    <div
-      className={`authenticated-app terminal-app command-closed screen-app theme-${theme}`}
-      ref={workspaceShellRef}
-    >
-      <header className="titlebar">
-        <button
-          className="brand"
-          type="button"
-          onClick={() => navigateToView('budgets')}
-        >
-          <span className="brand-mark" aria-hidden="true">pb</span>
-          <span>{appName.toLocaleLowerCase().replace(/\s+/g, '-')}</span>
-        </button>
-        <p>{formatMonth(selectedMonth)} · Personal budget</p>
-        <div className="theme-switcher" role="group" aria-label="Theme">
-          <input
-            checked={theme === 'dark'}
-            id="theme-dark"
-            name="theme"
-            type="radio"
-            onChange={() => setTheme('dark')}
-          />
-          <label htmlFor="theme-dark">Dark</label>
-          <input
-            checked={theme === 'light'}
-            id="theme-light"
-            name="theme"
-            type="radio"
-            onChange={() => setTheme('light')}
-          />
-          <label htmlFor="theme-light">Light</label>
-        </div>
-        <details className="profile">
-          <summary>
-            <span>{initials || 'PB'}</span>
-            {email.split('@')[0]}
-          </summary>
-          <div className="account-popover">
-            <strong>{email}</strong>
-            <button
-              className="terminal-button"
-              disabled={isSigningOut}
-              type="button"
-              onClick={() => void handleSignOut()}
-            >
-              {isSigningOut ? 'Signing out...' : 'Sign out'}
-            </button>
-          </div>
-        </details>
-      </header>
-
-      <aside className="sidebar" aria-label="Application navigation">
-        <nav className="main-nav">
-          {navigationItems.map((item) => (
-            <button
-              aria-current={activeView === item.view ? 'page' : undefined}
-              className={`nav-item${
-                activeView === item.view ? ' is-active' : ''
-              }${
-                focusedSemanticId === `nav-${item.view}` ? ' is-focused' : ''
-              }`}
-              data-semantic-id={`nav-${item.view}`}
-              data-semantic-region="sidebar"
-              data-status-action="select"
-              data-status-label={`${item.label.toLocaleLowerCase()} / navigation`}
-              key={item.view}
-              type="button"
-              onClick={() => navigateToView(item.view)}
-            >
-              <span>{item.label}</span>
-              {item.view === 'transactions' && (
-                <strong>{uncategorizedTransactionCount}</strong>
-              )}
-            </button>
-          ))}
-        </nav>
-      </aside>
-
-      <main className="workspace">
-        {signOutError && (
-          <p className="form-message form-message--error" role="alert">
-            {signOutError}
-          </p>
         )}
         {activeView === 'transactions' && (
           <TransactionsPanel
@@ -1169,87 +1232,82 @@ function AuthenticatedShell({
             onMonthChange={setSelectedMonth}
           />
         )}
+        {activeView === 'settings' && (
+          <SettingsPanel
+            email={email}
+            focusRequest={settingsFocusRequest}
+            isSigningOut={isSigningOut}
+            signOutError={signOutError}
+            themePreference={themePreference}
+            onActivityChanged={handleTransactionsChanged}
+            onInteractionChange={setSettingsInteraction}
+            onSignOut={() => void handleSignOut()}
+            onThemePreferenceChange={setThemePreference}
+          />
+        )}
       </main>
 
-      <footer className="statusline">
-        <div>
-          <strong>
-            {activeView === 'transactions'
-              ? isTransactionSearchOpen
-                ? 'SEARCH'
-                : transactionControlDialog
-                  ? transactionControlDialog.toLocaleUpperCase()
-                : 'EDIT'
-              : insightsInteraction?.mode === 'drilldown'
-                ? 'DRILLDOWN'
-                : insightsInteraction?.mode === 'transactions'
-                  ? 'TRANSACTIONS'
-                  : 'REPORT'}
-          </strong>
-          <span>
-            {activeView === 'transactions'
-              ? isTransactionSearchOpen
-                ? transactionSearchQuery || 'search'
-                : transactionControlDialog
-                  ? `transactions / ${transactionControlDialog}`
-                : 'transaction / category'
-              : insightsInteraction
-                ? statusContext.label
-                : `${formatMonth(selectedMonth)} / all accounts`}
-          </span>
-        </div>
-        <div>
-          {activeView === 'transactions' ? (
-            isTransactionSearchOpen ? (
-              <>
-                <span><kbd>esc</kbd> clear and return</span>
-                <span><kbd>enter</kbd> focus first result</span>
-              </>
-            ) : transactionControlDialog ? (
-              <>
-                <span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span>
-                {transactionControlDialog === 'filter' && (
-                  <span><kbd>Space</kbd> toggle</span>
-                )}
-                <span><kbd>Enter</kbd> activate</span>
-                <span><kbd>Esc</kbd> close</span>
-              </>
-            ) : (
-              <>
-                <span><kbd>/</kbd> search</span>
-                <span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span>
-                <span><kbd>c</kbd> category</span>
-                <span><kbd>t</kbd> status</span>
-                <span><kbd>enter</kbd> select</span>
-                <span><kbd>esc</kbd> cancel</span>
-              </>
-            )
-          ) : insightsInteraction?.mode === 'drilldown' ? (
-            <>
-              {(insightsInteraction.canOpenTransactions ||
-                statusContext.action === 'close') && (
-                <span><kbd>Enter</kbd> {statusContext.action}</span>
-              )}
-              <span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span>
-              <span><kbd>Esc</kbd> close</span>
-            </>
-          ) : insightsInteraction?.mode === 'transactions' ? (
-            <>
-              <span><kbd>j</kbd><kbd>k</kbd> focus</span>
-              <span>
-                <kbd>Esc</kbd> {insightsInteraction.hasParent ? 'back' : 'close'}
-              </span>
-            </>
-          ) : (
-            <>
-              {statusContext.action !== 'view' && (
-                <span><kbd>Enter</kbd> {statusContext.action}</span>
-              )}
-              <span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span>
-            </>
-          )}
-        </div>
-      </footer>
+      {activeView === 'budgets' && isCommandPaletteOpen && (
+        <aside className="command-panel" aria-label="Command">
+          <div className="command-panel__head">
+            <h2>Command</h2>
+          </div>
+          <label className="command-input">
+            <span aria-hidden="true">:</span>
+            <input
+              ref={commandInputRef}
+              aria-label="Command"
+              value={commandQuery}
+              onChange={(event) => setCommandQuery(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') {
+                  event.preventDefault()
+                  closeCommandPalette()
+                }
+              }}
+            />
+          </label>
+          <ul className="command-list">
+            <li className="is-highlighted">
+              <button type="button" onClick={() => navigateToView('transactions')}>
+                Go to transactions
+              </button>
+            </li>
+            <li>
+              <button type="button" onClick={() => navigateToView('insights')}>
+                Go to reports
+              </button>
+            </li>
+            <li>
+              <button type="button" onClick={() => navigateToView('settings')}>
+                Go to settings
+              </button>
+            </li>
+            <li>
+              <button
+                type="button"
+                onClick={() => {
+                  closeCommandPalette()
+                  window.requestAnimationFrame(() => {
+                    const firstBudgetEntry = document.querySelector<HTMLElement>(
+                      '.budget-table [data-semantic-kind="budget-row"], .budget-table [data-semantic-kind="budget-subsection"]',
+                    )
+                    const categoryTarget =
+                      firstBudgetEntry ?? document.getElementById('budget-heading')
+                    if (categoryTarget) {
+                      focusWithScrollComfort(categoryTarget)
+                    }
+                  })
+                }}
+              >
+                Go to category
+              </button>
+            </li>
+          </ul>
+        </aside>
+      )}
+
+      <Statusline presentation={statusPresentation} />
     </div>
   )
 }

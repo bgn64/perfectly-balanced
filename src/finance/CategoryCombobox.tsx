@@ -210,8 +210,8 @@ export function CategoryCombobox({
         }
         data-semantic-kind={semanticContext ? 'category-picker-search' : undefined}
         data-semantic-region={semanticContext ? 'workspace' : undefined}
-        data-semantic-status-action={semanticContext?.inputAction}
-        data-semantic-status-label={semanticContext?.statusLabel}
+        data-status-action={semanticContext?.inputAction}
+        data-status-label={semanticContext?.statusLabel}
         disabled={disabled || isBusy}
         maxLength={100}
         placeholder={placeholder}
@@ -290,14 +290,14 @@ export function CategoryCombobox({
                   : undefined
               }
               data-semantic-region={semanticContext ? 'workspace' : undefined}
-              data-semantic-status-action={
+              data-status-action={
                 semanticContext
                   ? option.kind === 'category'
                     ? semanticContext.optionAction
                     : semanticContext.createAction
                   : undefined
               }
-              data-semantic-status-label={
+              data-status-label={
                 semanticContext
                   ? `${semanticContext.statusLabel}: ${
                       option.kind === 'category'
