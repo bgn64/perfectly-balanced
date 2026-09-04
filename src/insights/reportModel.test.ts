@@ -153,6 +153,32 @@ describe('buildReportModel', () => {
     ).toBe(false)
   })
 
+  it('classifies categorized activity by budget direction instead of sign', () => {
+    const model = buildReportModel({
+      mode: 'categorized',
+      allocations,
+      subsections,
+      categories,
+      transactions: [
+        transaction('spending-inflow', 125, 'Grocery refund'),
+        transaction('income-outflow', -75, 'Payroll correction'),
+      ],
+      splits: [
+        split('spending-inflow-split', 'spending-inflow', 'groceries', 125),
+        split('income-outflow-split', 'income-outflow', 'salary', -75),
+      ],
+    })
+
+    expect(model.spending).toMatchObject({
+      total: 125,
+      slices: [{ label: 'Food', value: 125 }],
+    })
+    expect(model.income).toMatchObject({
+      total: 75,
+      slices: [{ label: 'Employment', value: 75 }],
+    })
+  })
+
   it('ranks spending variance and excludes ignored activity', () => {
     const model = report('all')
 

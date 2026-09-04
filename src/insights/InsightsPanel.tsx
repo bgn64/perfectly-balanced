@@ -905,30 +905,38 @@ function VarianceRanking({
           No {direction}-budget spending items.
         </p>
       ) : (
-        <ol className="reports-v2-variance-list">
-          {items.map((item) => (
-            <li
-              data-semantic-id={`report-variance-${direction}-${item.id}`}
-              data-semantic-kind="report-variance"
-              data-semantic-region="workspace"
-              data-status-action="view"
-              data-status-label={`reports / ${direction} budget / ${item.name.toLocaleLowerCase()}`}
-              key={item.id}
-              tabIndex={0}
-            >
-              <strong>{item.name}</strong>
-              <span>{item.groupName}</span>
-              <small>
-                {formatDisplayMoney(item.actual)} spent /{' '}
-                {formatDisplayMoney(item.planned)} planned
-              </small>
-              <strong className={isOver ? 'is-over' : 'is-under'}>
-                {isOver ? '+' : ''}
-                {formatDisplayMoney(Math.abs(item.variance))}
-              </strong>
-            </li>
-          ))}
-        </ol>
+        <>
+          <div aria-hidden="true" className="reports-v2-variance-columns">
+            <span>Item</span>
+            <span>Section</span>
+            <span>Activity</span>
+            <span>Variance</span>
+          </div>
+          <ol className="reports-v2-variance-list">
+            {items.map((item) => (
+              <li
+                data-semantic-id={`report-variance-${direction}-${item.id}`}
+                data-semantic-kind="report-variance"
+                data-semantic-region="workspace"
+                data-status-action="view"
+                data-status-label={`reports / ${direction} budget / ${item.name.toLocaleLowerCase()}`}
+                key={item.id}
+                tabIndex={0}
+              >
+                <strong>{item.name}</strong>
+                <span>{item.groupName}</span>
+                <small>
+                  {formatDisplayMoney(item.actual)} spent /{' '}
+                  {formatDisplayMoney(item.planned)} planned
+                </small>
+                <strong className={isOver ? 'is-over' : 'is-under'}>
+                  {isOver ? '+' : ''}
+                  {formatDisplayMoney(Math.abs(item.variance))}
+                </strong>
+              </li>
+            ))}
+          </ol>
+        </>
       )}
     </section>
   )
