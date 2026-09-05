@@ -103,6 +103,27 @@ function report(mode: ReportMode) {
   })
 }
 
+function representedAmounts(model: ReturnType<typeof buildReportModel>) {
+  const amounts = new Map<string, number>()
+  for (const chart of [model.income, model.spending]) {
+    const multiplier = chart.direction === 'income' ? 1 : -1
+    for (const slice of chart.slices) {
+      for (const contribution of slice.transactions) {
+        amounts.set(
+          contribution.transactionId,
+          (amounts.get(contribution.transactionId) ?? 0) +
+            contribution.amount * multiplier,
+        )
+      }
+    }
+  }
+  return Object.fromEntries(
+    Array.from(amounts.entries()).sort(([left], [right]) =>
+      left.localeCompare(right),
+    ),
+  )
+}
+
 describe('buildReportModel', () => {
   it('includes categorized and uncategorized activity in All mode', () => {
     const model = report('all')
@@ -153,29 +174,83 @@ describe('buildReportModel', () => {
     ).toBe(false)
   })
 
-  it('classifies categorized activity by budget direction instead of sign', () => {
+  it('represents every included transaction in All and only categorized transactions in Categorized', () => {
+    expect(representedAmounts(report('all'))).toEqual({
+      'books-transaction': -80,
+      'gift-transaction': 50,
+      'grocery-transaction': -450,
+      'parking-transaction': -20,
+      'salary-transaction': 1200,
+    })
+    expect(representedAmounts(report('categorized'))).toEqual({
+      'books-transaction': -80,
+      'grocery-transaction': -450,
+      'salary-transaction': 1200,
+    })
+  })
+
+  it('places categorized activity by budget direction and nets by sign', () => {
     const model = buildReportModel({
       mode: 'categorized',
       allocations,
       subsections,
       categories,
       transactions: [
+        transaction('spending-outflow', -200, 'Groceries'),
         transaction('spending-inflow', 125, 'Grocery refund'),
+        transaction('income-inflow', 200, 'Employer'),
         transaction('income-outflow', -75, 'Payroll correction'),
       ],
       splits: [
+        split(
+          'spending-outflow-split',
+          'spending-outflow',
+          'groceries',
+          -200,
+        ),
         split('spending-inflow-split', 'spending-inflow', 'groceries', 125),
+        split('income-inflow-split', 'income-inflow', 'salary', 200),
         split('income-outflow-split', 'income-outflow', 'salary', -75),
       ],
     })
 
     expect(model.spending).toMatchObject({
-      total: 125,
-      slices: [{ label: 'Food', value: 125 }],
+      total: 75,
+      slices: [
+        {
+          label: 'Food',
+          value: 75,
+          transactions: expect.arrayContaining([
+            expect.objectContaining({
+              transactionId: 'spending-outflow',
+              amount: 200,
+            }),
+            expect.objectContaining({
+              transactionId: 'spending-inflow',
+              amount: -125,
+            }),
+          ]),
+        },
+      ],
     })
     expect(model.income).toMatchObject({
-      total: 75,
-      slices: [{ label: 'Employment', value: 75 }],
+      total: 125,
+      slices: [
+        {
+          label: 'Employment',
+          value: 125,
+          transactions: expect.arrayContaining([
+            expect.objectContaining({
+              transactionId: 'income-inflow',
+              amount: 200,
+            }),
+            expect.objectContaining({
+              transactionId: 'income-outflow',
+              amount: -75,
+            }),
+          ]),
+        },
+      ],
     })
   })
 

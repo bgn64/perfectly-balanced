@@ -287,7 +287,7 @@ function buildActualSlices({
       `category:${split.category_id}`,
       allocation?.category_name ?? category?.name ?? 'Unknown category',
     )
-    const amount = Math.abs(split.amount)
+    const amount = direction === 'income' ? split.amount : -split.amount
     const contribution: ReportTransactionContribution = {
       id: `${split.id}:${direction}`,
       transactionId: transaction.id,
