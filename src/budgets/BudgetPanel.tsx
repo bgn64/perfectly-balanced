@@ -1380,7 +1380,7 @@ export function BudgetPanel({
     0,
   )
   const spent = spendingAllocations.reduce(
-    (sum, allocation) => sum + Math.max(0, -allocation.actual_amount),
+    (sum, allocation) => sum - allocation.actual_amount,
     0,
   )
   const allocatedCategoryIds = allocations.map(
@@ -1972,8 +1972,8 @@ function BudgetAllocationRow({
   const isBusy = busyId !== null
   const activityAmount =
     allocation.direction === 'spending'
-      ? Math.max(0, -allocation.actual_amount)
-      : Math.max(0, allocation.actual_amount)
+      ? -allocation.actual_amount
+      : allocation.actual_amount
   const remaining = plannedAmount - activityAmount
   const isOverPlan = activityAmount > plannedAmount
   const isIncomeOverPlan = allocation.direction === 'income' && isOverPlan

@@ -269,4 +269,28 @@ describe('buildReportModel', () => {
     expect(model.underBudget).toEqual([])
     expect(model.spending.total).not.toBe(649)
   })
+
+  it('preserves net-negative spending activity in variance', () => {
+    const model = buildReportModel({
+      mode: 'all',
+      allocations: allocations.map((allocation) =>
+        allocation.category_id === 'groceries'
+          ? { ...allocation, actual_amount: 100 }
+          : allocation,
+      ),
+      subsections,
+      categories,
+      transactions,
+      splits,
+    })
+
+    expect(model.underBudget).toContainEqual({
+      id: 'groceries-allocation',
+      name: 'Groceries',
+      groupName: 'Food',
+      planned: 400,
+      actual: -100,
+      variance: -500,
+    })
+  })
 })
