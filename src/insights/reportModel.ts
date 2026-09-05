@@ -287,7 +287,7 @@ function buildActualSlices({
       `category:${split.category_id}`,
       allocation?.category_name ?? category?.name ?? 'Unknown category',
     )
-    const amount = Math.abs(split.amount)
+    const amount = direction === 'income' ? split.amount : -split.amount
     const contribution: ReportTransactionContribution = {
       id: `${split.id}:${direction}`,
       transactionId: transaction.id,
@@ -424,7 +424,7 @@ export function buildReportModel(input: ReportModelInput): ReportModel {
     .filter((allocation) => allocation.direction === 'spending')
     .map<ReportVarianceItem>((allocation) => {
       const planned = Math.abs(allocation.budgeted_amount)
-      const actual = Math.max(0, -allocation.actual_amount)
+      const actual = -allocation.actual_amount
       return {
         id: allocation.allocation_id,
         name: allocation.category_name,
