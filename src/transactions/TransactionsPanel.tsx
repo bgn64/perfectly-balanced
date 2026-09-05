@@ -24,8 +24,10 @@ import {
 } from '../finance/utils.ts'
 import { getSupabaseClient } from '../lib/supabase.ts'
 import { focusWithScrollComfort } from '../navigation/focus.ts'
+import { TransactionDetailModal } from './TransactionDetailModal.tsx'
 
 interface TransactionsData {
+  budgetMonths: string[]
   transactions: Transaction[]
   categories: Category[]
   splits: TransactionSplit[]
@@ -134,13 +136,13 @@ interface PendingResultFocus {
 
 async function queryTransactions(): Promise<TransactionsData> {
   const client = getSupabaseClient()
-  const [transactions, categoriesResult, splits] =
+  const [transactions, categoriesResult, splits, budgetsResult] =
     await Promise.all([
       collectPages((afterId, limit) => {
         let query = client
           .from('transactions')
           .select(
-            'id, plaid_item_id, transaction_date, merchant_name, transaction_name, amount, currency_code, is_pending, is_ignored, account_name',
+            'id, plaid_item_id, source_transaction_id, transaction_date, budget_month_override, effective_budget_month, merchant_name, transaction_name, amount, currency_code, is_pending, is_ignored, account_name, imported_at, plaid_items(institution_name)',
           )
           .order('id')
           .limit(limit)
@@ -161,17 +163,28 @@ async function queryTransactions(): Promise<TransactionsData> {
         }
         return query
       }),
+      client.from('budgets').select('month').order('month', { ascending: false }),
     ])
 
   if (categoriesResult.error) {
     throw new Error(categoriesResult.error.message)
   }
+  if (budgetsResult.error) {
+    throw new Error(budgetsResult.error.message)
+  }
 
   return {
-    transactions: transactions.map((transaction) => ({
-      ...transaction,
-      amount: Number(transaction.amount),
-    })),
+    budgetMonths: (budgetsResult.data ?? []).map((budget) => budget.month),
+    transactions: transactions.map((transaction) => {
+      const { plaid_items: plaidItem, ...fields } = transaction
+      return {
+        ...fields,
+        amount: Number(transaction.amount),
+        institution_name:
+          (Array.isArray(plaidItem) ? plaidItem[0] : plaidItem)
+            ?.institution_name ?? null,
+      }
+    }),
     categories: categoriesResult.data ?? [],
     splits: splits.map((split) => ({
       ...split,
@@ -203,6 +216,7 @@ export function TransactionsPanel({
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [splits, setSplits] = useState<TransactionSplit[]>([])
+  const [budgetMonths, setBudgetMonths] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [dataError, setDataError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
@@ -222,6 +236,10 @@ export function TransactionsPanel({
   const [selectedTransactionId, setSelectedTransactionId] = useState<
     string | null
   >(null)
+  const [detailTransaction, setDetailTransaction] = useState<{
+    focus: 'category' | 'month'
+    id: string
+  } | null>(null)
   const [editingTransactionId, setEditingTransactionId] = useState<
     string | null
   >(null)
@@ -252,6 +270,7 @@ export function TransactionsPanel({
       setTransactions(data.transactions)
       setCategories(data.categories)
       setSplits(data.splits)
+      setBudgetMonths(data.budgetMonths)
       if (!selectedTransactionIdRef.current && data.transactions[0]) {
         selectedTransactionIdRef.current = data.transactions[0].id
         setSelectedTransactionId(data.transactions[0].id)
@@ -489,9 +508,10 @@ export function TransactionsPanel({
     return items
   }, [displayedPage, totalPages])
 
-  const selectedTransaction =
-    transactions.find((transaction) => transaction.id === selectedTransactionId) ??
-    null
+  const detailedTransaction = detailTransaction
+    ? transactions.find((transaction) => transaction.id === detailTransaction.id) ??
+      null
+    : null
 
   const selectTransaction = useCallback((transaction: Transaction) => {
     selectedTransactionIdRef.current = transaction.id
@@ -501,6 +521,14 @@ export function TransactionsPanel({
       transaction.currency_code === 'USD' ? null : nonUsdCategoryMessage,
     )
   }, [])
+
+  const openTransactionDetail = useCallback(
+    (transaction: Transaction, focus: 'category' | 'month' = 'month') => {
+      selectTransaction(transaction)
+      setDetailTransaction({ focus, id: transaction.id })
+    },
+    [selectTransaction],
+  )
 
   const focusTransaction = useCallback((transactionId: string) => {
     window.requestAnimationFrame(() => {
@@ -671,12 +699,10 @@ export function TransactionsPanel({
         setCategoryNotice(nonUsdCategoryMessage)
         return
       }
-      if (editingTransactionId !== transaction.id) {
-        setEditingTransactionId(transaction.id)
-      }
+      setEditingTransactionId(transaction.id)
       focusPickerSearch()
     },
-    [editingTransactionId, focusPickerSearch, selectTransaction],
+    [focusPickerSearch, selectTransaction],
   )
 
   const processIgnoredUpdates = useCallback(async () => {
@@ -795,6 +821,9 @@ export function TransactionsPanel({
       if (controlDialog) {
         return
       }
+      if (detailTransaction) {
+        return
+      }
 
       const key = event.key.toLocaleLowerCase()
       if (event.key === 'Escape' && isSearchOpen) {
@@ -820,21 +849,32 @@ export function TransactionsPanel({
         }
       }
 
-      const focusedTransactionId =
+      const focusedTransactionRow =
         event.target instanceof HTMLElement
           ? event.target.closest<HTMLElement>(
               '[data-semantic-kind="transaction-row"]',
-            )?.dataset.transactionId
+            )
           : null
+      const focusedTransactionId = focusedTransactionRow?.dataset.transactionId
       const actionTransaction = focusedTransactionId
         ? transactions.find(
             (transaction) => transaction.id === focusedTransactionId,
           ) ?? null
-        : selectedTransaction
+        : null
 
       if (key === 'c' && !event.ctrlKey && !event.shiftKey && actionTransaction) {
         event.preventDefault()
         openCategoryPicker(actionTransaction)
+        return
+      }
+
+      if (
+        event.key === 'Enter' &&
+        actionTransaction &&
+        event.target === focusedTransactionRow
+      ) {
+        event.preventDefault()
+        openTransactionDetail(actionTransaction)
         return
       }
 
@@ -850,12 +890,13 @@ export function TransactionsPanel({
   }, [
     closeSearch,
     controlDialog,
+    detailTransaction,
     isSearchOpen,
-    openSearch,
     openCategoryPicker,
+    openSearch,
+    openTransactionDetail,
     removeTransactionFilter,
     selectTransaction,
-    selectedTransaction,
     toggleTransactionIgnored,
     transactionFilters,
     transactions,
@@ -1219,7 +1260,8 @@ export function TransactionsPanel({
                   categoriesById.get(split.category_id)?.name ?? 'Unknown category',
               )
               const isEditing = transaction.id === editingTransactionId
-              const isSelected = isEditing
+              const isSelected =
+                isEditing || transaction.id === detailTransaction?.id
               const isUsd = transaction.currency_code === 'USD'
               return (
                 <div
@@ -1251,7 +1293,7 @@ export function TransactionsPanel({
                   }}
                   onClick={(event) => {
                     if (event.target === event.currentTarget) {
-                      selectTransaction(transaction)
+                      openTransactionDetail(transaction)
                     }
                   }}
                 >
@@ -1259,7 +1301,7 @@ export function TransactionsPanel({
                     className="transaction-row-simple__select"
                     data-transaction-id={transaction.id}
                     type="button"
-                    onClick={() => selectTransaction(transaction)}
+                    onClick={() => openTransactionDetail(transaction)}
                   >
                     <span className="transaction-row-simple__name">
                       <strong>{transactionDescription(transaction)}</strong>
@@ -1306,14 +1348,14 @@ export function TransactionsPanel({
                       <button
                         aria-label={
                           isUsd
-                            ? `Choose a category for ${transactionDescription(transaction)}`
+                            ? `Quick categorize ${transactionDescription(transaction)}`
                             : nonUsdCategoryMessage
                         }
                         className={`category-chip${
                           transactionSplits.length === 0 ? ' empty' : ''
                         }`}
                         data-status-action={
-                          isUsd ? 'edit categories' : 'category unavailable'
+                          isUsd ? 'quick categorize' : 'category unavailable'
                         }
                         data-status-label={transactionDescription(transaction)}
                         data-transaction-id={transaction.id}
@@ -1610,6 +1652,26 @@ export function TransactionsPanel({
             )}
           </section>
         </div>
+      )}
+      {detailedTransaction && detailTransaction && (
+        <TransactionDetailModal
+          budgetMonths={budgetMonths}
+          categories={categories}
+          createCategory={createCategory}
+          initialFocus={detailTransaction.focus}
+          splits={splitsByTransaction.get(detailedTransaction.id) ?? []}
+          transaction={detailedTransaction}
+          onClose={() => setDetailTransaction(null)}
+          onSaved={async () => {
+            const didRefresh = await refreshTransactions()
+            if (!didRefresh) {
+              throw new Error(
+                'The transaction was saved, but the queue could not be refreshed.',
+              )
+            }
+            onTransactionsChanged()
+          }}
+        />
       )}
     </section>
   )

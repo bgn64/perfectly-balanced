@@ -389,6 +389,39 @@
   outline: 1px solid var(--theme-accent);
 }
 
+.split-editor-row--navigate {
+  cursor: pointer;
+}
+
+.split-editor-row--navigate:hover {
+  border-color: var(--theme-accent);
+  background: var(--theme-selection);
+}
+
+.split-category-value,
+.split-amount-value {
+  color: var(--theme-text);
+  font-size: 0.68rem;
+}
+
+.split-amount-value {
+  justify-self: end;
+}
+
+.split-row-marker {
+  justify-self: center;
+  color: var(--theme-text-muted);
+}
+
+.split-editor-row--editing {
+  position: relative;
+  z-index: 3;
+}
+
+.split-editor-row--editing .combo-menu {
+  z-index: 4;
+}
+
 .split-category,
 .split-remove,
 .transaction-detail-add {

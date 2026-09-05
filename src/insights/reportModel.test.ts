@@ -67,7 +67,10 @@ function transaction(
   return {
     id,
     plaid_item_id: null,
+    source_transaction_id: `source-${id}`,
     transaction_date: '2026-09-15',
+    budget_month_override: null,
+    effective_budget_month: '2026-09-01',
     merchant_name: merchantName,
     transaction_name: null,
     amount,
@@ -75,6 +78,8 @@ function transaction(
     is_pending: false,
     is_ignored: false,
     account_name: 'Checking',
+    institution_name: null,
+    imported_at: '2026-09-16T00:00:00Z',
   }
 }
 

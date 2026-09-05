@@ -52,7 +52,7 @@ export function CategoryCombobox({
   const containerRef = useRef<HTMLDivElement>(null)
   const optionIdPrefix = useId()
   const [query, setQuery] = useState(selectedCategory?.name ?? '')
-  const [isOpen, setIsOpen] = useState(false)
+  const [isOpen, setIsOpen] = useState(autoFocus)
   const [isBusy, setIsBusy] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [activeIndex, setActiveIndex] = useState(0)

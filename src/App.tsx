@@ -335,6 +335,29 @@ function buildAuthenticatedStatus({
     )
   }
 
+  if (statusContext.semanticKind === 'transaction-detail') {
+    const isSplitRow = statusContext.action === 'edit split'
+    return {
+      mode: isSplitRow ? 'SPLIT' : 'TRANSACTION',
+      label: statusContext.label,
+      shortcuts: isSplitRow
+        ? [
+            { keys: ['a'], label: 'amount' },
+            { keys: ['c'], label: 'category' },
+            { keys: ['d'], label: 'delete' },
+            { keys: ['j', 'k'], label: 'focus' },
+            { keys: ['Esc'], label: 'close' },
+          ]
+        : [
+            { keys: ['Enter'], label: statusContext.action },
+            { keys: ['m'], label: 'month' },
+            { keys: ['t'], label: 'status' },
+            { keys: ['h', 'j', 'k', 'l'], label: 'focus' },
+            { keys: ['Esc'], label: 'close' },
+          ],
+    }
+  }
+
   return buildNavigationStatus({
     view: activeView,
     action: statusContext.action,
@@ -760,9 +783,6 @@ function AuthenticatedShell({
     .toUpperCase()
   const focusWorkspaceControl = useCallback((control: HTMLElement) => {
     focusWithScrollComfort(control)
-    if (control.dataset.semanticKind === 'transaction-row') {
-      control.click()
-    }
   }, [])
   const navigateToView = useCallback((view: AppView) => {
     pendingViewFocusRef.current = view
@@ -864,14 +884,13 @@ function AuthenticatedShell({
     let animationFrame = 0
     const updateFocusStatus = () => {
       const activeElement = document.activeElement
+      if (!(activeElement instanceof HTMLElement) || !root.contains(activeElement)) {
+        return
+      }
       const activeControl =
-        activeElement instanceof HTMLElement
-          ? activeElement.closest<HTMLElement>('[data-status-label]')
-          : null
+        activeElement.closest<HTMLElement>('[data-status-label]')
       const activeSemanticNode =
-        activeElement instanceof HTMLElement
-          ? activeElement.closest<HTMLElement>('[data-semantic-id]')
-          : null
+        activeElement.closest<HTMLElement>('[data-semantic-id]')
       setFocusedSemanticId(activeSemanticNode?.dataset.semanticId ?? null)
       setStatusContext(
         getStatusContext(activeControl, activeElement, activeSemanticNode),
@@ -881,8 +900,12 @@ function AuthenticatedShell({
       window.cancelAnimationFrame(animationFrame)
       animationFrame = window.requestAnimationFrame(updateFocusStatus)
     }
+    const handleFocusIn = () => {
+      window.cancelAnimationFrame(animationFrame)
+      updateFocusStatus()
+    }
     const observer = new MutationObserver(scheduleFocusStatusUpdate)
-    root.addEventListener('focusin', scheduleFocusStatusUpdate)
+    document.addEventListener('focusin', handleFocusIn)
     observer.observe(root, {
       attributeFilter: ['aria-hidden', 'disabled', 'hidden'],
       attributes: true,
@@ -893,7 +916,7 @@ function AuthenticatedShell({
 
     return () => {
       window.cancelAnimationFrame(animationFrame)
-      root.removeEventListener('focusin', scheduleFocusStatusUpdate)
+      document.removeEventListener('focusin', handleFocusIn)
       observer.disconnect()
     }
   }, [activeView])

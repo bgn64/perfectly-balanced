@@ -18,7 +18,7 @@
       </span>
       <span class="review-nav__group">
         <a href="#detail-overview">Overview</a>
-        <a href="#detail-splits">Split editing</a>
+        <a href="#detail-split-navigation">Split rows</a>
         <a href="#detail-month">Month menu</a>
         <a href="#detail-reassigned">Reassigned</a>
         <a href="#detail-mobile">Mobile</a>
@@ -42,16 +42,16 @@
               <div class="transaction-detail-summary"><span class="terminal-pill terminal-pill--ok">Posted</span><span>Sep 29, 2026</span><span>Local Checking</span><span>Local Bank</span></div>
               <dl class="transaction-detail-grid transaction-detail-grid--plain"><div><dt>Bank description</dt><dd>NORTHSTAR MARKET 0412</dd></div><div><dt>Currency</dt><dd>USD</dd></div><div><dt>Source</dt><dd>Plaid import</dd></div><div><dt>Transaction ID</dt><dd>…8416</dd></div></dl>
               <div class="transaction-inline-fields"><label class="transaction-inline-field"><span><strong>Budget month</strong><small>Where it appears in Budget and Reports</small></span><button class="transaction-month-trigger" type="button">September 2026 <span>⌄</span></button></label><div class="transaction-inline-field"><span><strong>Inclusion</strong><small>Whether it contributes to totals</small></span><div class="transaction-inclusion-control" role="group" aria-label="Transaction inclusion"><button class="is-selected" type="button">Included</button><button type="button">Ignored</button></div></div></div>
-              <section class="transaction-detail-section transaction-allocation-section"><header><div><p class="eyebrow">Category allocation</p><h3>Split total across categories</h3></div><button class="transaction-detail-add" type="button">+ Add split</button></header><div class="transaction-split-editor"><div class="split-editor-head"><span>Category</span><span>Amount</span><span></span></div><div class="split-editor-row is-focused"><button class="split-category" type="button">Groceries</button><label><span class="sr-only">Groceries amount</span><input value="$300.00" /></label><button aria-label="Remove Groceries split" class="split-remove" type="button">×</button></div><div class="split-editor-row"><button class="split-category" type="button">Home supplies</button><label><span class="sr-only">Home supplies amount</span><input value="$125.80" /></label><button aria-label="Remove Home supplies split" class="split-remove" type="button">×</button></div><div class="split-editor-total"><span>Assigned</span><strong>$425.80</strong><span>Remaining</span><strong class="available">$0</strong></div></div></section>
+              <section class="transaction-detail-section transaction-allocation-section"><header><div><p class="eyebrow">Category allocation</p><h3>Split total across categories</h3></div><button class="transaction-detail-add" type="button">+ Add split</button></header><div class="transaction-split-editor"><div class="split-editor-head"><span>Category</span><span>Amount</span><span></span></div><div class="split-editor-row split-editor-row--navigate is-focused" tabindex="0"><span class="split-category-value">Groceries</span><strong class="split-amount-value">$300.00</strong><span class="split-row-marker">›</span></div><div class="split-editor-row split-editor-row--navigate" tabindex="0"><span class="split-category-value">Home supplies</span><strong class="split-amount-value">$125.80</strong><span class="split-row-marker">›</span></div><div class="split-editor-total"><span>Assigned</span><strong>$425.80</strong><span>Remaining</span><strong class="available">$0</strong></div></div></section>
             </div>
             <footer class="app-modal__foot"><span>Imported through Plaid · Bank date unchanged</span><div><button class="terminal-button" type="button">Close</button><button class="terminal-button terminal-button--primary" type="button">Save changes</button></div></footer>
           </section>
         </div>
-        <footer class="statusline"><div><strong>TRANSACTION</strong><span>Northstar Market / Groceries split</span></div><div><span><kbd>a</kbd> add split</span><span><kbd>d</kbd> remove</span><span><kbd>m</kbd> month</span><span><kbd>t</kbd> status</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span><span><kbd>Esc</kbd> close</span></div></footer>
+        <footer class="statusline"><div><strong>SPLIT</strong><span>Northstar Market / Groceries</span></div><div><span><kbd>a</kbd> amount</span><span><kbd>c</kbd> category</span><span><kbd>d</kbd> delete</span><span><kbd>j</kbd><kbd>k</kbd> focus</span><span><kbd>Esc</kbd> close</span></div></footer>
       </div>
     </section>
 
-    <section class="review-frame" id="detail-splits" aria-labelledby="detail-splits-title">
+    <section class="review-frame" id="detail-splits" aria-labelledby="detail-splits-title" hidden>
       <header class="review-frame__head"><div><p class="eyebrow">Inline edit state</p><h2 id="detail-splits-title">Edit category splits directly in transaction details</h2></div><p>The transaction modal does not change screens. Category and amount controls are always present, with inline totals and validation.</p></header>
       <div class="app-modal-preview">
         <section class="app-modal app-modal--transaction" aria-labelledby="split-editor-title" aria-modal="true" role="dialog">
@@ -60,6 +60,42 @@
           <footer class="app-modal__foot"><span>Unsaved changes</span><div><button class="terminal-button">Close</button><button class="terminal-button terminal-button--primary" disabled>Save changes</button></div></footer>
         </section>
         <footer class="statusline app-modal-preview__status"><div><strong>TRANSACTION</strong><span>Northstar Market / Groceries amount</span></div><div><span><kbd>Enter</kbd> apply</span><span><kbd>Esc</kbd> cancel edit</span></div></footer>
+      </div>
+    </section>
+
+    <section class="review-frame" id="detail-split-navigation" aria-labelledby="detail-split-navigation-title">
+      <header class="review-frame__head"><div><p class="eyebrow">Split row navigation</p><h2 id="detail-split-navigation-title">Focus the allocation, then choose the edit</h2></div><p>HJKL lands on the whole split row. Category and amount remain readable values until <kbd>c</kbd> or <kbd>a</kbd> explicitly opens an editor; <kbd>d</kbd> removes the focused split.</p></header>
+      <div class="app-modal-preview">
+        <section class="app-modal app-modal--transaction" aria-labelledby="split-navigation-title" aria-modal="true" role="dialog">
+          <header class="app-modal__head"><div><p class="eyebrow">Transaction details</p><h2 id="split-navigation-title">Northstar Market</h2></div><strong class="negative">-$425.80</strong></header>
+          <div class="app-modal__body transaction-detail-body transaction-detail-form"><div class="transaction-detail-summary"><span class="terminal-pill terminal-pill--ok">Posted</span><span>Sep 29, 2026</span><span>Local Checking</span></div><section class="transaction-detail-section transaction-allocation-section"><header><div><p class="eyebrow">Category allocation</p><h3>Split total across categories</h3></div><button class="transaction-detail-add">+ Add split</button></header><div class="transaction-split-editor"><div class="split-editor-head"><span>Category</span><span>Amount</span><span></span></div><div class="split-editor-row split-editor-row--navigate is-focused" tabindex="0"><span class="split-category-value">Groceries</span><strong class="split-amount-value">$300.00</strong><span class="split-row-marker">›</span></div><div class="split-editor-row split-editor-row--navigate" tabindex="0"><span class="split-category-value">Home supplies</span><strong class="split-amount-value">$125.80</strong><span class="split-row-marker">›</span></div><div class="split-editor-total"><span>Assigned</span><strong>$425.80</strong><span>Remaining</span><strong class="available">$0</strong></div></div></section></div>
+          <footer class="app-modal__foot"><span>Bank date unchanged</span><div><button class="terminal-button">Close</button><button class="terminal-button terminal-button--primary" disabled>Save changes</button></div></footer>
+        </section>
+        <footer class="statusline app-modal-preview__status"><div><strong>SPLIT</strong><span>Northstar Market / Groceries</span></div><div><span><kbd>a</kbd> amount</span><span><kbd>c</kbd> category</span><span><kbd>d</kbd> delete</span><span><kbd>j</kbd><kbd>k</kbd> focus</span><span><kbd>Esc</kbd> close</span></div></footer>
+      </div>
+    </section>
+
+    <section class="review-frame" id="detail-split-category-edit" aria-labelledby="detail-split-category-edit-title">
+      <header class="review-frame__head"><div><p class="eyebrow">Category edit</p><h2 id="detail-split-category-edit-title"><kbd>c</kbd> opens the picker for the focused split</h2></div><p>The row stays in place while the category value becomes a combobox. Selecting a category returns focus to the split row.</p></header>
+      <div class="app-modal-preview">
+        <section class="app-modal app-modal--transaction" aria-labelledby="split-category-edit-title" aria-modal="true" role="dialog">
+          <header class="app-modal__head"><div><p class="eyebrow">Transaction details</p><h2 id="split-category-edit-title">Northstar Market</h2></div><strong class="negative">-$425.80</strong></header>
+          <div class="app-modal__body transaction-detail-body"><section class="transaction-detail-section transaction-allocation-section"><header><div><p class="eyebrow">Category allocation</p><h3>Split total across categories</h3></div><button class="transaction-detail-add">+ Add split</button></header><div class="transaction-split-editor"><div class="split-editor-head"><span>Category</span><span>Amount</span><span></span></div><div class="split-editor-row split-editor-row--editing is-focused"><div class="category-combobox"><input aria-label="Groceries split category" value="Groceries" /><div class="combo-menu"><button class="combo-option highlighted">Groceries</button><button class="combo-option">Restaurants</button><button class="combo-option">Home supplies</button></div></div><strong class="split-amount-value">$300.00</strong><span class="split-row-marker">›</span></div><div class="split-editor-row split-editor-row--navigate"><span class="split-category-value">Home supplies</span><strong class="split-amount-value">$125.80</strong><span class="split-row-marker">›</span></div></div></section></div>
+          <footer class="app-modal__foot"><span>Editing Groceries category</span><div><button class="terminal-button">Close</button><button class="terminal-button terminal-button--primary">Save changes</button></div></footer>
+        </section>
+        <footer class="statusline app-modal-preview__status"><div><strong>CATEGORY</strong><span>Northstar Market / Groceries</span></div><div><span><kbd>Ctrl+N</kbd><kbd>Ctrl+P</kbd> choose</span><span><kbd>Enter</kbd> select</span><span><kbd>Esc</kbd> cancel edit</span></div></footer>
+      </div>
+    </section>
+
+    <section class="review-frame" id="detail-split-amount-edit" aria-labelledby="detail-split-amount-edit-title">
+      <header class="review-frame__head"><div><p class="eyebrow">Amount edit</p><h2 id="detail-split-amount-edit-title"><kbd>a</kbd> edits only the focused split amount</h2></div><p>The amount becomes an input without moving into another screen. Enter applies the draft value; Escape restores the previous value and row focus.</p></header>
+      <div class="app-modal-preview">
+        <section class="app-modal app-modal--transaction" aria-labelledby="split-amount-edit-title" aria-modal="true" role="dialog">
+          <header class="app-modal__head"><div><p class="eyebrow">Transaction details</p><h2 id="split-amount-edit-title">Northstar Market</h2></div><strong class="negative">-$425.80</strong></header>
+          <div class="app-modal__body transaction-detail-body"><section class="transaction-detail-section transaction-allocation-section"><header><div><p class="eyebrow">Category allocation</p><h3>Split total across categories</h3></div><button class="transaction-detail-add">+ Add split</button></header><div class="transaction-split-editor"><div class="split-editor-head"><span>Category</span><span>Amount</span><span></span></div><div class="split-editor-row split-editor-row--editing is-focused"><span class="split-category-value">Groceries</span><label><span class="sr-only">Groceries amount</span><input class="is-focused" value="300.00" /></label><span class="split-row-marker">›</span></div><div class="split-editor-row split-editor-row--navigate"><span class="split-category-value">Home supplies</span><strong class="split-amount-value">$125.80</strong><span class="split-row-marker">›</span></div><div class="split-editor-total"><span>Assigned</span><strong>$425.80</strong><span>Remaining</span><strong class="available">$0</strong></div></div></section></div>
+          <footer class="app-modal__foot"><span>Editing Groceries amount</span><div><button class="terminal-button">Close</button><button class="terminal-button terminal-button--primary">Save changes</button></div></footer>
+        </section>
+        <footer class="statusline app-modal-preview__status"><div><strong>AMOUNT</strong><span>Northstar Market / Groceries</span></div><div><span><kbd>Enter</kbd> apply</span><span><kbd>Esc</kbd> cancel edit</span></div></footer>
       </div>
     </section>
 

@@ -95,10 +95,10 @@ async function queryInsights(month: string): Promise<InsightsData> {
       let query = client
         .from('transactions')
         .select(
-          'id, plaid_item_id, transaction_date, merchant_name, transaction_name, amount, currency_code, is_pending, is_ignored, account_name',
+          'id, plaid_item_id, source_transaction_id, transaction_date, budget_month_override, effective_budget_month, merchant_name, transaction_name, amount, currency_code, is_pending, is_ignored, account_name, imported_at',
         )
-        .gte('transaction_date', `${month}-01`)
-        .lt('transaction_date', `${nextMonth}-01`)
+        .gte('effective_budget_month', `${month}-01`)
+        .lt('effective_budget_month', `${nextMonth}-01`)
         .eq('currency_code', 'USD')
         .order('id')
         .limit(limit)
@@ -119,6 +119,7 @@ async function queryInsights(month: string): Promise<InsightsData> {
   const normalizedTransactions = transactions.map((transaction) => ({
     ...transaction,
     amount: Number(transaction.amount),
+    institution_name: null,
   }))
   const transactionIds = normalizedTransactions.map(
     (transaction) => transaction.id,

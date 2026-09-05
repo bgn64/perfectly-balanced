@@ -31,7 +31,10 @@ export interface Category {
 export interface Transaction {
   id: string
   plaid_item_id: string | null
+  source_transaction_id: string
   transaction_date: string
+  budget_month_override: string | null
+  effective_budget_month: string
   merchant_name: string | null
   transaction_name: string | null
   amount: number
@@ -39,6 +42,8 @@ export interface Transaction {
   is_pending: boolean
   is_ignored: boolean
   account_name: string
+  institution_name: string | null
+  imported_at: string
 }
 
 export interface TransactionSplit {
