@@ -16,6 +16,7 @@ import type {
 } from '../finance/types.ts'
 import { collectPages } from '../finance/query.ts'
 import {
+  effectiveTransactionDate,
   formatMoney,
   formatMonth,
   isTextEntryTarget,
@@ -24,11 +25,21 @@ import {
 } from '../finance/utils.ts'
 import { getSupabaseClient } from '../lib/supabase.ts'
 import { focusWithScrollComfort } from '../navigation/focus.ts'
+import {
+  TransactionDetailDialog,
+} from './TransactionDetailDialog.tsx'
+import type { TransactionDetailInteraction } from '../navigation/status.ts'
+import type { TransactionSplitPayload } from './model.ts'
 
 interface TransactionsData {
   transactions: Transaction[]
   categories: Category[]
   splits: TransactionSplit[]
+}
+
+interface PlaidItemSummary {
+  id: string
+  institution_name: string | null
 }
 
 type TransactionSort =
@@ -53,6 +64,7 @@ type TransactionControlDialog = 'time' | 'filter' | 'sort'
 
 const nonUsdCategoryMessage = 'Only USD transactions can be categorized.'
 const transactionPageSize = 25
+const emptyTransactionSplits: TransactionSplit[] = []
 const timeRangeOptions: ReadonlyArray<{
   value: TransactionTimeRange
   label: string
@@ -134,13 +146,13 @@ interface PendingResultFocus {
 
 async function queryTransactions(): Promise<TransactionsData> {
   const client = getSupabaseClient()
-  const [transactions, categoriesResult, splits] =
+  const [transactions, categoriesResult, splits, plaidItemsResult] =
     await Promise.all([
       collectPages((afterId, limit) => {
         let query = client
           .from('transactions')
           .select(
-            'id, plaid_item_id, transaction_date, merchant_name, transaction_name, amount, currency_code, is_pending, is_ignored, account_name',
+            'id, plaid_item_id, plaid_account_id, source_transaction_id, transaction_date, transaction_date_override, effective_transaction_date, merchant_name, transaction_name, amount, currency_code, is_pending, is_ignored, category, account_name, imported_at',
           )
           .order('id')
           .limit(limit)
@@ -161,16 +173,30 @@ async function queryTransactions(): Promise<TransactionsData> {
         }
         return query
       }),
+      client.from('plaid_items').select('id, institution_name'),
     ])
 
   if (categoriesResult.error) {
     throw new Error(categoriesResult.error.message)
   }
+  if (plaidItemsResult.error) {
+    throw new Error(plaidItemsResult.error.message)
+  }
+
+  const institutionsByItemId = new Map(
+    ((plaidItemsResult.data ?? []) as PlaidItemSummary[]).map((item) => [
+      item.id,
+      item.institution_name,
+    ]),
+  )
 
   return {
     transactions: transactions.map((transaction) => ({
       ...transaction,
       amount: Number(transaction.amount),
+      institution_name: transaction.plaid_item_id
+        ? institutionsByItemId.get(transaction.plaid_item_id) ?? null
+        : null,
     })),
     categories: categoriesResult.data ?? [],
     splits: splits.map((split) => ({
@@ -186,6 +212,7 @@ export function TransactionsPanel({
   selectedMonth,
   onCategoriesChanged,
   onControlDialogChange,
+  onDetailInteractionChange,
   onSearchStateChange,
   onTransactionsChanged,
   onUncategorizedCountChange,
@@ -195,6 +222,9 @@ export function TransactionsPanel({
   selectedMonth: string
   onCategoriesChanged: () => void
   onControlDialogChange: (dialog: TransactionControlDialog | null) => void
+  onDetailInteractionChange: (
+    interaction: TransactionDetailInteraction | null,
+  ) => void
   onSearchStateChange: (isOpen: boolean, query: string) => void
   onTransactionsChanged: () => void
   onUncategorizedCountChange: (count: number) => void
@@ -225,6 +255,9 @@ export function TransactionsPanel({
   const [editingTransactionId, setEditingTransactionId] = useState<
     string | null
   >(null)
+  const [detailTransactionId, setDetailTransactionId] = useState<string | null>(
+    null,
+  )
   const [categoryNotice, setCategoryNotice] = useState<string | null>(null)
   const [isSavingCategories, setIsSavingCategories] = useState(false)
   const requestGeneration = useRef(0)
@@ -239,6 +272,7 @@ export function TransactionsPanel({
   const processingIgnoredUpdatesRef = useRef(false)
   const controlDialogRef = useRef<HTMLElement>(null)
   const controlDialogOriginRef = useRef<HTMLElement | null>(null)
+  const detailDialogOriginRef = useRef<HTMLElement | null>(null)
   const filterButtonRef = useRef<HTMLButtonElement>(null)
   const pendingResultFocusRef = useRef<PendingResultFocus | null>(null)
 
@@ -315,7 +349,8 @@ export function TransactionsPanel({
   const selectedMonthTransactionCount = useMemo(
     () =>
       activeTransactions.filter(
-        (transaction) => monthKey(transaction.transaction_date) === selectedMonth,
+        (transaction) =>
+          monthKey(effectiveTransactionDate(transaction)) === selectedMonth,
       ).length,
     [activeTransactions, selectedMonth],
   )
@@ -354,8 +389,13 @@ export function TransactionsPanel({
     () => () => {
       onSearchStateChange(false, '')
       onControlDialogChange(null)
+      onDetailInteractionChange(null)
     },
-    [onControlDialogChange, onSearchStateChange],
+    [
+      onControlDialogChange,
+      onDetailInteractionChange,
+      onSearchStateChange,
+    ],
   )
 
   useEffect(() => {
@@ -375,7 +415,7 @@ export function TransactionsPanel({
       (filter) => filter === 'included' || filter === 'ignored',
     )
     const filtered = transactions.filter((transaction) => {
-      const transactionMonth = monthKey(transaction.transaction_date)
+      const transactionMonth = monthKey(effectiveTransactionDate(transaction))
       if (!isInTimeRange(transactionMonth, selectedMonth, timeRange)) {
         return false
       }
@@ -434,8 +474,12 @@ export function TransactionsPanel({
         return Math.abs(left.amount) - Math.abs(right.amount)
       }
       return sort === 'oldest'
-        ? left.transaction_date.localeCompare(right.transaction_date)
-        : right.transaction_date.localeCompare(left.transaction_date)
+        ? effectiveTransactionDate(left).localeCompare(
+            effectiveTransactionDate(right),
+          )
+        : effectiveTransactionDate(right).localeCompare(
+            effectiveTransactionDate(left),
+          )
     })
   }, [
     categoriesById,
@@ -492,6 +536,9 @@ export function TransactionsPanel({
   const selectedTransaction =
     transactions.find((transaction) => transaction.id === selectedTransactionId) ??
     null
+  const detailTransaction =
+    transactions.find((transaction) => transaction.id === detailTransactionId) ??
+    null
 
   const selectTransaction = useCallback((transaction: Transaction) => {
     selectedTransactionIdRef.current = transaction.id
@@ -510,6 +557,59 @@ export function TransactionsPanel({
       }
     })
   }, [])
+
+  const openTransactionDetail = useCallback(
+    (transaction: Transaction, origin?: HTMLElement | null) => {
+      selectTransaction(transaction)
+      setEditingTransactionId(null)
+      detailDialogOriginRef.current =
+        origin ??
+        transactionRowRefs.current.get(transaction.id) ??
+        (document.activeElement instanceof HTMLElement
+          ? document.activeElement
+          : null)
+      setDetailTransactionId(transaction.id)
+    },
+    [selectTransaction],
+  )
+
+  const closeTransactionDetail = useCallback(() => {
+    const transactionId = detailTransactionId
+    const origin = detailDialogOriginRef.current
+    detailDialogOriginRef.current = null
+    setDetailTransactionId(null)
+    onDetailInteractionChange(null)
+    window.requestAnimationFrame(() => {
+      if (origin?.isConnected) {
+        focusWithScrollComfort(origin)
+        return
+      }
+      if (transactionId && transactionRowRefs.current.has(transactionId)) {
+        focusTransaction(transactionId)
+        return
+      }
+      if (filterButtonRef.current) {
+        focusWithScrollComfort(filterButtonRef.current)
+      }
+    })
+  }, [
+    detailTransactionId,
+    focusTransaction,
+    onDetailInteractionChange,
+  ])
+
+  useEffect(() => {
+    if (isLoading || !detailTransactionId || detailTransaction) {
+      return
+    }
+    // oxlint-disable-next-line react/set-state-in-effect -- A sync removal must release modal keyboard ownership and restore a valid focus target.
+    closeTransactionDetail()
+  }, [
+    closeTransactionDetail,
+    detailTransaction,
+    detailTransactionId,
+    isLoading,
+  ])
 
   useEffect(() => {
     const pendingFocus = pendingResultFocusRef.current
@@ -727,7 +827,7 @@ export function TransactionsPanel({
   }, [onTransactionsChanged])
 
   const toggleTransactionIgnored = useCallback(
-    (transaction: Transaction) => {
+    (transaction: Transaction, restoreResultFocus = true) => {
       const currentUpdate = ignoredUpdatesRef.current.get(transaction.id)
       const desired = !(currentUpdate?.desired ?? transaction.is_ignored)
       if (currentUpdate) {
@@ -739,14 +839,16 @@ export function TransactionsPanel({
         })
       }
       setDataError(null)
-      pendingResultFocusRef.current = {
-        transactionId: transaction.id,
-        pageIndex: Math.max(
-          0,
-          pageTransactions.findIndex(
-            (candidate) => candidate.id === transaction.id,
+      if (restoreResultFocus) {
+        pendingResultFocusRef.current = {
+          transactionId: transaction.id,
+          pageIndex: Math.max(
+            0,
+            pageTransactions.findIndex(
+              (candidate) => candidate.id === transaction.id,
+            ),
           ),
-        ),
+        }
       }
       setTransactions((current) =>
         current.map((candidate) =>
@@ -793,6 +895,9 @@ export function TransactionsPanel({
         return
       }
       if (controlDialog) {
+        return
+      }
+      if (detailTransactionId) {
         return
       }
 
@@ -850,6 +955,7 @@ export function TransactionsPanel({
   }, [
     closeSearch,
     controlDialog,
+    detailTransactionId,
     isSearchOpen,
     openSearch,
     openCategoryPicker,
@@ -916,6 +1022,7 @@ export function TransactionsPanel({
           ),
         }
       }
+
       const didRefresh = await refreshTransactions()
       if (!didRefresh) {
         throw new Error(
@@ -932,6 +1039,69 @@ export function TransactionsPanel({
     } finally {
       setIsSavingCategories(false)
     }
+  }
+
+  async function saveDetailSplits(
+    transaction: Transaction,
+    splitPayload: TransactionSplitPayload[],
+  ): Promise<void> {
+    const { error } = await getSupabaseClient().rpc(
+      'replace_transaction_category_splits',
+      {
+        p_transaction_id: transaction.id,
+        p_splits: splitPayload,
+      },
+    )
+    if (error) {
+      throw new Error(error.message)
+    }
+    const didRefresh = await refreshTransactions()
+    if (!didRefresh) {
+      throw new Error(
+        'The split changes were saved, but transactions could not be refreshed.',
+      )
+    }
+    onTransactionsChanged()
+  }
+
+  async function saveDetailDate(
+    transaction: Transaction,
+    budgetDate: string,
+  ): Promise<void> {
+    requestGeneration.current += 1
+    const { data, error } = await getSupabaseClient().rpc(
+      'set_transaction_budget_date',
+      {
+        p_budget_date: budgetDate,
+        p_transaction_id: transaction.id,
+      },
+    )
+    if (error) {
+      throw new Error(error.message)
+    }
+    const effectiveDate = typeof data === 'string' ? data : budgetDate
+    setTransactions((current) =>
+      current.map((candidate) =>
+        candidate.id === transaction.id
+          ? {
+              ...candidate,
+              effective_transaction_date: effectiveDate,
+              transaction_date_override:
+                effectiveDate === candidate.transaction_date
+                  ? null
+                  : effectiveDate,
+            }
+          : candidate,
+      ),
+    )
+    setCurrentPage(1)
+    const didRefresh = await refreshTransactions()
+    if (!didRefresh) {
+      throw new Error(
+        'The date was saved, but transactions could not be refreshed.',
+      )
+    }
+    onTransactionsChanged()
   }
 
   function cancelCategoryPicker(transactionId: string) {
@@ -1219,7 +1389,8 @@ export function TransactionsPanel({
                   categoriesById.get(split.category_id)?.name ?? 'Unknown category',
               )
               const isEditing = transaction.id === editingTransactionId
-              const isSelected = isEditing
+              const isSelected =
+                isEditing || transaction.id === detailTransactionId
               const isUsd = transaction.currency_code === 'USD'
               return (
                 <div
@@ -1250,8 +1421,12 @@ export function TransactionsPanel({
                     }
                   }}
                   onClick={(event) => {
-                    if (event.target === event.currentTarget) {
-                      selectTransaction(transaction)
+                    if (
+                      !(event.target as HTMLElement).closest(
+                        'button, input, [role="combobox"]',
+                      )
+                    ) {
+                      openTransactionDetail(transaction, event.currentTarget)
                     }
                   }}
                 >
@@ -1259,7 +1434,9 @@ export function TransactionsPanel({
                     className="transaction-row-simple__select"
                     data-transaction-id={transaction.id}
                     type="button"
-                    onClick={() => selectTransaction(transaction)}
+                    onClick={(event) =>
+                      openTransactionDetail(transaction, event.currentTarget)
+                    }
                   >
                     <span className="transaction-row-simple__name">
                       <strong>{transactionDescription(transaction)}</strong>
@@ -1268,7 +1445,9 @@ export function TransactionsPanel({
                           day: 'numeric',
                           month: 'short',
                         }).format(
-                          new Date(`${transaction.transaction_date}T00:00:00`),
+                          new Date(
+                            `${effectiveTransactionDate(transaction)}T00:00:00`,
+                          ),
                         )}
                         {' · '}
                         {transaction.account_name}
@@ -1437,6 +1616,26 @@ export function TransactionsPanel({
           </nav>
         )}
       </section>
+      {detailTransaction && (
+        <TransactionDetailDialog
+          categories={categories}
+          splits={
+            splitsByTransaction.get(detailTransaction.id) ??
+            emptyTransactionSplits
+          }
+          transaction={detailTransaction}
+          onClose={closeTransactionDetail}
+          onCreateCategory={createCategory}
+          onInteractionChange={onDetailInteractionChange}
+          onSaveDate={(date) => saveDetailDate(detailTransaction, date)}
+          onSaveSplits={(splitPayload) =>
+            saveDetailSplits(detailTransaction, splitPayload)
+          }
+          onToggleIgnored={() =>
+            toggleTransactionIgnored(detailTransaction, false)
+          }
+        />
+      )}
       {controlDialog && (
         <div
           className="transaction-control-layer"

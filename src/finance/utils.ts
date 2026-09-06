@@ -22,6 +22,36 @@ export function monthKey(date: string): string {
   return date.slice(0, 7)
 }
 
+export function effectiveTransactionDate(
+  transaction: Pick<Transaction, 'effective_transaction_date'>,
+): string {
+  return transaction.effective_transaction_date
+}
+
+export function parseCalendarDateInput(value: string): string | null {
+  const match = value.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+  if (!match) {
+    return null
+  }
+  const month = Number(match[1])
+  const day = Number(match[2])
+  const year = Number(match[3])
+  const date = new Date(Date.UTC(year, month - 1, day))
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
+  ) {
+    return null
+  }
+  return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+}
+
+export function formatCalendarDateInput(date: string): string {
+  const [year, month, day] = date.split('-')
+  return `${Number(month)}/${Number(day)}/${year}`
+}
+
 export function formatMoney(
   amount: number,
   currencyCode = 'USD',

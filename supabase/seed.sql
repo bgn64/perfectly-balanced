@@ -220,6 +220,7 @@ insert into public.transactions (
   user_id,
   source_transaction_id,
   transaction_date,
+  transaction_date_override,
   merchant_name,
   transaction_name,
   amount,
@@ -234,6 +235,7 @@ values
     '00000000-0000-0000-0000-000000000001',
     'local-salary-2026-08-01',
     date '2026-08-01',
+    null,
     'Contoso Payroll',
     'Contoso Payroll Direct Deposit',
     7000,
@@ -247,6 +249,7 @@ values
     '00000000-0000-0000-0000-000000000001',
     'local-groceries-2026-08-05',
     date '2026-08-05',
+    null,
     'Local Market',
     'Local Market',
     -125.5,
@@ -260,6 +263,7 @@ values
     '00000000-0000-0000-0000-000000000001',
     'local-restaurant-2026-08-08',
     date '2026-08-08',
+    date '2026-09-01',
     'Cedar Cafe',
     'Cedar Cafe',
     -42,
@@ -273,6 +277,7 @@ values
     '00000000-0000-0000-0000-000000000001',
     'local-uncategorized-2026-08-10',
     date '2026-08-10',
+    null,
     'Corner Shop',
     'Corner Shop',
     -18.75,
@@ -283,6 +288,7 @@ values
   )
 on conflict (id) do update
 set transaction_date = excluded.transaction_date,
+    transaction_date_override = excluded.transaction_date_override,
     merchant_name = excluded.merchant_name,
     transaction_name = excluded.transaction_name,
     amount = excluded.amount,
@@ -319,7 +325,14 @@ values
     '00000000-0000-0000-0000-000000000001',
     '50000000-0000-0000-0000-000000000003',
     '10000000-0000-0000-0000-000000000005',
-    -42
+    -24
+  ),
+  (
+    '60000000-0000-0000-0000-000000000004',
+    '00000000-0000-0000-0000-000000000001',
+    '50000000-0000-0000-0000-000000000003',
+    '10000000-0000-0000-0000-000000000004',
+    -18
   )
 on conflict (id) do update
 set category_id = excluded.category_id,

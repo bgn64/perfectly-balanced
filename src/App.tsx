@@ -29,9 +29,11 @@ import {
   type SpatialDirection,
 } from './navigation/spatial.ts'
 import {
+  buildTransactionDetailStatus,
   buildNavigationStatus,
   textEntryStatus,
   type StatusPresentation,
+  type TransactionDetailInteraction,
 } from './navigation/status.ts'
 import {
   SettingsPanel,
@@ -42,7 +44,9 @@ import {
   resolveTheme,
   type ThemePreference,
 } from './settings/model.ts'
-import { TransactionsPanel } from './transactions/TransactionsPanel.tsx'
+import {
+  TransactionsPanel,
+} from './transactions/TransactionsPanel.tsx'
 import './App.css'
 import './terminal.css'
 import './theme.css'
@@ -171,6 +175,7 @@ function buildAuthenticatedStatus({
   settingsInteraction,
   statusContext,
   transactionControlDialog,
+  transactionDetailInteraction,
   transactionSearchQuery,
 }: {
   activeView: AppView
@@ -182,6 +187,7 @@ function buildAuthenticatedStatus({
   settingsInteraction: SettingsInteraction | null
   statusContext: StatusContext
   transactionControlDialog: 'time' | 'filter' | 'sort' | null
+  transactionDetailInteraction: TransactionDetailInteraction | null
   transactionSearchQuery: string
 }): StatusPresentation {
   if (budgetKeyboardInteraction) {
@@ -269,6 +275,10 @@ function buildAuthenticatedStatus({
       { keys: ['Enter'], label: 'focus first result' },
       { keys: ['Esc'], label: 'clear and return' },
     ])
+  }
+
+  if (activeView === 'transactions' && transactionDetailInteraction) {
+    return buildTransactionDetailStatus(transactionDetailInteraction)
   }
 
   if (activeView === 'transactions' && transactionControlDialog) {
@@ -692,6 +702,8 @@ function AuthenticatedShell({
   const [transactionControlDialog, setTransactionControlDialog] = useState<
     'time' | 'filter' | 'sort' | null
   >(null)
+  const [transactionDetailInteraction, setTransactionDetailInteraction] =
+    useState<TransactionDetailInteraction | null>(null)
   const [insightsInteraction, setInsightsInteraction] =
     useState<InsightsInteraction | null>(null)
   const [settingsInteraction, setSettingsInteraction] =
@@ -760,9 +772,6 @@ function AuthenticatedShell({
     .toUpperCase()
   const focusWorkspaceControl = useCallback((control: HTMLElement) => {
     focusWithScrollComfort(control)
-    if (control.dataset.semanticKind === 'transaction-row') {
-      control.click()
-    }
   }, [])
   const navigateToView = useCallback((view: AppView) => {
     pendingViewFocusRef.current = view
@@ -933,6 +942,9 @@ function AuthenticatedShell({
           event.preventDefault()
           requestBudgetKeyboardAction(action, focusedSemanticId)
         }
+        return
+      }
+      if (transactionDetailInteraction) {
         return
       }
       if (
@@ -1132,6 +1144,7 @@ function AuthenticatedShell({
     budgetKeyboardInteraction,
     openCommandPalette,
     requestBudgetKeyboardAction,
+    transactionDetailInteraction,
   ])
 
   async function handleSignOut() {
@@ -1159,6 +1172,7 @@ function AuthenticatedShell({
     settingsInteraction,
     statusContext,
     transactionControlDialog,
+    transactionDetailInteraction,
     transactionSearchQuery,
   })
 
@@ -1218,6 +1232,7 @@ function AuthenticatedShell({
             selectedMonth={selectedMonth}
             onCategoriesChanged={handleCategoriesChanged}
             onControlDialogChange={setTransactionControlDialog}
+            onDetailInteractionChange={setTransactionDetailInteraction}
             onSearchStateChange={handleTransactionSearchStateChange}
             onTransactionsChanged={handleTransactionsChanged}
             onUncategorizedCountChange={handleUncategorizedCountChange}

@@ -18,6 +18,7 @@ import type {
   Category,
 } from '../finance/types.ts'
 import {
+  effectiveTransactionDate,
   formatDisplayMoney,
   formatMonth,
   monthKey,
@@ -283,7 +284,9 @@ async function queryBudget(month: string): Promise<BudgetData> {
     collectPages((afterId, limit) => {
       let query = client
         .from('transactions')
-        .select('id, transaction_date, currency_code, is_ignored')
+        .select(
+          'id, transaction_date, transaction_date_override, effective_transaction_date, currency_code, is_ignored',
+        )
         .order('id')
         .limit(limit)
       if (afterId) {
@@ -318,7 +321,7 @@ async function queryBudget(month: string): Promise<BudgetData> {
   const uncategorizedCount = transactions.filter(
     (transaction) =>
       !transaction.is_ignored &&
-      monthKey(transaction.transaction_date) === month &&
+      monthKey(effectiveTransactionDate(transaction)) === month &&
       !categorizedTransactionIds.has(transaction.id),
   ).length
   const ignoredTransactionIds = transactions
@@ -326,7 +329,7 @@ async function queryBudget(month: string): Promise<BudgetData> {
       (transaction) =>
         transaction.is_ignored &&
         transaction.currency_code === 'USD' &&
-        monthKey(transaction.transaction_date) === month,
+        monthKey(effectiveTransactionDate(transaction)) === month,
     )
     .map((transaction) => transaction.id)
   const budget =

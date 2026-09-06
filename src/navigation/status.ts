@@ -9,6 +9,20 @@ export interface StatusPresentation {
   shortcuts: StatusShortcut[]
 }
 
+export type TransactionDetailInteractionMode =
+  | 'detail'
+  | 'split'
+  | 'amount'
+  | 'category'
+  | 'date'
+  | 'saving'
+
+export interface TransactionDetailInteraction {
+  hasUnsavedChanges: boolean
+  mode: TransactionDetailInteractionMode
+  label: string
+}
+
 export interface NavigationStatusInput {
   view: 'budgets' | 'transactions' | 'insights' | 'settings'
   action: string
@@ -113,4 +127,56 @@ export function textEntryStatus(
   shortcuts: StatusShortcut[],
 ): StatusPresentation {
   return { mode, label, shortcuts }
+}
+
+export function buildTransactionDetailStatus(
+  interaction: TransactionDetailInteraction,
+): StatusPresentation {
+  if (interaction.mode === 'saving') {
+    return {
+      mode: 'SAVING',
+      label: interaction.label,
+      shortcuts: [],
+    }
+  }
+  if (interaction.mode === 'date') {
+    return textEntryStatus('DATE', interaction.label, [
+      { keys: ['Enter'], label: 'save' },
+      { keys: ['Esc'], label: 'cancel' },
+    ])
+  }
+  if (interaction.mode === 'amount') {
+    return textEntryStatus('AMOUNT', interaction.label, [
+      { keys: ['Enter'], label: 'apply' },
+      { keys: ['Esc'], label: 'cancel' },
+    ])
+  }
+  if (interaction.mode === 'category') {
+    return textEntryStatus('CATEGORY', interaction.label, [
+      { keys: ['Ctrl+N', 'Ctrl+P'], label: 'choose' },
+      { keys: ['Enter'], label: 'select' },
+      { keys: ['Esc'], label: 'cancel' },
+    ])
+  }
+  return {
+    mode: interaction.mode === 'split' ? 'SPLIT' : 'DETAIL',
+    label: interaction.label,
+    shortcuts: [
+      { keys: ['j', 'k'], label: 'split' },
+      ...(interaction.mode === 'split'
+        ? [
+            { keys: ['a'], label: 'amount' },
+            { keys: ['c'], label: 'category' },
+            { keys: ['d'], label: 'delete' },
+          ]
+        : []),
+      { keys: ['n'], label: 'new split' },
+      { keys: ['e'], label: 'date' },
+      { keys: ['t'], label: 'status' },
+      {
+        keys: ['Esc'],
+        label: interaction.hasUnsavedChanges ? 'discard changes' : 'close',
+      },
+    ],
+  }
 }
