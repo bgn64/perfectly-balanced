@@ -17,7 +17,7 @@
         <a aria-current="page" href="reports.html">Reports</a>
       </span>
       <span class="review-nav__group">
-        <a href="#reports-v2-overview">All activity</a>
+        <a href="#reports-v2-overview">Shared month</a>
         <a href="#reports-v2-categorized">Categorized mode</a>
         <a href="#reports-v2-planned">Planned mode</a>
         <a href="#reports-v2-category-modal">Category modal</a>
@@ -28,13 +28,17 @@
 
     <section id="reports-v2-overview" class="review-frame" aria-labelledby="reports-v2-overview-title">
       <header class="review-frame__head">
-        <div><p class="eyebrow">Recommended reports</p><h2 id="reports-v2-overview-title">Two aligned charts, one shared mode</h2></div>
-        <p>Income and Spending share identical chart rows, so their donut centers stay aligned regardless of legend length.</p>
+        <div><p class="eyebrow">Recommended reports</p><h2 id="reports-v2-overview-title">Shared month, report-specific mode</h2></div>
+        <p>The connected rail identifies Reports and the selected month together, while report mode remains a separate chart-specific control.</p>
       </header>
       <div class="terminal-app command-closed screen-app theme-dark">
         <header class="titlebar">
           <button class="brand" type="button"><span class="brand-mark" aria-hidden="true">pb</span><span>perfectly-balanced</span></button>
-          <p>September 2026 &middot; Personal budget</p>
+          <nav class="global-month-switcher" aria-label="Workspace month">
+            <button type="button" aria-label="Previous workspace month" title="Previous month"><span aria-hidden="true">&larr;</span></button>
+            <span class="global-month-switcher__current"><strong>September 2026</strong></span>
+            <button type="button" aria-label="Next workspace month" title="Next month"><span aria-hidden="true">&rarr;</span></button>
+          </nav>
           <div class="theme-switcher" role="group" aria-label="Theme">
             <input checked id="theme-dark" name="reports-v2-theme" type="radio" /><label for="theme-dark">Dark</label>
             <input id="theme-light" name="reports-v2-theme" type="radio" /><label for="theme-light">Light</label>
@@ -51,11 +55,7 @@
         <main class="workspace">
           <section class="page insights-page insights-page--terminal reports-v2-page">
             <header class="workspace-head workspace-head--compact">
-              <div><p class="eyebrow">Reports / 2026 / 09</p><h1>September 2026 at a glance</h1><p class="subtitle">Compare income and spending, then drill into any legend row.</p></div>
-              <nav class="month-jump-controls" aria-label="Month navigation">
-                <button type="button"><span aria-hidden="true">&larr;</span><span><small>Previous month</small><strong>August 2026</strong></span></button>
-                <button type="button"><span><small>Next month</small><strong>October 2026</strong></span><span aria-hidden="true">&rarr;</span></button>
-              </nav>
+              <div><p class="eyebrow">Income and spending</p><h1>Reports</h1><p class="subtitle">Compare activity, then drill into any legend row.</p></div>
             </header>
             <div class="reports-v2-modebar">
               <div><p class="eyebrow">Report mode</p><p class="subtle">The selected mode applies to both charts.</p></div>
@@ -153,5 +153,24 @@
         <footer class="statusline reports-v2-preview-status"><div><strong>TRANSACTIONS</strong><span>reports / spending / uncategorized</span></div><div><span><kbd>j</kbd><kbd>k</kbd> focus</span><span><kbd>Esc</kbd> close</span></div></footer>
       </div>
     </section>
+    <script>
+      const reportsOverview = document.querySelector('#reports-v2-overview')
+      const reportsHeading = reportsOverview.querySelector(
+        '.workspace-head > div',
+      )
+      const reportsTitle = reportsHeading.querySelector('h1')
+      const reportsMonth = reportsOverview.querySelector(
+        '.global-month-switcher',
+      )
+      const reportsMonthLabel = reportsMonth.querySelector(
+        '.global-month-switcher__current',
+      )
+      const reportsSeparator = document.createElement('span')
+      reportsSeparator.className = 'global-month-switcher__separator'
+      reportsSeparator.setAttribute('aria-hidden', 'true')
+      reportsSeparator.textContent = '/'
+      reportsMonthLabel.prepend(reportsTitle, reportsSeparator)
+      reportsHeading.querySelector('.subtitle').before(reportsMonth)
+    </script>
   </body>
 </html>

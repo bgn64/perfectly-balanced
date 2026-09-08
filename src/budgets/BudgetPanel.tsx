@@ -27,6 +27,7 @@ import {
 } from '../finance/utils.ts'
 import { getSupabaseClient } from '../lib/supabase.ts'
 import { focusWithScrollComfort } from '../navigation/focus.ts'
+import { WorkspaceMonthHeading } from '../navigation/WorkspaceMonthHeading.tsx'
 import { useAuth } from '../auth/useAuth.ts'
 
 interface BudgetData {
@@ -1522,43 +1523,16 @@ export function BudgetPanel({
   return (
     <>
       <header className="workspace-head">
-        <div>
-          <p className="eyebrow">Budget / {selectedMonth.replace('-', ' / ')}</p>
-          <h1>{formatMonth(selectedMonth)}</h1>
-          <p className="subtitle">Plan with the keyboard. Review with a glance.</p>
-        </div>
-        <nav className="month-jump-controls" aria-label="Month navigation">
-          <button
-            data-semantic-id="month-previous"
-            data-semantic-region="workspace"
-            data-status-action="previous month"
-            data-status-label="budget / previous month"
-            disabled={busyId !== null}
-            type="button"
-            onClick={() => onMonthChange(shiftMonth(selectedMonth, -1))}
-          >
-            <span aria-hidden="true">←</span>
-            <span>
-              <small>Previous month</small>
-              <strong>{formatMonth(shiftMonth(selectedMonth, -1))}</strong>
-            </span>
-          </button>
-          <button
-            data-semantic-id="month-next"
-            data-semantic-region="workspace"
-            data-status-action="next month"
-            data-status-label="budget / next month"
-            disabled={busyId !== null}
-            type="button"
-            onClick={() => onMonthChange(shiftMonth(selectedMonth, 1))}
-          >
-            <span>
-              <small>Next month</small>
-              <strong>{formatMonth(shiftMonth(selectedMonth, 1))}</strong>
-            </span>
-            <span aria-hidden="true">→</span>
-          </button>
-        </nav>
+        <WorkspaceMonthHeading
+          disabled={busyId !== null}
+          eyebrow="Monthly plan"
+          selectedMonth={selectedMonth}
+          semanticIdPrefix="month"
+          statusLabel="budget"
+          subtitle="Plan with the keyboard. Review with a glance."
+          title="Budget"
+          onMonthChange={onMonthChange}
+        />
       </header>
 
       {errorMessage && (
