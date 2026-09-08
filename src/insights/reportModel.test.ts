@@ -67,14 +67,21 @@ function transaction(
   return {
     id,
     plaid_item_id: null,
+    plaid_account_id: null,
+    source_transaction_id: id,
     transaction_date: '2026-09-15',
+    transaction_date_override: null,
+    effective_transaction_date: '2026-09-15',
     merchant_name: merchantName,
     transaction_name: null,
     amount,
     currency_code: 'USD',
     is_pending: false,
     is_ignored: false,
+    category: null,
     account_name: 'Checking',
+    institution_name: null,
+    imported_at: '2026-09-15T12:00:00Z',
   }
 }
 
@@ -172,6 +179,29 @@ describe('buildReportModel', () => {
     expect(
       model.spending.slices.some((slice) => slice.kind === 'uncategorized'),
     ).toBe(false)
+  })
+
+  it('uses the effective transaction date in report drilldowns', () => {
+    const overriddenTransaction = {
+      ...transaction('grocery-transaction', -450, 'Greenway Foods'),
+      transaction_date: '2026-08-31',
+      transaction_date_override: '2026-09-01',
+      effective_transaction_date: '2026-09-01',
+    }
+    const model = buildReportModel({
+      mode: 'categorized',
+      allocations,
+      subsections,
+      categories,
+      transactions: [overriddenTransaction],
+      splits: [
+        split('grocery-split', 'grocery-transaction', 'groceries', -450),
+      ],
+    })
+
+    expect(model.spending.slices[0]?.transactions[0]?.transactionDate).toBe(
+      '2026-09-01',
+    )
   })
 
   it('represents every included transaction in All and only categorized transactions in Categorized', () => {

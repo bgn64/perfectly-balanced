@@ -6,7 +6,10 @@ import type {
   Transaction,
   TransactionSplit,
 } from '../finance/types.ts'
-import { transactionDescription } from '../finance/utils.ts'
+import {
+  effectiveTransactionDate,
+  transactionDescription,
+} from '../finance/utils.ts'
 
 export type ReportMode = 'all' | 'planned' | 'categorized'
 
@@ -293,7 +296,7 @@ function buildActualSlices({
       transactionId: transaction.id,
       name: transactionDescription(transaction),
       accountName: transaction.account_name,
-      transactionDate: transaction.transaction_date,
+      transactionDate: effectiveTransactionDate(transaction),
       amount,
     }
     parent.value += amount
@@ -322,7 +325,7 @@ function buildActualSlices({
         transactionId: transaction.id,
         name: transactionDescription(transaction),
         accountName: transaction.account_name,
-        transactionDate: transaction.transaction_date,
+        transactionDate: effectiveTransactionDate(transaction),
         amount,
       }
       parent.value += amount

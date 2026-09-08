@@ -23,7 +23,11 @@
     </header>
 
     <nav class="review-section-nav" aria-label="Transaction frame navigation">
-      <a href="#proposed-queue">Proposed queue</a><a href="#proposed-time">Time modal</a>
+      <a href="#proposed-queue">Proposed queue</a><a href="#proposed-detail">Detail modal</a>
+      <a href="#proposed-detail-split">Split focus</a><a href="#proposed-detail-amount">Split amount</a>
+      <a href="#proposed-detail-category">New split</a>
+      <a href="#proposed-detail-date">Date editor</a><a href="#proposed-detail-mobile">Mobile detail</a>
+      <a href="#proposed-time">Time modal</a>
       <a href="#proposed-filter-simple">Filter modal</a>
       <a href="#proposed-sort">Sort modal</a><a href="#proposed-active-filters">Active filters</a>
       <a href="#proposed-triage-before">Triage before</a>
@@ -72,6 +76,247 @@
               </section>
             </main>
             <footer class="statusline"><div><strong>NAVIGATE</strong><span>transactions / navigation</span><span>focus 2 of 34</span></div><div><span><kbd>Enter</kbd> select</span><span><kbd>l</kbd> enter workspace</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span><span><kbd>/</kbd> search</span></div></footer>
+          </div>
+        </div>
+      </section>
+
+      <section class="review-frame" id="proposed-detail">
+        <header class="review-frame__head">
+          <div><p class="eyebrow">Proposed / transaction detail</p><h2>Full transaction context without removing inline actions</h2></div>
+          <p class="review-frame__meta">Click or press <kbd>Enter</kbd> on the transaction body to open this modal. The row&rsquo;s existing category and Included controls remain independently clickable and keep their current <kbd>c</kbd> and <kbd>t</kbd> shortcuts.</p>
+        </header>
+        <div class="review-frame__viewport transaction-detail-app-preview">
+          <div class="authenticated-app terminal-app command-closed screen-app theme-dark">
+            <header class="titlebar"><button class="brand" type="button"><span class="brand-mark">pb</span><span>perfectly-balanced</span></button><p>September 2026 &middot; Personal budget</p><div class="theme-switcher" role="group" aria-label="Theme"><input checked id="detail-theme-dark" name="detail-theme" type="radio" /><label for="detail-theme-dark">Dark</label><input id="detail-theme-light" name="detail-theme" type="radio" /><label for="detail-theme-light">Light</label></div><details class="profile"><summary><span>D</span>dev</summary></details></header>
+            <aside class="sidebar" aria-label="Application navigation"><nav class="main-nav"><button class="nav-item" type="button"><span>Budget</span></button><button class="nav-item is-active" aria-current="page" type="button"><span>Transactions</span><strong>18</strong></button><button class="nav-item" type="button"><span>Reports</span></button></nav></aside>
+            <main class="workspace">
+              <section class="page transactions-page transactions-page--terminal">
+                <header class="workspace-head workspace-head--compact"><div><p class="eyebrow">Transaction stream / all accounts</p><h1>Transactions</h1><p class="subtle">Review and categorize imported activity.</p></div><span class="terminal-pill terminal-pill--warning">18 uncategorized</span></header>
+                <section class="budget-table transaction-table">
+                  <div class="table-head"><div><p class="eyebrow">Imported activity</p><h2>All transactions</h2></div></div>
+                  <div class="transaction-column-head" aria-hidden="true"><span>Transaction</span><span>Category</span><span>Status</span><span>Amount</span></div>
+                  <section class="transactions">
+                    <div class="transaction-row-simple"><button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Northstar Market</strong><span>Sep 30 &middot; Local Checking</span></span></button><div class="transaction-category-cell"><button class="category-chip" type="button">Groceries</button></div><button class="transaction-state-button" type="button">Included</button><strong class="transaction-amount negative">-$86.24</strong></div>
+                    <div class="transaction-row-simple is-selected"><button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Cedar Cafe</strong><span>Sep 1 &middot; Local Credit Card</span></span></button><div class="transaction-category-cell"><button class="category-chip" type="button">Restaurants +1</button></div><button class="transaction-state-button" type="button">Included</button><strong class="transaction-amount negative">-$42.00</strong></div>
+                    <div class="transaction-row-simple"><button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Metro Transit</strong><span>Sep 1 &middot; Local Credit Card</span></span></button><div class="transaction-category-cell"><button class="category-chip empty" type="button">Select category...</button></div><button class="transaction-state-button" type="button">Included</button><strong class="transaction-amount negative">-$24.00</strong></div>
+                  </section>
+                </section>
+              </section>
+            </main>
+            <div class="transaction-control-layer">
+              <section class="transaction-control-dialog transaction-detail-dialog" role="dialog" aria-modal="true" aria-labelledby="proposed-detail-title">
+                <header class="transaction-dialog-head transaction-detail-dialog__head">
+                  <div><p class="eyebrow">Transaction details</p><h2 id="proposed-detail-title">Cedar Cafe</h2><p>Local Credit Card &middot; Posted</p></div>
+                  <div class="transaction-detail-heading-actions"><strong class="negative">-$42.00</strong><button aria-label="Close transaction details" class="transaction-detail-close" type="button">&times;</button></div>
+                </header>
+                <div class="transaction-detail-dialog__body">
+                  <div class="transaction-detail-primary">
+                    <section class="transaction-detail-section">
+                      <header class="transaction-detail-section__head"><div><p class="eyebrow">Budget attribution</p><h3>September 2026</h3></div><button class="transaction-state-button" type="button">Included</button></header>
+                      <div class="transaction-date-summary">
+                        <button class="transaction-detail-field transaction-detail-field--editable" type="button"><span>Budget date<small>Used by budgets, reports, filters, and sorting</small></span><strong>Sep 1, 2026</strong></button>
+                        <div class="transaction-detail-field"><span>Original date<small>Imported value &middot; never overwritten</small></span><strong>Aug 31, 2026</strong></div>
+                      </div>
+                    </section>
+                    <section class="transaction-detail-section">
+                      <header class="transaction-detail-section__head"><div><p class="eyebrow">Category allocation</p><h3>Split transaction</h3></div><button class="terminal-button transaction-detail-add" type="button">+ New split</button></header>
+                      <div class="transaction-split-head" aria-hidden="true"><span>Category</span><span>Amount</span></div>
+                      <div class="transaction-split-list">
+                        <div class="transaction-split-row"><button type="button"><span class="transaction-split-caret">&rsaquo;</span><span><strong>Restaurants</strong><small>Food</small></span></button><strong>-$24.00</strong></div>
+                        <div class="transaction-split-row"><button type="button"><span class="transaction-split-caret">&rsaquo;</span><span><strong>Groceries</strong><small>Food</small></span></button><strong>-$18.00</strong></div>
+                      </div>
+                      <div class="transaction-split-total"><span>Assigned <strong>-$42.00</strong></span><span class="available">Remaining <strong>$0.00</strong></span></div>
+                    </section>
+                  </div>
+                  <aside class="transaction-import-details">
+                    <div><p class="eyebrow">Imported details</p><h3>Source record</h3></div>
+                    <dl>
+                      <div><dt>Merchant</dt><dd>Cedar Cafe</dd></div>
+                      <div><dt>Original description</dt><dd>CEDAR CAFE #0482</dd></div>
+                      <div><dt>Account</dt><dd>Local Credit Card</dd></div>
+                      <div><dt>Connection</dt><dd>Northstar Bank</dd></div>
+                      <div><dt>Bank category</dt><dd>Food and drink</dd></div>
+                      <div><dt>Status</dt><dd>Posted</dd></div>
+                      <div><dt>Currency</dt><dd>USD</dd></div>
+                      <div><dt>Imported</dt><dd>Sep 1, 2026 at 8:14 AM</dd></div>
+                      <div><dt>Source ID</dt><dd><code>QK8...J7P</code></dd></div>
+                    </dl>
+                    <p class="transaction-detail-note">Edits change budgeting behavior only. Imported source values remain available here.</p>
+                  </aside>
+                </div>
+                <footer class="transaction-dialog-actions transaction-detail-dialog__actions"><span class="transaction-detail-save-state">All changes saved</span><span></span><button class="terminal-button" type="button">Close</button></footer>
+              </section>
+            </div>
+            <footer class="statusline"><div><strong>DETAIL</strong><span>transaction / Cedar Cafe</span><span>split 1 of 2</span></div><div><span><kbd>j</kbd><kbd>k</kbd> move</span><span><kbd>n</kbd> new split</span><span><kbd>e</kbd> date</span><span><kbd>t</kbd> status</span><span><kbd>Esc</kbd> close</span></div></footer>
+          </div>
+        </div>
+      </section>
+
+      <section class="review-frame" id="proposed-detail-split">
+        <header class="review-frame__head">
+          <div><p class="eyebrow">Proposed / split focus</p><h2>Split rows use the app&rsquo;s keyboard-first row pattern</h2></div>
+          <p class="review-frame__meta">Hover or keyboard focus selects a split row; the status line then reveals <kbd>a</kbd> amount, <kbd>c</kbd> category, <kbd>d</kbd> delete, and <kbd>n</kbd> new split. The assigned total must reconcile exactly.</p>
+        </header>
+        <div class="review-frame__viewport transaction-detail-state-preview">
+          <section class="transaction-control-dialog transaction-detail-dialog" role="dialog" aria-modal="true" aria-labelledby="proposed-detail-split-title">
+            <header class="transaction-dialog-head transaction-detail-dialog__head"><div><p class="eyebrow">Transaction details</p><h2 id="proposed-detail-split-title">Northstar Market</h2><p>Local Checking &middot; Posted</p></div><div class="transaction-detail-heading-actions"><strong class="negative">-$86.24</strong><button aria-label="Close transaction details" class="transaction-detail-close" type="button">&times;</button></div></header>
+            <div class="transaction-detail-dialog__body">
+              <div class="transaction-detail-primary">
+                <section class="transaction-detail-section">
+                  <header class="transaction-detail-section__head"><div><p class="eyebrow">Budget attribution</p><h3>September 2026</h3></div><button class="transaction-state-button" type="button">Included</button></header>
+                  <div class="transaction-date-summary"><button class="transaction-detail-field transaction-detail-field--editable" type="button"><span>Budget date<small>Used by budgets, reports, filters, and sorting</small></span><strong>Sep 30, 2026</strong></button><div class="transaction-detail-field"><span>Original date<small>Imported value &middot; never overwritten</small></span><strong>Sep 30, 2026</strong></div></div>
+                </section>
+                <section class="transaction-detail-section">
+                  <header class="transaction-detail-section__head"><div><p class="eyebrow">Category allocation</p><h3>3 category splits</h3></div><button class="terminal-button transaction-detail-add" type="button">+ New split</button></header>
+                  <div class="transaction-split-head" aria-hidden="true"><span>Category</span><span>Amount</span></div>
+                  <div class="transaction-split-list">
+                    <div class="transaction-split-row"><button type="button"><span class="transaction-split-caret">&rsaquo;</span><span><strong>Groceries</strong><small>Food</small></span></button><strong>-$50.00</strong></div>
+                    <div class="transaction-split-row is-focused"><button type="button"><span class="transaction-split-caret">&rsaquo;</span><span><strong>Household</strong><small>Home</small></span></button><strong>-$20.00</strong></div>
+                    <div class="transaction-split-row"><button type="button"><span class="transaction-split-caret">&rsaquo;</span><span><strong>Personal care</strong><small>Personal</small></span></button><strong>-$16.24</strong></div>
+                  </div>
+                  <div class="transaction-split-total"><span>Assigned <strong>-$86.24</strong></span><span class="available">Remaining <strong>$0.00</strong></span></div>
+                </section>
+              </div>
+              <aside class="transaction-import-details"><div><p class="eyebrow">Imported details</p><h3>Source record</h3></div><dl><div><dt>Merchant</dt><dd>Northstar Market</dd></div><div><dt>Original description</dt><dd>NORTHSTAR MARKET #118</dd></div><div><dt>Account</dt><dd>Local Checking</dd></div><div><dt>Connection</dt><dd>Northstar Bank</dd></div><div><dt>Bank category</dt><dd>Groceries</dd></div><div><dt>Status</dt><dd>Posted</dd></div><div><dt>Currency</dt><dd>USD</dd></div><div><dt>Imported</dt><dd>Sep 30, 2026 at 7:42 AM</dd></div><div><dt>Source ID</dt><dd><code>NM4...8QL</code></dd></div></dl><p class="transaction-detail-note">Edits change budgeting behavior only. Imported source values remain available here.</p></aside>
+            </div>
+            <footer class="transaction-dialog-actions transaction-detail-dialog__actions"><span class="transaction-detail-save-state">All changes saved</span><span></span><button class="terminal-button" type="button">Close</button></footer>
+          </section>
+          <footer class="statusline"><div><strong>SPLIT</strong><span>Northstar Market / Household</span><span>2 of 3</span></div><div><span><kbd>a</kbd> amount</span><span><kbd>c</kbd> category</span><span><kbd>d</kbd> delete</span><span><kbd>n</kbd> new split</span><span><kbd>Esc</kbd> close</span></div></footer>
+        </div>
+      </section>
+
+      <section class="review-frame" id="proposed-detail-amount">
+        <header class="review-frame__head">
+          <div><p class="eyebrow">Proposed / split amount</p><h2>Amount editing keeps the transaction total visible</h2></div>
+          <p class="review-frame__meta">Pressing <kbd>a</kbd> edits the focused split in place. The footer and reconciliation line make it clear that the split cannot save until every assigned amount adds up to the transaction total.</p>
+        </header>
+        <div class="review-frame__viewport transaction-detail-state-preview">
+          <section class="transaction-control-dialog transaction-detail-dialog" role="dialog" aria-modal="true" aria-labelledby="proposed-detail-amount-title">
+            <header class="transaction-dialog-head transaction-detail-dialog__head"><div><p class="eyebrow">Transaction details</p><h2 id="proposed-detail-amount-title">Northstar Market</h2><p>Local Checking &middot; Posted</p></div><div class="transaction-detail-heading-actions"><strong class="negative">-$86.24</strong><button aria-label="Close transaction details" class="transaction-detail-close" type="button">&times;</button></div></header>
+            <div class="transaction-detail-dialog__body">
+              <div class="transaction-detail-primary">
+                <section class="transaction-detail-section">
+                  <header class="transaction-detail-section__head"><div><p class="eyebrow">Budget attribution</p><h3>September 2026</h3></div><button class="transaction-state-button" type="button">Included</button></header>
+                  <div class="transaction-date-summary"><button class="transaction-detail-field transaction-detail-field--editable" type="button"><span>Budget date<small>Used by budgets, reports, filters, and sorting</small></span><strong>Sep 30, 2026</strong></button><div class="transaction-detail-field"><span>Original date<small>Imported value &middot; never overwritten</small></span><strong>Sep 30, 2026</strong></div></div>
+                </section>
+                <section class="transaction-detail-section">
+                  <header class="transaction-detail-section__head"><div><p class="eyebrow">Category allocation</p><h3>Edit Household amount</h3></div><span class="transaction-detail-remainder">-$8.00 remaining</span></header>
+                  <div class="transaction-split-head" aria-hidden="true"><span>Category</span><span>Amount</span></div>
+                  <div class="transaction-split-list">
+                    <div class="transaction-split-row"><button type="button"><span class="transaction-split-caret">&rsaquo;</span><span><strong>Groceries</strong><small>Food</small></span></button><strong>-$50.00</strong></div>
+                    <div class="transaction-split-row transaction-split-row--amount-edit"><button type="button"><span class="transaction-split-caret">&rsaquo;</span><span><strong>Household</strong><small>Home</small></span></button><label class="transaction-split-amount"><span class="sr-only">Household split amount</span><input aria-invalid="true" value="-$12.00" /></label></div>
+                    <div class="transaction-split-row"><button type="button"><span class="transaction-split-caret">&rsaquo;</span><span><strong>Personal care</strong><small>Personal</small></span></button><strong>-$16.24</strong></div>
+                  </div>
+                  <div class="transaction-split-total transaction-split-total--pending"><span>Assigned <strong>-$78.24</strong></span><span class="warning">Remaining <strong>-$8.00</strong></span></div>
+                  <p class="transaction-split-error" role="alert">Split amounts must add up to -$86.24 before changes can be saved.</p>
+                </section>
+              </div>
+              <aside class="transaction-import-details"><div><p class="eyebrow">Imported details</p><h3>Source record</h3></div><dl><div><dt>Merchant</dt><dd>Northstar Market</dd></div><div><dt>Original description</dt><dd>NORTHSTAR MARKET #118</dd></div><div><dt>Account</dt><dd>Local Checking</dd></div><div><dt>Connection</dt><dd>Northstar Bank</dd></div><div><dt>Bank category</dt><dd>Groceries</dd></div><div><dt>Status</dt><dd>Posted</dd></div><div><dt>Currency</dt><dd>USD</dd></div><div><dt>Imported</dt><dd>Sep 30, 2026 at 7:42 AM</dd></div><div><dt>Source ID</dt><dd><code>NM4...8QL</code></dd></div></dl><p class="transaction-detail-note">Edits change budgeting behavior only. Imported source values remain available here.</p></aside>
+            </div>
+            <footer class="transaction-dialog-actions transaction-detail-dialog__actions"><span class="transaction-detail-save-state transaction-detail-save-state--pending">Split total does not match</span><span></span><button class="terminal-button" type="button">Close</button></footer>
+          </section>
+          <footer class="statusline"><div><strong>AMOUNT</strong><span>Northstar Market / Household</span></div><div><span><kbd>Enter</kbd> apply</span><span><kbd>Esc</kbd> cancel</span></div></footer>
+        </div>
+      </section>
+
+      <section class="review-frame" id="proposed-detail-category">
+        <header class="review-frame__head">
+          <div><p class="eyebrow">Proposed / new split</p><h2>New splits start with category selection</h2></div>
+          <p class="review-frame__meta"><kbd>n</kbd> inserts a focused row and opens the existing searchable category picker. The amount defaults to the unassigned remainder and remains editable with <kbd>a</kbd>.</p>
+        </header>
+        <div class="review-frame__viewport transaction-detail-state-preview">
+          <section class="transaction-control-dialog transaction-detail-dialog transaction-detail-dialog--picker" role="dialog" aria-modal="true" aria-labelledby="proposed-detail-category-title">
+            <header class="transaction-dialog-head transaction-detail-dialog__head"><div><p class="eyebrow">Transaction details</p><h2 id="proposed-detail-category-title">Northstar Market</h2><p>Local Checking &middot; Posted</p></div><div class="transaction-detail-heading-actions"><strong class="negative">-$86.24</strong><button aria-label="Close transaction details" class="transaction-detail-close" type="button">&times;</button></div></header>
+            <div class="transaction-detail-dialog__body">
+              <div class="transaction-detail-primary">
+                <section class="transaction-detail-section">
+                  <header class="transaction-detail-section__head"><div><p class="eyebrow">Budget attribution</p><h3>September 2026</h3></div><button class="transaction-state-button" type="button">Included</button></header>
+                  <div class="transaction-date-summary"><button class="transaction-detail-field transaction-detail-field--editable" type="button"><span>Budget date<small>Used by budgets, reports, filters, and sorting</small></span><strong>Sep 30, 2026</strong></button><div class="transaction-detail-field"><span>Original date<small>Imported value &middot; never overwritten</small></span><strong>Sep 30, 2026</strong></div></div>
+                </section>
+                <section class="transaction-detail-section">
+                  <header class="transaction-detail-section__head"><div><p class="eyebrow">Category allocation</p><h3>Choose a category</h3></div><span class="transaction-detail-remainder">-$16.24 remaining</span></header>
+                  <div class="transaction-split-head" aria-hidden="true"><span>Category</span><span>Amount</span></div>
+                  <div class="transaction-split-list">
+                    <div class="transaction-split-row"><button type="button"><span class="transaction-split-caret">&rsaquo;</span><span><strong>Groceries</strong><small>Food</small></span></button><strong>-$50.00</strong></div>
+                    <div class="transaction-split-row"><button type="button"><span class="transaction-split-caret">&rsaquo;</span><span><strong>Household</strong><small>Home</small></span></button><strong>-$20.00</strong></div>
+                    <div class="transaction-split-row transaction-split-row--editing">
+                      <div class="transaction-split-category-editor"><input aria-label="Choose split category" class="category-search-input" placeholder="Search categories" value="per" /><div class="category-search-menu" role="listbox"><button class="is-highlighted" role="option" type="button">Personal care</button><button role="option" type="button">Personal spending</button><button class="category-search-menu__create" role="option" type="button">+ Create &ldquo;per&rdquo;</button></div></div>
+                      <label class="transaction-split-amount"><span class="sr-only">Split amount</span><input value="-$16.24" /></label>
+                    </div>
+                  </div>
+                  <div class="transaction-split-total transaction-split-total--pending"><span>Assigned <strong>-$70.00</strong></span><span class="warning">Remaining <strong>-$16.24</strong></span></div>
+                </section>
+              </div>
+              <aside class="transaction-import-details"><div><p class="eyebrow">Imported details</p><h3>Source record</h3></div><dl><div><dt>Merchant</dt><dd>Northstar Market</dd></div><div><dt>Original description</dt><dd>NORTHSTAR MARKET #118</dd></div><div><dt>Account</dt><dd>Local Checking</dd></div><div><dt>Connection</dt><dd>Northstar Bank</dd></div><div><dt>Bank category</dt><dd>Groceries</dd></div><div><dt>Status</dt><dd>Posted</dd></div><div><dt>Currency</dt><dd>USD</dd></div><div><dt>Imported</dt><dd>Sep 30, 2026 at 7:42 AM</dd></div><div><dt>Source ID</dt><dd><code>NM4...8QL</code></dd></div></dl><p class="transaction-detail-note">Edits change budgeting behavior only. Imported source values remain available here.</p></aside>
+            </div>
+            <footer class="transaction-dialog-actions transaction-detail-dialog__actions"><span class="transaction-detail-save-state transaction-detail-save-state--pending">Choose a category to add the split</span><span></span><button class="terminal-button" type="button">Close</button></footer>
+          </section>
+          <footer class="statusline"><div><strong>CATEGORY</strong><span>new split / category</span></div><div><span><kbd>Ctrl+N</kbd><kbd>Ctrl+P</kbd> choose</span><span><kbd>Enter</kbd> select</span><span><kbd>Esc</kbd> cancel row</span></div></footer>
+        </div>
+      </section>
+
+      <section class="review-frame" id="proposed-detail-date">
+        <header class="review-frame__head">
+          <div><p class="eyebrow">Proposed / date editor</p><h2>Budget date is editable; original date is permanent</h2></div>
+          <p class="review-frame__meta">The text field accepts entries such as <code>1/5/2022</code>. Saving moves the transaction between monthly budgets, reports, filters, and sort order while retaining the imported date for audit.</p>
+        </header>
+        <div class="review-frame__viewport transaction-detail-state-preview transaction-detail-state-preview--light">
+          <section class="transaction-control-dialog transaction-detail-dialog" role="dialog" aria-modal="true" aria-labelledby="proposed-detail-date-title">
+            <header class="transaction-dialog-head transaction-detail-dialog__head"><div><p class="eyebrow">Transaction details</p><h2 id="proposed-detail-date-title">Cedar Cafe</h2><p>Local Credit Card &middot; Posted</p></div><div class="transaction-detail-heading-actions"><strong class="negative">-$42.00</strong><button aria-label="Close transaction details" class="transaction-detail-close" type="button">&times;</button></div></header>
+            <div class="transaction-detail-dialog__body">
+              <div class="transaction-detail-primary">
+                <section class="transaction-detail-section">
+                  <header class="transaction-detail-section__head"><div><p class="eyebrow">Budget attribution</p><h3>Edit transaction date</h3></div><button class="transaction-state-button" type="button">Included</button></header>
+                  <div class="transaction-date-summary">
+                    <label class="transaction-detail-field transaction-detail-field--editing"><span>Budget date<small id="date-format-hint">Month/day/year, for example 1/5/2022</small></span><input aria-describedby="date-format-hint" aria-invalid="true" value="9/31/2026" /></label>
+                    <div class="transaction-detail-field"><span>Original date<small>Imported value &middot; never overwritten</small></span><strong>Aug 31, 2026</strong></div>
+                  </div>
+                  <p class="form-message form-message--error transaction-date-error" role="alert">Enter a valid date, for example 1/5/2022.</p>
+                  <div class="transaction-date-impact"><strong>Budget impact</strong><p>A valid September date moves this transaction from the August budget into September and updates its position in Transactions.</p></div>
+                </section>
+                <section class="transaction-detail-section">
+                  <header class="transaction-detail-section__head"><div><p class="eyebrow">Category allocation</p><h3>Split transaction</h3></div><button class="terminal-button transaction-detail-add" type="button">+ New split</button></header>
+                  <div class="transaction-split-head" aria-hidden="true"><span>Category</span><span>Amount</span></div>
+                  <div class="transaction-split-list"><div class="transaction-split-row"><button type="button"><span class="transaction-split-caret">&rsaquo;</span><span><strong>Restaurants</strong><small>Food</small></span></button><strong>-$24.00</strong></div><div class="transaction-split-row"><button type="button"><span class="transaction-split-caret">&rsaquo;</span><span><strong>Groceries</strong><small>Food</small></span></button><strong>-$18.00</strong></div></div>
+                  <div class="transaction-split-total"><span>Assigned <strong>-$42.00</strong></span><span class="available">Remaining <strong>$0.00</strong></span></div>
+                </section>
+              </div>
+              <aside class="transaction-import-details"><div><p class="eyebrow">Imported details</p><h3>Source record</h3></div><dl><div><dt>Merchant</dt><dd>Cedar Cafe</dd></div><div><dt>Original description</dt><dd>CEDAR CAFE #0482</dd></div><div><dt>Account</dt><dd>Local Credit Card</dd></div><div><dt>Connection</dt><dd>Northstar Bank</dd></div><div><dt>Bank category</dt><dd>Food and drink</dd></div><div><dt>Status</dt><dd>Posted</dd></div><div><dt>Currency</dt><dd>USD</dd></div><div><dt>Imported</dt><dd>Sep 1, 2026 at 8:14 AM</dd></div><div><dt>Source ID</dt><dd><code>QK8...J7P</code></dd></div></dl><p class="transaction-detail-note">Edits change budgeting behavior only. Imported source values remain available here.</p></aside>
+            </div>
+            <footer class="transaction-dialog-actions transaction-detail-dialog__actions"><button class="terminal-button" type="button">Cancel</button><span></span><button class="terminal-button terminal-button--primary" disabled type="button">Save date</button></footer>
+          </section>
+          <footer class="statusline"><div><strong>DATE</strong><span>Cedar Cafe / invalid date</span></div><div><span><kbd>Enter</kbd> save</span><span><kbd>Esc</kbd> cancel</span></div></footer>
+        </div>
+      </section>
+
+      <section class="review-frame" id="proposed-detail-mobile">
+        <header class="review-frame__head">
+          <div><p class="eyebrow">Proposed / responsive</p><h2>Mobile detail keeps attribution ahead of import metadata</h2></div>
+          <p class="review-frame__meta">Light-theme narrow layout stacks dates and split rows, keeps editable values as direct touch targets, and moves imported metadata below the budgeting controls.</p>
+        </header>
+        <div class="review-frame__viewport transaction-detail-mobile-preview">
+          <div class="transaction-detail-mobile-shell">
+            <section class="transaction-control-dialog transaction-detail-dialog" role="dialog" aria-modal="true" aria-labelledby="proposed-detail-mobile-title">
+              <header class="transaction-dialog-head transaction-detail-dialog__head"><div><p class="eyebrow">Transaction details</p><h2 id="proposed-detail-mobile-title">Cedar Cafe</h2><p>Local Credit Card &middot; Posted</p></div><div class="transaction-detail-heading-actions"><strong class="negative">-$42.00</strong><button class="transaction-detail-close" type="button">&times;</button></div></header>
+              <div class="transaction-detail-dialog__body">
+                <div class="transaction-detail-primary">
+                  <section class="transaction-detail-section">
+                    <header class="transaction-detail-section__head"><div><p class="eyebrow">Budget attribution</p><h3>September 2026</h3></div><button class="transaction-state-button" type="button">Included</button></header>
+                    <div class="transaction-date-summary"><button class="transaction-detail-field transaction-detail-field--editable" type="button"><span>Budget date<small>Tap to edit</small></span><strong>Sep 1, 2026</strong></button><div class="transaction-detail-field"><span>Original date<small>Imported</small></span><strong>Aug 31, 2026</strong></div></div>
+                  </section>
+                  <section class="transaction-detail-section">
+                    <header class="transaction-detail-section__head"><div><p class="eyebrow">Category allocation</p><h3>2 splits</h3></div><button class="terminal-button transaction-detail-add" type="button">+ Split</button></header>
+                    <div class="transaction-split-list">
+                      <div class="transaction-split-row is-focused"><button type="button"><span><strong>Restaurants</strong><small>Food</small></span></button><strong>-$24.00</strong></div>
+                      <div class="transaction-split-row"><button type="button"><span><strong>Groceries</strong><small>Food</small></span></button><strong>-$18.00</strong></div>
+                    </div>
+                    <div class="transaction-split-total"><span>Assigned <strong>-$42.00</strong></span><span class="available">Remaining <strong>$0.00</strong></span></div>
+                  </section>
+                </div>
+                <aside class="transaction-import-details"><div><p class="eyebrow">Imported details</p><h3>Source record</h3></div><dl><div><dt>Description</dt><dd>CEDAR CAFE #0482</dd></div><div><dt>Connection</dt><dd>Northstar Bank</dd></div><div><dt>Bank category</dt><dd>Food and drink</dd></div><div><dt>Imported</dt><dd>Sep 1 at 8:14 AM</dd></div></dl></aside>
+              </div>
+              <footer class="transaction-dialog-actions transaction-detail-dialog__actions"><span class="transaction-detail-save-state">All changes saved</span><span></span><button class="terminal-button" type="button">Close</button></footer>
+            </section>
           </div>
         </div>
       </section>

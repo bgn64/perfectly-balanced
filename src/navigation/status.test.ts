@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { buildNavigationStatus, textEntryStatus } from './status.ts'
+import {
+  buildNavigationStatus,
+  buildTransactionDetailStatus,
+  textEntryStatus,
+} from './status.ts'
 
 describe('statusline presentation', () => {
   it('does not advertise spatial navigation while text entry owns focus', () => {
@@ -94,6 +98,39 @@ describe('statusline presentation', () => {
       { keys: ['h', 'j', 'k', 'l'], label: 'focus' },
       { keys: [':'], label: 'command' },
     ])
+  })
+
+  it('shows transaction detail actions only in the status line', () => {
+    expect(
+      buildTransactionDetailStatus({
+        hasUnsavedChanges: false,
+        mode: 'split',
+        label: 'transaction / Cedar Cafe / Restaurants',
+      }),
+    ).toEqual({
+      mode: 'SPLIT',
+      label: 'transaction / Cedar Cafe / Restaurants',
+      shortcuts: [
+        { keys: ['j', 'k'], label: 'split' },
+        { keys: ['a'], label: 'amount' },
+        { keys: ['c'], label: 'category' },
+        { keys: ['d'], label: 'delete' },
+        { keys: ['n'], label: 'new split' },
+        { keys: ['e'], label: 'date' },
+        { keys: ['t'], label: 'status' },
+        { keys: ['Esc'], label: 'close' },
+      ],
+    })
+  })
+
+  it('advertises explicit discard when split drafts are unsaved', () => {
+    expect(
+      buildTransactionDetailStatus({
+        hasUnsavedChanges: true,
+        mode: 'split',
+        label: 'transaction / Cedar Cafe / Restaurants',
+      }).shortcuts.at(-1),
+    ).toEqual({ keys: ['Esc'], label: 'discard changes' })
   })
 
   it('shows disconnect only for a focused account', () => {
