@@ -26,6 +26,7 @@ export interface TransactionDetailInteraction {
 export interface NavigationStatusInput {
   view: 'budgets' | 'transactions' | 'insights' | 'settings'
   action: string
+  hasRecommendations?: boolean
   label: string
   semanticKind: string | null
   isTextEntry: boolean
@@ -39,6 +40,7 @@ const focusShortcut: StatusShortcut = {
 export function buildNavigationStatus({
   view,
   action,
+  hasRecommendations = false,
   label,
   semanticKind,
   isTextEntry,
@@ -82,6 +84,9 @@ export function buildNavigationStatus({
     shortcuts.push({ keys: ['n'], label: 'new' })
   } else if (isTransactionRow) {
     shortcuts.push(
+      ...(hasRecommendations
+        ? [{ keys: ['a'], label: 'apply recommendations' }]
+        : []),
       { keys: ['c'], label: 'category' },
       { keys: ['t'], label: 'status' },
     )

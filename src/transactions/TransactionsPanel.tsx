@@ -30,6 +30,12 @@ import type { TransactionDetailInteraction } from '../navigation/status.ts'
 import { TransactionDetailDialog } from './TransactionDetailDialog.tsx'
 import type { TransactionSplitPayload } from './model.ts'
 import {
+  applicableTransactionRecommendation,
+  computeTransactionRecommendations,
+  type ApplicableTransactionRecommendation,
+  type RecommendedAction,
+} from './recommendations.ts'
+import {
   isInTransactionTimeRange,
   transactionTimeRangeDescription,
   transactionTimeRanges,
@@ -99,6 +105,17 @@ interface PendingIgnoredUpdate {
 interface PendingResultFocus {
   transactionId: string
   pageIndex: number
+}
+
+function recommendationTitle(
+  action: RecommendedAction<unknown>,
+  label: string,
+): string {
+  const evidence =
+    action.match === 'merchant-amount'
+      ? 'the latest transaction with the same merchant and amount'
+      : 'the latest transaction with the same merchant'
+  return `Apply recommended ${label} from ${evidence}`
 }
 
 async function queryTransactions(): Promise<TransactionsData> {
@@ -219,6 +236,10 @@ export function TransactionsPanel({
   )
   const [categoryNotice, setCategoryNotice] = useState<string | null>(null)
   const [isSavingCategories, setIsSavingCategories] = useState(false)
+  const [
+    applyingRecommendationTransactionId,
+    setApplyingRecommendationTransactionId,
+  ] = useState<string | null>(null)
   const requestGeneration = useRef(0)
   const selectedTransactionIdRef = useRef<string | null>(null)
   const transactionRowRefs = useRef(new Map<string, HTMLDivElement>())
@@ -234,6 +255,7 @@ export function TransactionsPanel({
   const detailDialogOriginRef = useRef<HTMLElement | null>(null)
   const filterButtonRef = useRef<HTMLButtonElement>(null)
   const pendingResultFocusRef = useRef<PendingResultFocus | null>(null)
+  const applyingRecommendationTransactionIdRef = useRef<string | null>(null)
 
   const refreshTransactions = useCallback(async () => {
     const generation = ++requestGeneration.current
@@ -291,6 +313,54 @@ export function TransactionsPanel({
   const categoriesById = useMemo(
     () => new Map(categories.map((category) => [category.id, category])),
     [categories],
+  )
+  const recommendationsByTransactionId = useMemo(
+    () =>
+      new Map(
+        computeTransactionRecommendations(
+          transactions.map((transaction) => ({
+            id: transaction.id,
+            amount: transaction.amount,
+            categoryIds: (
+              splitsByTransaction.get(transaction.id) ?? emptyTransactionSplits
+            ).map((split) => split.category_id),
+            currencyCode: transaction.currency_code,
+            effectiveDate: effectiveTransactionDate(transaction),
+            importedAt: transaction.imported_at,
+            isIgnored: transaction.is_ignored,
+            isPending: transaction.is_pending,
+            merchantName: transaction.merchant_name,
+            transactionName: transaction.transaction_name,
+          })),
+        ).map((recommendation) => [
+          recommendation.transactionId,
+          recommendation,
+        ]),
+      ),
+    [splitsByTransaction, transactions],
+  )
+  const recommendationForTransaction = useCallback(
+    (transaction: Transaction): ApplicableTransactionRecommendation => {
+      const applicable = applicableTransactionRecommendation(
+        recommendationsByTransactionId.get(transaction.id),
+        {
+          categoryCount: (
+            splitsByTransaction.get(transaction.id) ?? emptyTransactionSplits
+          ).length,
+          currencyCode: transaction.currency_code,
+          isIgnored: transaction.is_ignored,
+        },
+      )
+      return {
+        category:
+          applicable.category &&
+          categoriesById.has(applicable.category.value)
+            ? applicable.category
+            : null,
+        ignored: applicable.ignored,
+      }
+    },
+    [categoriesById, recommendationsByTransactionId, splitsByTransaction],
   )
   const activeTransactions = useMemo(
     () => transactions.filter((transaction) => !transaction.is_ignored),
@@ -827,6 +897,78 @@ export function TransactionsPanel({
     [pageTransactions, processIgnoredUpdates],
   )
 
+  const applyTransactionRecommendations = useCallback(
+    async (
+      transaction: Transaction,
+      recommendation: ApplicableTransactionRecommendation,
+      selection: { category: boolean; ignored: boolean },
+    ) => {
+      const category = selection.category ? recommendation.category : null
+      const ignored = selection.ignored ? recommendation.ignored : null
+      if (!category && !ignored) {
+        setDataError('No applicable recommendations are available.')
+        return
+      }
+      if (applyingRecommendationTransactionIdRef.current) {
+        return
+      }
+
+      applyingRecommendationTransactionIdRef.current = transaction.id
+      setApplyingRecommendationTransactionId(transaction.id)
+      setDataError(null)
+      selectTransaction(transaction)
+      pendingResultFocusRef.current = {
+        transactionId: transaction.id,
+        pageIndex: Math.max(
+          0,
+          pageTransactions.findIndex(
+            (candidate) => candidate.id === transaction.id,
+          ),
+        ),
+      }
+
+      try {
+        const { error } = await getSupabaseClient().rpc(
+          'apply_transaction_recommendations',
+          {
+            p_category_id: category?.value ?? null,
+            p_expected_is_ignored: ignored ? transaction.is_ignored : null,
+            p_is_ignored: ignored?.value ?? null,
+            p_transaction_id: transaction.id,
+          },
+        )
+        if (error) {
+          throw new Error(error.message)
+        }
+        const didRefresh = await refreshTransactions()
+        if (!didRefresh) {
+          throw new Error(
+            'The recommendations were applied, but transactions could not be refreshed.',
+          )
+        }
+        onTransactionsChanged()
+      } catch (error) {
+        pendingResultFocusRef.current = null
+        setDataError(
+          error instanceof Error
+            ? error.message
+            : 'The recommendations could not be applied.',
+        )
+        window.requestAnimationFrame(() => focusTransaction(transaction.id))
+      } finally {
+        applyingRecommendationTransactionIdRef.current = null
+        setApplyingRecommendationTransactionId(null)
+      }
+    },
+    [
+      focusTransaction,
+      onTransactionsChanged,
+      pageTransactions,
+      refreshTransactions,
+      selectTransaction,
+    ],
+  )
+
   const removeTransactionFilter = useCallback(
     (filter: TransactionFilter) => {
       const filterIndex = transactionFilters.indexOf(filter)
@@ -901,6 +1043,30 @@ export function TransactionsPanel({
             (transaction) => transaction.id === focusedTransactionId,
           ) ?? null
         : selectedTransaction
+      const actionRecommendation = actionTransaction
+        ? recommendationForTransaction(actionTransaction)
+        : null
+
+      if (
+        key === 'a' &&
+        !event.ctrlKey &&
+        !event.shiftKey &&
+        focusedTransactionId &&
+        actionTransaction &&
+        actionRecommendation &&
+        (actionRecommendation.category || actionRecommendation.ignored)
+      ) {
+        event.preventDefault()
+        void applyTransactionRecommendations(
+          actionTransaction,
+          actionRecommendation,
+          {
+            category: true,
+            ignored: true,
+          },
+        )
+        return
+      }
 
       if (key === 'c' && !event.ctrlKey && !event.shiftKey && actionTransaction) {
         event.preventDefault()
@@ -918,12 +1084,14 @@ export function TransactionsPanel({
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [
+    applyTransactionRecommendations,
     closeSearch,
     controlDialog,
     detailTransactionId,
     isSearchOpen,
     openSearch,
     openCategoryPicker,
+    recommendationForTransaction,
     removeTransactionFilter,
     selectTransaction,
     selectedTransaction,
@@ -1358,14 +1526,29 @@ export function TransactionsPanel({
               const isSelected =
                 isEditing || transaction.id === detailTransactionId
               const isUsd = transaction.currency_code === 'USD'
+              const recommendation = recommendationForTransaction(transaction)
+              const recommendedCategory = recommendation.category
+                ? categoriesById.get(recommendation.category.value) ?? null
+                : null
+              const hasRecommendations = Boolean(
+                recommendedCategory || recommendation.ignored,
+              )
+              const isApplyingRecommendations =
+                applyingRecommendationTransactionId === transaction.id
               return (
                 <div
+                  aria-busy={isApplyingRecommendations || undefined}
                   aria-current={isSelected ? 'true' : undefined}
                   className={`transaction-row-simple${
                     isSelected ? ' is-selected' : ''
                   }${
                     transaction.is_ignored ? ' is-ignored' : ''
+                  }${
+                    hasRecommendations ? ' has-recommendations' : ''
                   }`}
+                  data-recommendations-available={
+                    hasRecommendations ? 'true' : undefined
+                  }
                   data-semantic-id={`transaction-row-${transaction.id}`}
                   data-semantic-kind="transaction-row"
                   data-semantic-region="workspace"
@@ -1447,7 +1630,13 @@ export function TransactionsPanel({
                       onSelect={(category) => saveCategory(transaction, category)}
                     />
                   ) : (
-                    <div className="transaction-category-cell">
+                    <div
+                      className={`transaction-category-cell${
+                        recommendedCategory
+                          ? ' transaction-recommendation-cell'
+                          : ''
+                      }`}
+                    >
                       <button
                         aria-label={
                           isUsd
@@ -1462,7 +1651,7 @@ export function TransactionsPanel({
                         }
                         data-status-label={transactionDescription(transaction)}
                         data-transaction-id={transaction.id}
-                        disabled={!isUsd}
+                        disabled={!isUsd || isApplyingRecommendations}
                         type="button"
                         onClick={() => openCategoryPicker(transaction)}
                       >
@@ -1472,6 +1661,31 @@ export function TransactionsPanel({
                           <CategorySummary categoryNames={categoryNames} />
                         )}
                       </button>
+                      {recommendedCategory && recommendation.category && (
+                        <button
+                          aria-label={`Apply recommended category ${recommendedCategory.name}`}
+                          className="transaction-recommendation-action"
+                          disabled={isApplyingRecommendations}
+                          title={recommendationTitle(
+                            recommendation.category,
+                            `category ${recommendedCategory.name}`,
+                          )}
+                          type="button"
+                          onClick={() =>
+                            void applyTransactionRecommendations(
+                              transaction,
+                              recommendation,
+                              {
+                                category: true,
+                                ignored: false,
+                              },
+                            )
+                          }
+                        >
+                          <strong>{recommendedCategory.name}</strong>
+                          <span>recommended</span>
+                        </button>
+                      )}
                       {isSelected && !isUsd && categoryNotice && (
                         <span
                           className="form-message form-message--error"
@@ -1482,24 +1696,58 @@ export function TransactionsPanel({
                       )}
                     </div>
                   )}
-                  <button
-                    aria-label={`${
-                      transaction.is_ignored ? 'Ignored' : 'Included'
-                    } transaction: ${transactionDescription(transaction)}`}
-                    className={`transaction-state-button${
-                      transaction.is_ignored ? ' is-ignored' : ''
+                  <div
+                    className={`transaction-status-cell${
+                      recommendation.ignored
+                        ? ' transaction-recommendation-cell'
+                        : ''
                     }`}
-                    data-status-action="toggle status"
-                    data-status-label={`transaction / ${transactionDescription(transaction)}`}
-                    data-transaction-id={transaction.id}
-                    type="button"
-                    onClick={() => {
-                      selectTransaction(transaction)
-                      toggleTransactionIgnored(transaction)
-                    }}
                   >
-                    {transaction.is_ignored ? 'Ignored' : 'Included'}
-                  </button>
+                    <button
+                      aria-label={`${
+                        transaction.is_ignored ? 'Ignored' : 'Included'
+                      } transaction: ${transactionDescription(transaction)}`}
+                      className={`transaction-state-button${
+                        transaction.is_ignored ? ' is-ignored' : ''
+                      }`}
+                      data-status-action="toggle status"
+                      data-status-label={`transaction / ${transactionDescription(transaction)}`}
+                      data-transaction-id={transaction.id}
+                      disabled={isApplyingRecommendations}
+                      type="button"
+                      onClick={() => {
+                        selectTransaction(transaction)
+                        toggleTransactionIgnored(transaction)
+                      }}
+                    >
+                      {transaction.is_ignored ? 'Ignored' : 'Included'}
+                    </button>
+                    {recommendation.ignored && (
+                      <button
+                        aria-label="Apply recommended status Ignore"
+                        className="transaction-recommendation-action transaction-recommendation-action--warning"
+                        disabled={isApplyingRecommendations}
+                        title={recommendationTitle(
+                          recommendation.ignored,
+                          'status Ignore',
+                        )}
+                        type="button"
+                        onClick={() =>
+                          void applyTransactionRecommendations(
+                            transaction,
+                            recommendation,
+                            {
+                              category: false,
+                              ignored: true,
+                            },
+                          )
+                        }
+                      >
+                        <strong>Ignore</strong>
+                        <span>recommended</span>
+                      </button>
+                    )}
+                  </div>
                   <strong
                     className={`transaction-amount ${
                       transaction.amount >= 0 ? 'positive' : 'negative'

@@ -323,7 +323,7 @@ body {
   color: var(--theme-text-muted);
 }
 
-.authenticated-app.terminal-app :is(.filter-token, .category-chip, .transaction-state-button) {
+.authenticated-app.terminal-app :is(.filter-token, .category-chip) {
   border-color: var(--theme-border);
   background: var(--theme-surface-raised);
   color: var(--theme-accent);
@@ -360,7 +360,10 @@ body {
   color: var(--theme-text-muted);
 }
 
-.authenticated-app.terminal-app .transaction-category-cell .category-chip {
+.authenticated-app.terminal-app :is(
+  .transaction-category-cell .category-chip,
+  .transaction-table .transaction-state-button
+) {
   border-color: transparent;
   background: transparent;
   color: var(--theme-accent);
@@ -370,7 +373,14 @@ body {
   color: var(--theme-text-muted);
 }
 
-.authenticated-app.terminal-app .transaction-category-cell .category-chip:is(:hover, :focus-visible) {
+.authenticated-app.terminal-app .transaction-table .transaction-state-button {
+  color: var(--theme-text-secondary);
+}
+
+.authenticated-app.terminal-app :is(
+  .transaction-category-cell .category-chip,
+  .transaction-table .transaction-state-button
+):is(:hover, :focus-visible) {
   border-color: var(--theme-accent);
   background: var(--theme-selection);
 }

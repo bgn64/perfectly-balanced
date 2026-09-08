@@ -363,6 +363,7 @@ h3 {
 .workspace-month-rail button:not(:disabled):hover,
 .workspace-month-rail button:not(:disabled):focus-visible {
   background: var(--theme-selection);
+  box-shadow: inset 0 0 0 2px var(--theme-accent);
   color: var(--theme-accent-strong);
   outline: none;
 }
@@ -2404,13 +2405,13 @@ button.filter-token.is-selected {
 }
 
 .transaction-row-simple::after,
-.transaction-state-button {
+.transaction-state-button,
+.transaction-status-cell {
   grid-column: 3;
   grid-row: 1;
   justify-self: start;
 }
 
-.transaction-state-button,
 .transaction-row-simple::after {
   border: 1px solid var(--theme-control-border);
   border-radius: 999px;
@@ -2421,11 +2422,39 @@ button.filter-token.is-selected {
   font-size: 0.62rem;
 }
 
+.transaction-state-button {
+  border: 1px solid var(--theme-control-border);
+  border-radius: 999px;
+  padding: 0.2rem 0.45rem;
+  background: var(--theme-surface-raised);
+  color: var(--theme-accent-strong);
+  font: inherit;
+  font-size: 0.62rem;
+}
+
+.transaction-table .transaction-state-button {
+  display: flex;
+  width: 100%;
+  min-height: 1.85rem;
+  align-items: center;
+  justify-content: flex-start;
+  border: 1px solid transparent;
+  border-radius: 0.2rem;
+  padding: 0.28rem 0.45rem;
+  background: transparent;
+  color: var(--theme-text);
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-align: left;
+}
+
 .transaction-row-simple::after {
   content: "Included";
 }
 
-.transaction-row-simple:has(> .transaction-state-button)::after {
+.transaction-row-simple:has(> .transaction-state-button)::after,
+.transaction-row-simple:has(> .transaction-status-cell)::after {
   display: none;
 }
 
@@ -2434,10 +2463,94 @@ button.filter-token.is-selected {
   border-color: var(--theme-accent);
   background: var(--theme-selection);
   color: var(--theme-text);
+  outline: none;
+}
+
+.transaction-table .transaction-state-button:hover,
+.transaction-table .transaction-state-button:focus-visible {
+  background: var(--theme-shell);
 }
 
 .transaction-state-button.is-ignored {
   color: var(--theme-warning);
+}
+
+.transaction-state-button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.transaction-status-cell {
+  width: 100%;
+  min-width: 0;
+}
+
+.transaction-status-cell .transaction-state-button {
+  grid-column: auto;
+  grid-row: auto;
+  justify-self: stretch;
+}
+
+.transaction-recommendation-cell {
+  display: grid;
+  align-self: stretch;
+  align-content: start;
+  gap: 0.12rem;
+  min-width: 0;
+}
+
+.transaction-recommendation-action {
+  position: relative;
+  display: flex;
+  width: 100%;
+  min-height: 1.1rem;
+  align-items: center;
+  gap: 0.3rem;
+  border: 1px solid transparent;
+  border-radius: 0.2rem;
+  padding: 0.05rem 1.2rem 0.05rem 0.45rem;
+  background: transparent;
+  color: var(--theme-accent-strong);
+  font: inherit;
+  font-size: 0.61rem;
+  text-align: left;
+}
+
+.transaction-recommendation-action::before {
+  position: absolute;
+  right: 0.35rem;
+  color: var(--theme-accent-strong);
+  content: "+";
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.transaction-recommendation-action > strong {
+  color: inherit;
+  font-size: 0.61rem;
+}
+
+.transaction-recommendation-action > span {
+  color: var(--theme-text-muted);
+  font-size: 0.53rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.transaction-recommendation-action--warning,
+.transaction-recommendation-action--warning::before {
+  color: var(--theme-warning);
+}
+
+.transaction-recommendation-action:is(:hover, :focus-visible) {
+  border-color: var(--theme-accent);
+  background: var(--theme-shell);
+  outline: none;
+}
+
+.transaction-recommendation-action:disabled {
+  cursor: wait;
+  opacity: 0.6;
 }
 
 .transaction-row-simple {
@@ -2901,7 +3014,8 @@ button.filter-token.is-selected {
   .transaction-column-head::after,
   .transaction-column-head > span:nth-child(3),
   .transaction-row-simple::after,
-  .transaction-state-button {
+  .transaction-state-button,
+  .transaction-status-cell {
     grid-column: 2;
   }
 
@@ -2910,11 +3024,42 @@ button.filter-token.is-selected {
     grid-column: 3;
   }
 
+  .transaction-row-simple.has-recommendations {
+    grid-template-columns: minmax(0, 1fr) minmax(4.5rem, auto);
+  }
+
+  .transaction-row-simple.has-recommendations
+    > .transaction-row-simple__select {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .transaction-row-simple.has-recommendations
+    > .transaction-category-cell {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .transaction-row-simple.has-recommendations
+    > .transaction-status-cell {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-row: 3;
+  }
+
+  .transaction-row-simple.has-recommendations
+    > strong.transaction-amount {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
   .transaction-inline-editor > span:first-child,
   .transaction-inline-editor .inline-input,
   .transaction-inline-editor .inline-error {
     grid-column: 1 / -1;
   }
+
 }
 
 .authenticated-app.terminal-app.screen-app .workspace {

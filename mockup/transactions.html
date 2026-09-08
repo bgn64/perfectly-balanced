@@ -23,7 +23,9 @@
     </header>
 
     <nav class="review-section-nav" aria-label="Transaction frame navigation">
-      <a href="#proposed-queue">Shared month</a><a href="#proposed-detail">Detail modal</a>
+      <a href="#proposed-queue">Shared month</a><a href="#proposed-recommendation">Always-visible recommendations</a>
+      <a href="#proposed-recommendation-applied">Applied</a><a href="#proposed-recommendation-mobile">Mobile</a>
+      <a href="#proposed-detail">Detail modal</a>
       <a href="#proposed-detail-split">Split focus</a><a href="#proposed-detail-amount">Split amount</a>
       <a href="#proposed-detail-category">New split</a>
       <a href="#proposed-detail-date">Date editor</a><a href="#proposed-detail-mobile">Mobile detail</a>
@@ -76,6 +78,82 @@
               </section>
             </main>
             <footer class="statusline"><div><strong>NAVIGATE</strong><span>transactions / navigation</span><span>focus 2 of 34</span></div><div><span><kbd>Enter</kbd> select</span><span><kbd>l</kbd> enter workspace</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span><span><kbd>/</kbd> search</span></div></footer>
+          </div>
+        </div>
+      </section>
+
+      <section class="review-frame" id="proposed-recommendation">
+        <header class="review-frame__head">
+          <div><p class="eyebrow">Proposed / visibility + focus</p><h2>Recommendations stay visible and month focus reads clearly</h2></div>
+          <p class="review-frame__meta">Eligible recommendations remain visible on idle rows. The focused month arrow uses the same accent boundary and selected background as other focused controls.</p>
+        </header>
+        <div class="review-frame__viewport transaction-recommendation-preview">
+          <div class="authenticated-app terminal-app command-closed screen-app theme-dark">
+            <header class="titlebar"><button class="brand" type="button"><span class="brand-mark">pb</span><span>perfectly-balanced</span></button><div class="theme-switcher" role="group" aria-label="Theme"><input checked id="recommendation-theme-dark" name="recommendation-theme" type="radio" /><label for="recommendation-theme-dark">Dark</label><input id="recommendation-theme-light" name="recommendation-theme" type="radio" /><label for="recommendation-theme-light">Light</label></div><details class="profile"><summary><span>D</span>dev</summary></details></header>
+            <aside class="sidebar" aria-label="Application navigation"><nav class="main-nav"><button class="nav-item" type="button"><span>Budget</span></button><button class="nav-item is-active" aria-current="page" type="button"><span>Transactions</span><strong>18</strong></button><button class="nav-item" type="button"><span>Reports</span></button></nav></aside>
+            <main class="workspace">
+              <section class="page transactions-page transactions-page--terminal">
+                <header class="workspace-head workspace-head--compact">
+                  <div class="workspace-month-heading"><p class="eyebrow">All accounts</p><nav class="workspace-month-rail" aria-label="Transactions month"><button class="is-focused" type="button" aria-label="Previous month, August 2026"><span aria-hidden="true">&larr;</span></button><span class="workspace-month-rail__current"><h1>Transactions</h1><span class="workspace-month-rail__separator" aria-hidden="true">/</span><strong>September 2026</strong></span><button type="button" aria-label="Next month, October 2026"><span aria-hidden="true">&rarr;</span></button></nav><p class="subtitle">Review and categorize imported activity.</p></div>
+                  <span class="terminal-pill terminal-pill--warning">18 uncategorized</span>
+                </header>
+                <section class="budget-table transaction-table" aria-labelledby="proposed-recommendation-title">
+                  <div class="table-head"><div><p class="eyebrow">Imported activity</p><h2 id="proposed-recommendation-title">Every account, one queue</h2></div></div>
+                  <div class="transaction-column-head" aria-hidden="true"><span>Transaction</span><span>Category</span><span>Status</span><span>Amount</span></div>
+                  <section class="transactions">
+                    <div class="transaction-row-simple"><button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Northstar Market</strong><span>Sep 30 &middot; Local Checking</span></span></button><div class="transaction-category-cell"><button class="category-chip" type="button">Groceries</button></div><button class="transaction-state-button" type="button">Included</button><strong class="transaction-amount negative">-$86.24</strong></div>
+                    <div class="transaction-row-simple has-recommendations">
+                      <button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Corner Shop</strong><span>Sep 26 &middot; Local Checking</span></span></button>
+                      <div class="transaction-category-cell transaction-recommendation-cell"><button class="category-chip empty" type="button">Select category...</button><button class="transaction-recommendation-action" type="button" title="Apply recommended category Groceries" aria-label="Apply recommended category Groceries"><strong>Groceries</strong><span>recommended</span></button></div>
+                      <div class="transaction-status-cell transaction-recommendation-cell"><button class="transaction-state-button" type="button">Included</button><button class="transaction-recommendation-action transaction-recommendation-action--warning" type="button" title="Apply recommended status Ignore" aria-label="Apply recommended status Ignore"><strong>Ignore</strong><span>recommended</span></button></div>
+                      <strong class="transaction-amount negative">-$18.75</strong>
+                    </div>
+                    <div class="transaction-row-simple"><button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>City Electric</strong><span>Sep 27 &middot; Local Checking</span></span></button><div class="transaction-category-cell"><button class="category-chip empty" type="button">Select category...</button></div><button class="transaction-state-button" type="button">Included</button><strong class="transaction-amount negative">-$119.80</strong></div>
+                  </section>
+                </section>
+              </section>
+            </main>
+            <footer class="statusline"><div><strong>EDIT</strong><span>transactions / previous month</span></div><div><span><kbd>Enter</kbd> previous month</span><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span></div></footer>
+          </div>
+        </div>
+      </section>
+
+      <section class="review-frame" id="proposed-recommendation-applied">
+        <header class="review-frame__head">
+          <div><p class="eyebrow">Proposed / accepted</p><h2>Acceptance updates the existing controls in place</h2></div>
+          <p class="review-frame__meta">The recommendation surface disappears after the refreshed values arrive. The row returns to its normal state, where Category remains editable and Status remains click-to-toggle.</p>
+        </header>
+        <div class="review-frame__viewport transaction-recommendation-state-preview">
+          <div class="terminal-app theme-dark">
+            <section class="budget-table transaction-table">
+              <div class="transaction-column-head" aria-hidden="true"><span>Transaction</span><span>Category</span><span>Status</span><span>Amount</span></div>
+              <div class="transaction-row-simple transaction-row-simple--applied is-ignored is-selected">
+                <button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Corner Shop</strong><span>Sep 26 &middot; Local Checking</span></span></button>
+                <div class="transaction-category-cell"><button class="category-chip" type="button">Groceries</button></div>
+                <button class="transaction-state-button is-ignored" type="button">Ignored</button>
+                <strong class="transaction-amount negative">-$18.75</strong>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <section class="review-frame" id="proposed-recommendation-mobile">
+        <header class="review-frame__head">
+          <div><p class="eyebrow">Proposed / responsive</p><h2>Recommendations remain beneath familiar mobile controls</h2></div>
+          <p class="review-frame__meta">Category and Status remain separate full-width targets. Each recommendation is independently clickable below its control and disappears when unavailable or already satisfied.</p>
+        </header>
+        <div class="review-frame__viewport transaction-recommendation-mobile-preview">
+          <div class="terminal-app theme-light">
+            <section class="budget-table transaction-table">
+              <div class="transaction-column-head" aria-hidden="true"><span>Transaction</span><span>Category</span><span>Status</span><span>Amount</span></div>
+              <div class="transaction-row-simple has-recommendations">
+                <button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Corner Shop</strong><span>Sep 26 &middot; Local Checking</span></span></button>
+                <div class="transaction-category-cell transaction-recommendation-cell"><button class="category-chip empty" type="button">Select category...</button><button class="transaction-recommendation-action" type="button" aria-label="Apply recommended category Groceries"><strong>Groceries</strong><span>recommended</span></button></div>
+                <div class="transaction-status-cell transaction-recommendation-cell"><button class="transaction-state-button" type="button">Included</button><button class="transaction-recommendation-action transaction-recommendation-action--warning" type="button" aria-label="Apply recommended status Ignore"><strong>Ignore</strong><span>recommended</span></button></div>
+                <strong class="transaction-amount negative">-$18.75</strong>
+              </div>
+            </section>
           </div>
         </div>
       </section>
@@ -1189,6 +1267,63 @@
         transactionSeparator,
       )
       transactionHeading.querySelector('.subtle').before(transactionMonth)
+
+      const applyRecommendation = (button) => {
+        const control = button.parentElement.querySelector(
+          '.category-chip, .transaction-state-button',
+        )
+        if (button.getAttribute('aria-label').includes('category')) {
+          control.textContent = 'Groceries'
+          control.classList.remove('empty')
+        } else {
+          control.textContent = 'Ignored'
+          control.classList.add('is-ignored')
+          button.closest('.transaction-row-simple').classList.add('is-ignored')
+        }
+        button.remove()
+      }
+
+      const proposedRecommendation = document.querySelector(
+        '#proposed-recommendation',
+      )
+      const recommendationFrames = [
+        proposedRecommendation,
+        document.querySelector('#proposed-recommendation-mobile'),
+      ]
+      recommendationFrames.forEach((frame) => {
+        frame
+          .querySelectorAll('.transaction-recommendation-action')
+          .forEach((button) => {
+            button.addEventListener('click', () => applyRecommendation(button))
+          })
+        frame.querySelectorAll('.transaction-state-button').forEach((button) => {
+          button.addEventListener('click', () => {
+            const isIgnored = button.textContent === 'Ignored'
+            button.textContent = isIgnored ? 'Included' : 'Ignored'
+            button.classList.toggle('is-ignored', !isIgnored)
+            button
+              .closest('.transaction-row-simple')
+              .classList.toggle('is-ignored', !isIgnored)
+            if (!isIgnored) {
+              button.parentElement
+                .querySelector('.transaction-recommendation-action--warning')
+                ?.remove()
+            }
+          })
+        })
+      })
+
+      document.addEventListener('keydown', (event) => {
+        if (
+          event.key !== 'a' ||
+          window.location.hash !== '#proposed-recommendation'
+        ) {
+          return
+        }
+        proposedRecommendation
+          .querySelectorAll('.transaction-recommendation-action')
+          .forEach(applyRecommendation)
+      })
     </script>
   </body>
 </html>
