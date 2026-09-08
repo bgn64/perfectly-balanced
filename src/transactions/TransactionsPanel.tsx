@@ -25,11 +25,16 @@ import {
 } from '../finance/utils.ts'
 import { getSupabaseClient } from '../lib/supabase.ts'
 import { focusWithScrollComfort } from '../navigation/focus.ts'
-import {
-  TransactionDetailDialog,
-} from './TransactionDetailDialog.tsx'
+import { WorkspaceMonthHeading } from '../navigation/WorkspaceMonthHeading.tsx'
 import type { TransactionDetailInteraction } from '../navigation/status.ts'
+import { TransactionDetailDialog } from './TransactionDetailDialog.tsx'
 import type { TransactionSplitPayload } from './model.ts'
+import {
+  isInTransactionTimeRange,
+  transactionTimeRangeDescription,
+  transactionTimeRanges,
+  type TransactionTimeRange,
+} from './timeRange.ts'
 
 interface TransactionsData {
   transactions: Transaction[]
@@ -48,13 +53,6 @@ type TransactionSort =
   | 'merchant'
   | 'amount-high'
   | 'amount-low'
-type TransactionTimeRange =
-  | 'current-month'
-  | 'last-month'
-  | 'last-3-months'
-  | 'last-6-months'
-  | 'this-year'
-  | 'all-time'
 type TransactionFilter =
   | 'categorized'
   | 'uncategorized'
@@ -65,18 +63,6 @@ type TransactionControlDialog = 'time' | 'filter' | 'sort'
 const nonUsdCategoryMessage = 'Only USD transactions can be categorized.'
 const transactionPageSize = 25
 const emptyTransactionSplits: TransactionSplit[] = []
-const timeRangeOptions: ReadonlyArray<{
-  value: TransactionTimeRange
-  label: string
-  description: string
-}> = [
-  { value: 'current-month', label: 'Current month', description: 'Selected month' },
-  { value: 'last-month', label: 'Last month', description: 'Previous month' },
-  { value: 'last-3-months', label: 'Last 3 months', description: 'Selected month and previous 2' },
-  { value: 'last-6-months', label: 'Last 6 months', description: 'Selected month and previous 5' },
-  { value: 'this-year', label: 'This year', description: 'January through selected month' },
-  { value: 'all-time', label: 'All time', description: 'All imported transactions' },
-]
 const sortOptions: ReadonlyArray<{
   value: TransactionSort
   label: string
@@ -103,35 +89,6 @@ const filterLabels: Record<TransactionFilter, string> = {
   uncategorized: 'Uncategorized',
   included: 'Included',
   ignored: 'Ignored',
-}
-
-function shiftMonth(month: string, offset: number): string {
-  const [year, monthNumber] = month.split('-').map(Number)
-  const date = new Date(Date.UTC(year, monthNumber - 1 + offset, 1))
-  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`
-}
-
-function isInTimeRange(
-  transactionMonth: string,
-  selectedMonth: string,
-  timeRange: TransactionTimeRange,
-): boolean {
-  if (timeRange === 'all-time') {
-    return true
-  }
-  if (timeRange === 'current-month') {
-    return transactionMonth === selectedMonth
-  }
-  if (timeRange === 'last-month') {
-    return transactionMonth === shiftMonth(selectedMonth, -1)
-  }
-  const firstMonth =
-    timeRange === 'last-3-months'
-      ? shiftMonth(selectedMonth, -2)
-      : timeRange === 'last-6-months'
-        ? shiftMonth(selectedMonth, -5)
-        : `${selectedMonth.slice(0, 4)}-01`
-  return transactionMonth >= firstMonth && transactionMonth <= selectedMonth
 }
 
 interface PendingIgnoredUpdate {
@@ -213,6 +170,7 @@ export function TransactionsPanel({
   onCategoriesChanged,
   onControlDialogChange,
   onDetailInteractionChange,
+  onMonthChange,
   onSearchStateChange,
   onTransactionsChanged,
   onUncategorizedCountChange,
@@ -225,6 +183,7 @@ export function TransactionsPanel({
   onDetailInteractionChange: (
     interaction: TransactionDetailInteraction | null,
   ) => void
+  onMonthChange: (month: string) => void
   onSearchStateChange: (isOpen: boolean, query: string) => void
   onTransactionsChanged: () => void
   onUncategorizedCountChange: (count: number) => void
@@ -416,7 +375,13 @@ export function TransactionsPanel({
     )
     const filtered = transactions.filter((transaction) => {
       const transactionMonth = monthKey(effectiveTransactionDate(transaction))
-      if (!isInTimeRange(transactionMonth, selectedMonth, timeRange)) {
+      if (
+        !isInTransactionTimeRange(
+          transactionMonth,
+          selectedMonth,
+          timeRange,
+        )
+      ) {
         return false
       }
       const transactionSplits = splitsByTransaction.get(transaction.id) ?? []
@@ -1169,7 +1134,7 @@ export function TransactionsPanel({
 
   const activeFilterCount = transactionFilters.length
   const timeRangeLabel =
-    timeRangeOptions.find((option) => option.value === timeRange)?.label ??
+    transactionTimeRanges.find((option) => option.value === timeRange)?.label ??
     'Current month'
   const sortLabel =
     sortOptions.find((option) => option.value === sort)?.label ?? 'Newest first'
@@ -1180,14 +1145,15 @@ export function TransactionsPanel({
       onFocusCapture={rememberTransactionFocus}
     >
       <header className="workspace-head workspace-head--compact">
-        <div>
-          <p className="eyebrow">Transaction stream / all accounts</p>
-          <h1>Transactions</h1>
-          <p className="subtle">
-            Search, filter, sort, and categorize every imported transaction from
-            one simple queue.
-          </p>
-        </div>
+        <WorkspaceMonthHeading
+          eyebrow="All accounts"
+          selectedMonth={selectedMonth}
+          semanticIdPrefix="transaction-month"
+          statusLabel="transactions"
+          subtitle="Search, filter, sort, and categorize every imported transaction from one simple queue."
+          title="Transactions"
+          onMonthChange={onMonthChange}
+        />
         <div className="transaction-state-pills">
           <span className="terminal-pill terminal-pill--warning">
             {uncategorizedTransactionCount} uncategorized
@@ -1670,7 +1636,7 @@ export function TransactionsPanel({
             </header>
             {controlDialog === 'time' && (
               <div className="transaction-time-options">
-                {timeRangeOptions.map((option) => {
+                {transactionTimeRanges.map((option) => {
                   const isChecked = option.value === timeRange
                   return (
                     <button
@@ -1692,7 +1658,12 @@ export function TransactionsPanel({
                       <i aria-hidden="true" />
                       <span>
                         <strong>{option.label}</strong>
-                        <small>{option.description}</small>
+                        <small>
+                          {transactionTimeRangeDescription(
+                            selectedMonth,
+                            option.value,
+                          )}
+                        </small>
                       </span>
                     </button>
                   )

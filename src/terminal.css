@@ -326,6 +326,77 @@ h3 {
   outline: none;
 }
 
+.workspace-month-heading {
+  min-width: 0;
+}
+
+.workspace-month-rail {
+  display: grid;
+  grid-template-columns: 2.75rem minmax(0, auto) 2.75rem;
+  align-items: stretch;
+  width: fit-content;
+  min-height: 2.75rem;
+  overflow: hidden;
+  border: 1px solid var(--theme-control-border);
+  border-radius: 0.3rem;
+  background: var(--theme-surface);
+}
+
+.workspace-month-rail button {
+  display: grid;
+  min-width: 2.75rem;
+  border: 0;
+  border-radius: 0;
+  background: var(--theme-surface-raised);
+  color: var(--theme-text-secondary);
+  place-items: center;
+}
+
+.workspace-month-rail button:first-child {
+  border-right: 1px solid var(--theme-control-border);
+}
+
+.workspace-month-rail button:last-child {
+  border-left: 1px solid var(--theme-control-border);
+}
+
+.workspace-month-rail button:not(:disabled):hover,
+.workspace-month-rail button:not(:disabled):focus-visible {
+  background: var(--theme-selection);
+  color: var(--theme-accent-strong);
+  outline: none;
+}
+
+.workspace-month-rail button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.workspace-month-rail__current {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  min-width: 0;
+  padding: 0.3rem 0.8rem;
+  line-height: 1.1;
+}
+
+.workspace-month-rail__current :is(h1, strong) {
+  color: var(--theme-text);
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.workspace-month-rail__separator {
+  color: var(--theme-text-faint);
+  font-size: 1.75rem;
+  line-height: 1;
+}
+
 .summary {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -3315,6 +3386,24 @@ button.filter-token.is-selected {
 }
 
 @media (max-width: 34rem) {
+
+  .workspace-month-heading,
+  .workspace-month-rail {
+    width: 100%;
+  }
+
+  .workspace-month-rail {
+    grid-template-columns: 2.75rem minmax(0, 1fr) 2.75rem;
+  }
+
+  .workspace-month-rail__current {
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+
+  .workspace-month-rail__separator {
+    display: none;
+  }
 
   .month-jump-controls {
     width: 100%;

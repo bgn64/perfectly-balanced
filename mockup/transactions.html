@@ -23,7 +23,7 @@
     </header>
 
     <nav class="review-section-nav" aria-label="Transaction frame navigation">
-      <a href="#proposed-queue">Proposed queue</a><a href="#proposed-detail">Detail modal</a>
+      <a href="#proposed-queue">Shared month</a><a href="#proposed-detail">Detail modal</a>
       <a href="#proposed-detail-split">Split focus</a><a href="#proposed-detail-amount">Split amount</a>
       <a href="#proposed-detail-category">New split</a>
       <a href="#proposed-detail-date">Date editor</a><a href="#proposed-detail-mobile">Mobile detail</a>
@@ -48,16 +48,16 @@
     <main class="review-frames">
       <section class="review-frame" id="proposed-queue">
         <header class="review-frame__head">
-          <div><p class="eyebrow">Proposed / queue</p><h2>Paginated results with reachable controls</h2></div>
-          <p class="review-frame__meta">Clicking Transactions leaves focus on the Transactions nav item. Enter or <kbd>l</kbd> moves into the workspace; the result queue is never auto-focused on view change.</p>
+          <div><p class="eyebrow">Proposed / shared month</p><h2>Transactions inherit workspace month</h2></div>
+          <p class="review-frame__meta">The connected rail identifies Transactions and the selected month together. Time offers ranges ending in that shared month.</p>
         </header>
         <div class="review-frame__viewport">
           <div class="authenticated-app terminal-app command-closed screen-app theme-dark">
-            <header class="titlebar"><button class="brand" type="button"><span class="brand-mark">pb</span><span>perfectly-balanced</span></button><p>September 2026 · Personal budget</p><div class="theme-switcher" role="group" aria-label="Theme"><input checked id="theme-dark" name="proposed-queue-theme" type="radio" /><label for="theme-dark">Dark</label><input id="theme-light" name="proposed-queue-theme" type="radio" /><label for="theme-light">Light</label></div><details class="profile"><summary><span>D</span>dev</summary></details></header>
+            <header class="titlebar"><button class="brand" type="button"><span class="brand-mark">pb</span><span>perfectly-balanced</span></button><nav class="global-month-switcher" aria-label="Workspace month"><button type="button" aria-label="Previous workspace month" title="Previous month"><span aria-hidden="true">&larr;</span></button><span class="global-month-switcher__current"><strong>September 2026</strong></span><button type="button" aria-label="Next workspace month" title="Next month"><span aria-hidden="true">&rarr;</span></button></nav><div class="theme-switcher" role="group" aria-label="Theme"><input checked id="theme-dark" name="proposed-queue-theme" type="radio" /><label for="theme-dark">Dark</label><input id="theme-light" name="proposed-queue-theme" type="radio" /><label for="theme-light">Light</label></div><details class="profile"><summary><span>D</span>dev</summary></details></header>
             <aside class="sidebar" aria-label="Application navigation"><nav class="main-nav"><button class="nav-item" type="button"><span>Budget</span></button><button class="nav-item is-active is-focused" aria-current="page" type="button"><span>Transactions</span><strong>18</strong></button><button class="nav-item" type="button"><span>Reports</span></button></nav></aside>
             <main class="workspace">
               <section class="page transactions-page transactions-page--terminal">
-                <header class="workspace-head workspace-head--compact"><div><p class="eyebrow">Transaction stream / all accounts</p><h1>Transactions</h1><p class="subtle">Review and categorize imported activity.</p></div><span class="terminal-pill terminal-pill--warning">18 uncategorized</span></header>
+                <header class="workspace-head workspace-head--compact"><div><p class="eyebrow">All accounts</p><h1>Transactions</h1><p class="subtle">Review and categorize imported activity.</p></div><span class="terminal-pill terminal-pill--warning">18 uncategorized</span></header>
                 <section class="summary" aria-label="Transaction overview"><div><span>Active activity</span><strong>143</strong></div><div><span>September activity</span><strong>87</strong></div><div><span>Categorized</span><strong class="available">125</strong></div><div><span>Needs review</span><strong class="warning">18</strong></div></section>
                 <section class="budget-table transaction-table" aria-labelledby="proposed-queue-title">
                   <div class="table-head"><div><p class="eyebrow">Imported activity</p><h2 id="proposed-queue-title">All transactions</h2></div></div>
@@ -323,7 +323,7 @@
 
       <section class="review-frame" id="proposed-time">
         <header class="review-frame__head"><div><p class="eyebrow">Proposed / modal</p><h2>Time range applies immediately</h2></div><p class="review-frame__meta">Click or press <kbd>Enter</kbd> on a radio choice to set it, close the modal, return focus to Time, and reset to page 1</p></header>
-        <div class="review-frame__viewport control-modal-preview"><section class="transaction-control-dialog transaction-time-dialog" role="dialog" aria-modal="true" aria-labelledby="proposed-time-title"><header class="transaction-dialog-head"><div><p class="eyebrow">Transactions</p><h2 id="proposed-time-title">Time range</h2></div><span>Current month</span></header><div class="transaction-time-options"><button class="transaction-option is-checked" type="button"><i></i><span><strong>Current month</strong><small>September 2026 · 87 transactions</small></span></button><button class="transaction-option is-selected" type="button"><i></i><span><strong>Last month</strong><small>August 2026 · 56 transactions</small></span></button><button class="transaction-option" type="button"><i></i><span><strong>Last 3 months</strong><small>July–September 2026</small></span></button><button class="transaction-option" type="button"><i></i><span><strong>Last 6 months</strong><small>April–September 2026</small></span></button><button class="transaction-option" type="button"><i></i><span><strong>This year</strong><small>January–September 2026</small></span></button><button class="transaction-option" type="button"><i></i><span><strong>All time</strong><small>All imported transactions</small></span></button></div></section></div>
+        <div class="review-frame__viewport control-modal-preview"><section class="transaction-control-dialog transaction-time-dialog" role="dialog" aria-modal="true" aria-labelledby="proposed-time-title"><header class="transaction-dialog-head"><div><p class="eyebrow">Transactions</p><h2 id="proposed-time-title">Time range</h2></div><span>Current month</span></header><div class="transaction-time-options"><button class="transaction-option is-checked" type="button"><i></i><span><strong>Current month</strong><small>September 2026</small></span></button><button class="transaction-option is-selected" type="button"><i></i><span><strong>Last 3 months</strong><small>July–September 2026</small></span></button><button class="transaction-option" type="button"><i></i><span><strong>Last 6 months</strong><small>April–September 2026</small></span></button><button class="transaction-option" type="button"><i></i><span><strong>Last year</strong><small>October 2025–September 2026</small></span></button><button class="transaction-option" type="button"><i></i><span><strong>All time</strong><small>All imported months</small></span></button></div></section></div>
       </section>
 
       <section class="review-frame" id="proposed-filter-simple">
@@ -1168,5 +1168,27 @@
         </div>
       </section>
     </main>
+    <script>
+      const proposedQueue = document.querySelector('#proposed-queue')
+      const transactionHeading = proposedQueue.querySelector(
+        '.workspace-head > div',
+      )
+      const transactionTitle = transactionHeading.querySelector('h1')
+      const transactionMonth = proposedQueue.querySelector(
+        '.global-month-switcher',
+      )
+      const transactionMonthLabel = transactionMonth.querySelector(
+        '.global-month-switcher__current',
+      )
+      const transactionSeparator = document.createElement('span')
+      transactionSeparator.className = 'global-month-switcher__separator'
+      transactionSeparator.setAttribute('aria-hidden', 'true')
+      transactionSeparator.textContent = '/'
+      transactionMonthLabel.prepend(
+        transactionTitle,
+        transactionSeparator,
+      )
+      transactionHeading.querySelector('.subtle').before(transactionMonth)
+    </script>
   </body>
 </html>

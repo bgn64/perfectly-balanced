@@ -57,6 +57,73 @@ button:disabled {
   font-weight: 800;
 }
 
+.global-month-switcher {
+  display: grid;
+  grid-template-columns: 2.5rem minmax(0, auto) 2.5rem;
+  align-items: stretch;
+  width: fit-content;
+  min-height: 2.75rem;
+  overflow: hidden;
+  border: 1px solid var(--theme-control-border);
+  border-radius: 0.3rem;
+  background: var(--theme-surface);
+}
+
+.global-month-switcher button {
+  display: grid;
+  min-width: 2.5rem;
+  border: 0;
+  border-radius: 0;
+  background: var(--theme-surface-raised);
+  color: var(--theme-text-secondary);
+  place-items: center;
+}
+
+.global-month-switcher button:first-child {
+  border-right: 1px solid var(--theme-control-border);
+}
+
+.global-month-switcher button:last-child {
+  border-left: 1px solid var(--theme-control-border);
+}
+
+.global-month-switcher button:hover,
+.global-month-switcher button:focus-visible {
+  background: var(--theme-selection);
+  color: var(--theme-accent-strong);
+}
+
+.global-month-switcher__current {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  padding: 0.2rem 0.75rem;
+  line-height: 1.1;
+}
+
+.global-month-switcher__current :is(h1, strong) {
+  color: var(--theme-text);
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1.1;
+}
+
+.global-month-switcher__separator {
+  color: var(--theme-text-faint);
+  font-size: 1.75rem;
+  line-height: 1;
+}
+
+:is(#streamlined-month, #streamlined-empty) .workspace-head .month-jump-controls {
+  display: none;
+}
+
+:is(#streamlined-month, #streamlined-empty, #proposed-queue, #reports-v2-overview) .workspace-head {
+  align-items: start;
+}
+
 .mockup-sample-link {
   border: 1px solid #414868;
   border-radius: 0.3rem;
@@ -554,6 +621,32 @@ body:has(input[id*="light"]:checked) {
   color: #5a5f78;
 }
 
+.terminal-app:has(input[id*="light"]:checked) .global-month-switcher,
+.terminal-app.theme-light .global-month-switcher {
+  border-color: #a1a6b5;
+  background: #e9e9ed;
+}
+
+.terminal-app:has(input[id*="light"]:checked) .global-month-switcher button,
+.terminal-app.theme-light .global-month-switcher button {
+  border-color: #a1a6b5;
+  background: #dfe0e6;
+  color: #343b58;
+}
+
+.terminal-app:has(input[id*="light"]:checked) .global-month-switcher__current strong,
+.terminal-app.theme-light .global-month-switcher__current strong {
+  color: #343b58;
+}
+
+.terminal-app:has(input[id*="light"]:checked) .global-month-switcher button:hover,
+.terminal-app:has(input[id*="light"]:checked) .global-month-switcher button:focus-visible,
+.terminal-app.theme-light .global-month-switcher button:hover,
+.terminal-app.theme-light .global-month-switcher button:focus-visible {
+  background: #d5d6db;
+  color: #34548a;
+}
+
 .terminal-app:has(input[id*="light"]:checked) .brand,
 .terminal-app:has(input[id*="light"]:checked) h1,
 .terminal-app:has(input[id*="light"]:checked) h2,
@@ -800,6 +893,21 @@ input:focus-visible {
 }
 
 @media (max-width: 34rem) {
+
+  :is(#streamlined-month, #streamlined-empty, #proposed-queue, #reports-v2-overview) .global-month-switcher {
+    grid-template-columns: 2.5rem minmax(0, 1fr) 2.5rem;
+    width: 100%;
+  }
+
+  .global-month-switcher__separator {
+    display: none;
+  }
+
+  .global-month-switcher__current {
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+  }
 
   .create-sample,
   .cross-section-move,

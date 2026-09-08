@@ -18,13 +18,13 @@ import type {
 } from '../finance/types.ts'
 import {
   formatDisplayMoney,
-  formatMonth,
   monthKey,
   shiftMonth,
 } from '../finance/utils.ts'
 import { collectPages } from '../finance/query.ts'
 import { getSupabaseClient } from '../lib/supabase.ts'
 import { focusWithScrollComfort } from '../navigation/focus.ts'
+import { WorkspaceMonthHeading } from '../navigation/WorkspaceMonthHeading.tsx'
 import {
   buildReportModel,
   type ReportChartModel,
@@ -388,43 +388,15 @@ export function InsightsPanel({
   return (
     <section className="page insights-page insights-page--terminal reports-v2-page">
       <header className="workspace-head workspace-head--compact">
-        <div>
-          <p className="eyebrow">Reports / {selectedMonth.replace('-', ' / ')}</p>
-          <h1>{formatMonth(selectedMonth)} at a glance</h1>
-          <p className="subtitle">
-            Compare income and spending, then drill into any legend row.
-          </p>
-        </div>
-        <nav className="month-jump-controls" aria-label="Month navigation">
-          <button
-            data-semantic-id="report-month-previous"
-            data-semantic-region="workspace"
-            data-status-action="previous month"
-            data-status-label="reports / previous month"
-            type="button"
-            onClick={() => onMonthChange(shiftMonth(selectedMonth, -1))}
-          >
-            <span aria-hidden="true">←</span>
-            <span>
-              <small>Previous month</small>
-              <strong>{formatMonth(shiftMonth(selectedMonth, -1))}</strong>
-            </span>
-          </button>
-          <button
-            data-semantic-id="report-month-next"
-            data-semantic-region="workspace"
-            data-status-action="next month"
-            data-status-label="reports / next month"
-            type="button"
-            onClick={() => onMonthChange(shiftMonth(selectedMonth, 1))}
-          >
-            <span>
-              <small>Next month</small>
-              <strong>{formatMonth(shiftMonth(selectedMonth, 1))}</strong>
-            </span>
-            <span aria-hidden="true">→</span>
-          </button>
-        </nav>
+        <WorkspaceMonthHeading
+          eyebrow="Income and spending"
+          selectedMonth={selectedMonth}
+          semanticIdPrefix="report-month"
+          statusLabel="reports"
+          subtitle="Compare activity, then drill into any legend row."
+          title="Reports"
+          onMonthChange={onMonthChange}
+        />
       </header>
 
       {errorMessage && (

@@ -1233,6 +1233,7 @@ function AuthenticatedShell({
             onCategoriesChanged={handleCategoriesChanged}
             onControlDialogChange={setTransactionControlDialog}
             onDetailInteractionChange={setTransactionDetailInteraction}
+            onMonthChange={setSelectedMonth}
             onSearchStateChange={handleTransactionSearchStateChange}
             onTransactionsChanged={handleTransactionsChanged}
             onUncategorizedCountChange={handleUncategorizedCountChange}
