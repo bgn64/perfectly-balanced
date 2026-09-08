@@ -43,6 +43,26 @@ describe('statusline presentation', () => {
     ])
   })
 
+  it('shows recommendation acceptance only for an eligible transaction row', () => {
+    expect(
+      buildNavigationStatus({
+        view: 'transactions',
+        action: 'select transaction',
+        hasRecommendations: true,
+        label: 'transaction / Corner Shop',
+        semanticKind: 'transaction-row',
+        isTextEntry: false,
+      }).shortcuts,
+    ).toEqual([
+      { keys: ['/'], label: 'search' },
+      { keys: ['a'], label: 'apply recommendations' },
+      { keys: ['c'], label: 'category' },
+      { keys: ['t'], label: 'status' },
+      { keys: ['Enter'], label: 'select transaction' },
+      { keys: ['h', 'j', 'k', 'l'], label: 'focus' },
+    ])
+  })
+
   it('omits Enter for read-only report rows', () => {
     const status = buildNavigationStatus({
       view: 'insights',

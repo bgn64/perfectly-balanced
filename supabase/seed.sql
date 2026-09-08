@@ -285,6 +285,20 @@ values
     false,
     'Shopping',
     'Local Checking'
+  ),
+  (
+    '50000000-0000-0000-0000-000000000005',
+    '00000000-0000-0000-0000-000000000001',
+    'local-corner-shop-2026-07-10',
+    date '2026-07-10',
+    null,
+    'Corner Shop',
+    'Corner Shop',
+    -18.75,
+    'USD',
+    false,
+    'Shopping',
+    'Local Checking'
   )
 on conflict (id) do update
 set transaction_date = excluded.transaction_date,
@@ -297,6 +311,10 @@ set transaction_date = excluded.transaction_date,
     category = excluded.category,
     account_name = excluded.account_name,
     imported_at = now();
+
+update public.transactions
+set is_ignored = true
+where id = '50000000-0000-0000-0000-000000000005';
 
 insert into public.transaction_category_splits (
   id,
@@ -333,6 +351,13 @@ values
     '50000000-0000-0000-0000-000000000003',
     '10000000-0000-0000-0000-000000000004',
     -18
+  ),
+  (
+    '60000000-0000-0000-0000-000000000005',
+    '00000000-0000-0000-0000-000000000001',
+    '50000000-0000-0000-0000-000000000005',
+    '10000000-0000-0000-0000-000000000004',
+    -18.75
   )
 on conflict (id) do update
 set category_id = excluded.category_id,

@@ -60,6 +60,7 @@ type SemanticRegion = 'header' | 'sidebar' | 'workspace'
 
 interface StatusContext {
   action: string
+  hasRecommendations: boolean
   label: string
   semanticKind: string | null
   isTextEntry: boolean
@@ -130,6 +131,8 @@ function getStatusContext(
 ): StatusContext {
   return {
     action: control?.dataset.statusAction ?? 'activate',
+    hasRecommendations:
+      semanticNode?.dataset.recommendationsAvailable === 'true',
     label: control?.dataset.statusLabel ?? 'budget',
     semanticKind:
       semanticNode?.dataset.semanticKind ?? control?.dataset.semanticKind ?? null,
@@ -348,6 +351,7 @@ function buildAuthenticatedStatus({
   return buildNavigationStatus({
     view: activeView,
     action: statusContext.action,
+    hasRecommendations: statusContext.hasRecommendations,
     label: statusContext.label,
     semanticKind: statusContext.semanticKind,
     isTextEntry: false,
@@ -732,6 +736,7 @@ function AuthenticatedShell({
   )
   const [statusContext, setStatusContext] = useState<StatusContext>({
     action: 'view',
+    hasRecommendations: false,
     label: 'budget / navigation',
     semanticKind: null,
     isTextEntry: false,
@@ -893,7 +898,12 @@ function AuthenticatedShell({
     const observer = new MutationObserver(scheduleFocusStatusUpdate)
     root.addEventListener('focusin', scheduleFocusStatusUpdate)
     observer.observe(root, {
-      attributeFilter: ['aria-hidden', 'disabled', 'hidden'],
+      attributeFilter: [
+        'aria-hidden',
+        'data-recommendations-available',
+        'disabled',
+        'hidden',
+      ],
       attributes: true,
       childList: true,
       subtree: true,
