@@ -61,6 +61,29 @@ with root and sectioned allocations, categorized transactions, and one
 uncategorized transaction. It creates no Plaid Items, webhook events, Vault
 secrets, or bank data.
 
+### Agent-assisted development
+
+Repository-wide engineering and safety rules live in `AGENTS.md`. The existing
+`.github/copilot-instructions.md` defines the general incremental development
+loop; path-scoped rules under `.github/instructions/` cover frontend, mockup,
+and Supabase files without loading unrelated guidance.
+
+On-demand workflows and domain knowledge live under `.github/skills/`:
+
+| Skill | Use it for |
+| --- | --- |
+| `mockup-contract` | Reconcile, propose, approve, and implement visible UI changes. |
+| `tokyo-terminal-design-system` | Theme tokens, terminal layout, responsive UI, keyboard focus, and accessibility. |
+| `finance-domain` | Budgets, transactions, reports, categories, splits, recommendations, dates, and money. |
+| `local-visual-verification` | Compare the running local app with canonical mockups. |
+| `plaid-supabase-safety` | Migrations, RLS, RPCs, Edge Functions, Vault, webhooks, sync, and Plaid. |
+
+Run the full application validation locally with `npm run validate`. To serve
+mockups beside the app, run `npm run mockup:serve` and open
+`http://localhost:4174` while the app remains at `http://localhost:5173`.
+Pull requests run tests, lint, and the production build; changes under
+`supabase/` also rebuild the local database from migrations and seed data.
+
 `VITE_LOCAL_DEMO_MODE` is generated only for local development. The client
 rejects it in production builds or when its Supabase URL is not localhost.
 Do not put a Supabase service-role key, Vercel token, Plaid credential, or
