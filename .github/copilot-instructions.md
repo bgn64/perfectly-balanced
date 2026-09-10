@@ -15,12 +15,9 @@ depth of investigation and validation to the risk of the change.
 
 ## 2. Approve user-visible changes
 
-- For changes that affect visible UI, create or update realistic mockups before
-  changing application UI source.
-- Cover the states affected by the request, including relevant desktop and
-  mobile layouts, light and dark themes, empty/loading/error states, modals,
-  focus states, and keyboard interactions.
-- Get explicit user approval of the visible design before implementation.
+- For changes that affect visible UI, load and follow
+  `.github/skills/mockup-contract/SKILL.md`. Its reconciliation, approval, and
+  separate-commit gates are mandatory.
 - Skip the mockup gate for behavior-only, backend, test, documentation, and
   read-only work that does not change the visible design.
 

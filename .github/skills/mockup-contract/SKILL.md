@@ -20,7 +20,8 @@ viewports, and UI automation tools.
 Perfectly Balanced defaults:
 
 - App: `npm run dev`, `http://localhost:5173`.
-- Mockup server beside the app: `npm run mockup:serve`,
+- Mockup server beside the app:
+  `npm run mockup -- --port 4174 --strictPort`,
   `http://localhost:4174`.
 - Local account: `dev@example.test` / `local-dev-password`.
 - Canonical surface: `mockup/surfaces/<surface>/`.
@@ -58,9 +59,9 @@ implement before approval.
 
 ## 4. Implement the approved contract
 
-Make the app match every approved state and interaction. Use
-`.github/skills/tokyo-terminal-design-system/SKILL.md` for visual and keyboard
-conventions. Do not change the mockup to accommodate implementation.
+Make the app match every approved state and interaction. Reuse the existing
+theme tokens, terminal layout, semantic controls, and keyboard conventions. Do
+not change the mockup to accommodate implementation.
 
 ## 5. Verify and finish
 
