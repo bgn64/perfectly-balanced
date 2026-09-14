@@ -1,0 +1,39 @@
+surface: authentication-startup
+status: reconciled
+reconciled_at: 2026-09-14
+route: /
+owners:
+  - src/main.tsx
+  - src/Root.tsx
+  - src/App.tsx
+  - src/auth/AuthProvider.tsx
+  - src/theme.css
+viewports:
+  desktop: 1024x768
+  mobile: 390x844
+themes:
+  current:
+    - dark
+  observed_issue: Saved light preference is not applied until AuthenticatedShell mounts.
+states:
+  - session-loading
+  - sign-in
+  - session-initialization-error
+  - configuration-error
+interactions:
+  keyboard:
+    - Tab moves through sign-in controls.
+    - Enter submits the focused sign-in form.
+  mouse:
+    - Sign-in buttons submit their associated forms.
+fixtures:
+  unauthenticated: Clear the local Supabase auth session.
+  authenticated: Use the seeded local account from AGENTS.md.
+  saved_light: Set perfectly-balanced.theme to light before navigation.
+interaction_fidelity: static
+reconciliation:
+  source: Running application at http://localhost:5173
+  outcome: The saved light fixture renders all four startup states with the dark default palette.
+legacy_references:
+  - mockup/index.html
+  - mockup/configuration-error.html
