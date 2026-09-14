@@ -2,8 +2,8 @@
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     sans-serif;
-  color: #14213d;
-  background: #f4f3ed;
+  color: var(--theme-text);
+  background: var(--theme-canvas);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -37,6 +37,6 @@ button:disabled {
 code {
   padding: 0.125rem 0.3125rem;
   border-radius: 0.25rem;
-  background: #e8eefb;
-  color: #1d4ed8;
+  background: var(--theme-surface-raised);
+  color: var(--theme-accent);
 }

@@ -1,7 +1,10 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import Root from './Root.tsx'
+import { initializeDocumentTheme } from './theme.ts'
 import './index.css'
+
+initializeDocumentTheme()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

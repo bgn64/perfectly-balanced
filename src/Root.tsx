@@ -1,6 +1,7 @@
 import { AuthProvider } from './auth/AuthProvider.tsx'
 import { clientConfiguration } from './config.ts'
 import App from './App.tsx'
+import { useThemePreference } from './theme.ts'
 
 function ConfigurationError({ message }: { message: string }) {
   return (
@@ -33,6 +34,7 @@ function ConfigurationError({ message }: { message: string }) {
 
 function Root() {
   const { config, error } = clientConfiguration
+  const { themePreference, setThemePreference } = useThemePreference()
 
   if (!config) {
     return (
@@ -44,7 +46,11 @@ function Root() {
 
   return (
     <AuthProvider>
-      <App appName={config.appName} />
+      <App
+        appName={config.appName}
+        themePreference={themePreference}
+        onThemePreferenceChange={setThemePreference}
+      />
     </AuthProvider>
   )
 }

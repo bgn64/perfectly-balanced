@@ -10,16 +10,16 @@
 .configuration-error__panel {
   width: min(100%, 31rem);
   padding: 2.5rem;
-  border: 1px solid #d8e0ef;
+  border: 1px solid var(--theme-border);
   border-radius: 1rem;
-  background: #fff;
-  box-shadow: 0 1.25rem 2.75rem rgb(20 33 61 / 8%);
+  background: var(--theme-surface);
+  box-shadow: var(--theme-shadow);
 }
 
 .auth-card h1,
 .configuration-error h1 {
   margin: 0;
-  color: #14213d;
+  color: var(--theme-text);
   font-size: clamp(2rem, 6vw, 2.75rem);
   letter-spacing: -0.04em;
   line-height: 1.1;
@@ -28,7 +28,7 @@
 .auth-card__copy,
 .auth-card__hint {
   margin: 1rem 0 0;
-  color: #52627d;
+  color: var(--theme-text-muted);
   line-height: 1.6;
 }
 
@@ -47,7 +47,7 @@
 }
 
 .sign-in-form label {
-  color: #293956;
+  color: var(--theme-text-secondary);
   font-size: 0.875rem;
   font-weight: 700;
 }
@@ -55,7 +55,7 @@
 .sign-in-form input {
   width: 100%;
   padding: 0.75rem 0.875rem;
-  border: 1px solid #aebbd2;
+  border: 1px solid var(--theme-control-border);
   border-radius: 0.5rem;
 }
 
@@ -64,8 +64,8 @@
   border: 0;
   border-radius: 0.55rem;
   padding: 0.65rem 0.9rem;
-  background: var(--accent, #1d4ed8);
-  color: #fff;
+  background: var(--theme-accent);
+  color: var(--theme-on-accent);
   font-weight: 750;
 }
 
@@ -79,7 +79,7 @@
   align-items: center;
   gap: 0.75rem;
   margin: 1.5rem 0;
-  color: #52627d;
+  color: var(--theme-text-muted);
   font-size: 0.8125rem;
   font-weight: 700;
   text-align: center;
@@ -88,15 +88,15 @@
 .auth-divider::before,
 .auth-divider::after {
   height: 1px;
-  background: #d8e0ef;
+  background: var(--theme-border);
   content: "";
 }
 
 .local-sign-in {
   padding: 1rem;
-  border: 1px solid #d8e0ef;
+  border: 1px solid var(--theme-border);
   border-radius: 0.75rem;
-  background: #f8faff;
+  background: var(--theme-shell);
 }
 
 .local-sign-in .eyebrow {
@@ -105,21 +105,21 @@
 
 .local-sign-in h2 {
   margin: 0;
-  color: #14213d;
+  color: var(--theme-text);
   font-size: 1rem;
 }
 
 .local-sign-in > p {
   margin: 0.5rem 0 0;
-  color: #52627d;
+  color: var(--theme-text-muted);
   font-size: 0.875rem;
   line-height: 1.5;
 }
 
 .button--secondary {
-  border: 1px solid var(--line, #d8e0ef);
-  background: var(--surface, #e8eefb);
-  color: var(--accent, #1d4ed8);
+  border: 1px solid var(--theme-border);
+  background: var(--theme-surface-raised);
+  color: var(--theme-accent);
 }
 
 .form-message {
@@ -130,13 +130,13 @@
 }
 
 .form-message--error {
-  background: #fef2f2;
-  color: #9f302c;
+  background: color-mix(in srgb, var(--theme-negative) 7%, transparent);
+  color: var(--theme-negative);
 }
 
 .form-message--success {
-  background: #f0fdf4;
-  color: #166534;
+  background: color-mix(in srgb, var(--theme-positive) 7%, transparent);
+  color: var(--theme-positive);
 }
 
 .authenticated-app {
@@ -210,7 +210,7 @@
   place-items: center;
   border-radius: 0.65rem;
   background: var(--accent);
-  color: #fff;
+  color: var(--theme-on-accent);
 }
 
 .primary-nav {
@@ -280,7 +280,7 @@ details > summary::-webkit-details-marker {
   border: 1px solid var(--line);
   border-radius: 0.75rem;
   background: var(--surface);
-  box-shadow: 0 14px 35px rgb(20 31 52 / 18%);
+  box-shadow: var(--theme-dialog-shadow);
   color: var(--muted);
   font-size: 0.78rem;
 }
@@ -309,7 +309,7 @@ details > summary::-webkit-details-marker {
 
 .eyebrow {
   margin: 0 0 0.35rem;
-  color: var(--accent, #2563eb);
+  color: var(--theme-accent);
   font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 0.1em;
@@ -572,7 +572,7 @@ details > summary::-webkit-details-marker {
   padding: 0.2rem 0.55rem;
   border-radius: 99px;
   background: var(--accent);
-  color: #fff;
+  color: var(--theme-on-accent);
   font-size: 0.68rem;
   font-weight: 800;
 }
@@ -678,7 +678,7 @@ details > summary::-webkit-details-marker {
 .segmented button.selected {
   background: var(--surface);
   color: var(--ink);
-  box-shadow: 0 1px 4px rgb(18 27 45 / 12%);
+  box-shadow: var(--theme-lift-shadow);
 }
 
 .progress {
@@ -748,7 +748,7 @@ details > summary::-webkit-details-marker {
   border: 1px solid var(--line);
   border-radius: 0.65rem;
   background: var(--surface);
-  box-shadow: 0 14px 35px rgb(20 31 52 / 18%);
+  box-shadow: var(--theme-dialog-shadow);
 }
 
 .combo-option {
@@ -1207,7 +1207,7 @@ input:focus-visible,
 select:focus-visible,
 button:focus-visible,
 summary:focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--accent, #2563eb) 45%, transparent);
+  outline: 3px solid color-mix(in srgb, var(--theme-accent) 45%, transparent);
   outline-offset: 2px;
 }
 

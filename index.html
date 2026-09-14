@@ -4,6 +4,26 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="theme-color" content="#16161e" />
+    <script>
+      (() => {
+        const key = 'perfectly-balanced.theme'
+        let preference = 'system'
+        try {
+          preference = localStorage.getItem(key) ?? preference
+        } catch {
+          // The system preference remains available when storage is blocked.
+        }
+        const theme = preference === 'light' ||
+          (preference !== 'dark' && matchMedia('(prefers-color-scheme: light)').matches)
+            ? 'light'
+            : 'dark'
+        document.documentElement.dataset.theme = theme
+        document.querySelector('meta[name="theme-color"]').content =
+          theme === 'light' ? '#d5d6db' : '#16161e'
+      })()
+    </script>
     <title>Invite-only web app</title>
   </head>
   <body>
