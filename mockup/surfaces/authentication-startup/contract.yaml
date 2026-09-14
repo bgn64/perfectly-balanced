@@ -1,6 +1,7 @@
 surface: authentication-startup
-status: reconciled
+status: approved
 reconciled_at: 2026-09-14
+approved_at: 2026-09-14
 route: /
 owners:
   - src/main.tsx
@@ -12,9 +13,14 @@ viewports:
   desktop: 1024x768
   mobile: 390x844
 themes:
-  current:
+  proposed:
     - dark
-  observed_issue: Saved light preference is not applied until AuthenticatedShell mounts.
+    - light
+    - system
+  behavior:
+    - Apply the saved preference before React renders any state.
+    - Resolve system preference before first paint and follow later system changes.
+    - Keep browser color scheme and theme color synchronized with the resolved theme.
 states:
   - session-loading
   - sign-in
@@ -26,14 +32,22 @@ interactions:
     - Enter submits the focused sign-in form.
   mouse:
     - Sign-in buttons submit their associated forms.
+    - Theme preview buttons switch every startup state together.
 fixtures:
   unauthenticated: Clear the local Supabase auth session.
   authenticated: Use the seeded local account from AGENTS.md.
   saved_light: Set perfectly-balanced.theme to light before navigation.
-interaction_fidelity: static
+interaction_fidelity: functional
 reconciliation:
   source: Running application at http://localhost:5173
   outcome: The saved light fixture renders all four startup states with the dark default palette.
+proposal:
+  visual_change: Palette only; layout, copy, spacing, and control hierarchy are unchanged.
+  implementation:
+    - Move theme preference ownership above authentication and configuration branches.
+    - Initialize the resolved theme before the first application render.
+    - Remove theme-specific fallback colors outside the shared token definitions.
+    - Keep chart colors as intentional data visualization colors unless contrast verification fails.
 legacy_references:
   - mockup/index.html
   - mockup/configuration-error.html

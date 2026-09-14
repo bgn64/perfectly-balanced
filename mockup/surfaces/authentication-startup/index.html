@@ -1,10 +1,18 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="theme-color" content="#d5d6db" />
     <title>Perfectly Balanced - Authentication startup contract</title>
     <link rel="stylesheet" href="../../neovim-tokyonight.css" />
+    <style>
+      .review-frame__viewport {
+        border-color: var(--theme-border);
+        background: var(--theme-canvas);
+      }
+    </style>
   </head>
   <body class="review-page">
     <nav class="review-nav" aria-label="Mockup review navigation">
@@ -15,12 +23,17 @@
         <a href="#session-error">Session error</a>
         <a href="#configuration-error">Configuration error</a>
       </span>
+      <span class="review-nav__group" aria-label="Theme preview">
+        <button class="terminal-button" type="button" data-preview-theme="dark">Dark</button>
+        <button class="terminal-button is-selected" type="button" data-preview-theme="light" aria-pressed="true">Light</button>
+        <button class="terminal-button" type="button" data-preview-theme="system">System</button>
+      </span>
     </nav>
 
     <main class="review-sections">
       <section class="review-section" id="session-loading" aria-labelledby="session-loading-label">
         <header class="review-section__label">
-          <p>Current startup behavior</p>
+          <p>Proposed theme-aware startup</p>
           <h1 id="session-loading-label">Session loading</h1>
         </header>
         <div class="review-frame">
@@ -46,7 +59,7 @@
 
       <section class="review-section" id="sign-in" aria-labelledby="sign-in-label">
         <header class="review-section__label">
-          <p>Current unauthenticated behavior</p>
+          <p>Proposed theme-aware startup</p>
           <h2 id="sign-in-label">Sign in</h2>
         </header>
         <div class="review-frame">
@@ -76,7 +89,7 @@
 
       <section class="review-section" id="session-error" aria-labelledby="session-error-label">
         <header class="review-section__label">
-          <p>Current startup behavior</p>
+          <p>Proposed theme-aware startup</p>
           <h2 id="session-error-label">Session initialization error</h2>
         </header>
         <div class="review-frame">
@@ -102,7 +115,7 @@
 
       <section class="review-section" id="configuration-error" aria-labelledby="configuration-error-label">
         <header class="review-section__label">
-          <p>Current pre-application behavior</p>
+          <p>Proposed theme-aware startup</p>
           <h2 id="configuration-error-label">Configuration error</h2>
         </header>
         <div class="review-frame">
@@ -130,5 +143,31 @@
         </div>
       </section>
     </main>
+    <script>
+      const themeColor = document.querySelector('meta[name="theme-color"]')
+      const systemTheme = window.matchMedia('(prefers-color-scheme: light)')
+      let preference = 'light'
+
+      function applyTheme() {
+        const theme = preference === 'system'
+          ? systemTheme.matches ? 'light' : 'dark'
+          : preference
+        document.documentElement.dataset.theme = theme
+        themeColor.content = theme === 'light' ? '#d5d6db' : '#16161e'
+        document.querySelectorAll('[data-preview-theme]').forEach((button) => {
+          const isSelected = button.dataset.previewTheme === preference
+          button.classList.toggle('is-selected', isSelected)
+          button.setAttribute('aria-pressed', String(isSelected))
+        })
+      }
+
+      document.querySelectorAll('[data-preview-theme]').forEach((button) => {
+        button.addEventListener('click', () => {
+          preference = button.dataset.previewTheme
+          applyTheme()
+        })
+      })
+      systemTheme.addEventListener('change', applyTheme)
+    </script>
   </body>
 </html>
