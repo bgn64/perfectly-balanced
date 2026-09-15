@@ -1,6 +1,7 @@
 surface: application-shell
-status: reconciled
+status: approved
 reconciled_at: 2026-09-14
+approved_at: 2026-09-14
 route: /
 owners:
   - src/App.tsx
@@ -36,6 +37,16 @@ reconciliation:
     - src/terminal.css defines the inset window width, height, margin, border, radius, clipping, and shadow.
     - src/App.css repeats height and margin on a more specific authenticated-shell selector.
   outcome: Authenticated application chrome is presented as a rounded desktop window inside the browser canvas.
+proposal:
+  visual_change:
+    - Make the authenticated shell exactly fill the browser viewport at every supported width.
+    - Remove the shell's outer border, rounded corners, shadow, width cap, and decorative canvas gutter.
+    - Preserve titlebar, sidebar, workspace, statusline, panel borders, spacing, and content hierarchy.
+  geometry:
+    - Shell bounds equal viewport bounds at 1920x1080, 1440x900, and 390x844.
+    - Titlebar stays pinned to the top and statusline stays pinned to the bottom through the existing grid.
+    - Workspace remains the only independently scrolling region.
+  rationale: Internal separators already provide the application structure; the outer window treatment duplicates the browser boundary and reduces usable workspace.
 legacy_references:
   - mockup/hud.html
   - mockup/theme.html
