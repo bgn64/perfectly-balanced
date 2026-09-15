@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
 import { getSupabaseClient } from '../lib/supabase.ts'
 import { AuthContext, type AuthContextValue } from './authContext.ts'
+import { loadSessionWithJwtRecovery } from './jwtRecovery.ts'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const client = getSupabaseClient()
@@ -14,6 +15,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let isMounted = true
+    let sessionRevision = 0
 
     function setAuthenticatedSession(nextSession: Session | null) {
       if (!isMounted) {
@@ -28,12 +30,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const {
       data: { subscription },
-    } = client.auth.onAuthStateChange((_event, nextSession) => {
+    } = client.auth.onAuthStateChange((event, nextSession) => {
+      if (event !== 'INITIAL_SESSION') sessionRevision += 1
       setAuthenticatedSession(nextSession)
     })
 
-    void client.auth.getSession().then(({ data, error }) => {
-      if (!isMounted) {
+    const initializationRevision = sessionRevision
+    void loadSessionWithJwtRecovery(client.auth).then(({ data, error }) => {
+      if (!isMounted || sessionRevision !== initializationRevision) {
         return
       }
 
@@ -44,6 +48,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       setAuthenticatedSession(data.session)
+    }).catch((error: unknown) => {
+      if (!isMounted || sessionRevision !== initializationRevision) return
+      setInitializationError(error instanceof Error ? error.message : 'Session initialization failed.')
+      setIsLoading(false)
     })
 
     return () => {
