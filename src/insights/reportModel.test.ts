@@ -6,7 +6,11 @@ import type {
   Transaction,
   TransactionSplit,
 } from '../finance/types.ts'
-import { buildReportModel, type ReportMode } from './reportModel.ts'
+import {
+  buildReportModel,
+  defaultReportMode,
+  type ReportMode,
+} from './reportModel.ts'
 
 const subsections: BudgetSubsection[] = [
   { id: 'employment', name: 'Employment', position: 0 },
@@ -132,6 +136,10 @@ function representedAmounts(model: ReturnType<typeof buildReportModel>) {
 }
 
 describe('buildReportModel', () => {
+  it('defaults each authenticated shell to the all-activity mode', () => {
+    expect(defaultReportMode).toBe('all')
+  })
+
   it('includes categorized and uncategorized activity in All mode', () => {
     const model = report('all')
 

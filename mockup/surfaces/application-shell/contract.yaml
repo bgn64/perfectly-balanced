@@ -139,8 +139,9 @@ navigation_followup:
       - Production build retains the existing large-chunk advisory.
       - Browser automation currently targets Chromium; Safari and Firefox are not covered by this suite.
 workspace_state_followup:
-  status: approved
+  status: implemented
   approved_at: 2026-09-14
+  implemented_at: 2026-09-14
   reconciled_at: 2026-09-14
   preview: workspace-state.html
   interaction_fidelity: functional
@@ -175,3 +176,23 @@ workspace_state_followup:
       - Own those view states beside activeView and selectedMonth in AuthenticatedShell.
       - Make TransactionsPanel and InsightsPanel controlled for committed workspace state only.
       - Keep transient panel state local and reset it naturally on unmount.
+  implementation:
+    files:
+      - src/App.tsx
+      - src/transactions/viewState.ts
+      - src/transactions/viewState.test.ts
+      - src/transactions/TransactionsPanel.tsx
+      - src/insights/reportModel.ts
+      - src/insights/InsightsPanel.tsx
+      - tests/navigation.pw.ts
+    outcomes:
+      - AuthenticatedShell owns transaction time, filters, sort, and report mode for the current authenticated app session.
+      - Inactive panels still unmount, preserving disposable lifetimes for drafts, dialogs, search, pagination, data, editors, focus, and errors.
+      - Reload and sign-out restore defaults without URL, localStorage, or sessionStorage workspace-state persistence.
+    verification:
+      - npm test: 54 tests passed.
+      - npm run test:browser: 8 native Chromium tests passed.
+      - npm run lint: passed.
+      - npm run build: passed with the existing large-chunk advisory.
+      - git diff --check: passed.
+      - Browser workflow preserved transaction controls and report mode across Budget navigation, discarded unapplied filter drafts, and reset on reload and sign-out.

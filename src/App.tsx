@@ -20,6 +20,10 @@ import {
   InsightsPanel,
   type InsightsInteraction,
 } from './insights/InsightsPanel.tsx'
+import {
+  defaultReportMode,
+  type ReportMode,
+} from './insights/reportModel.ts'
 import { getSupabaseClient } from './lib/supabase.ts'
 import { focusWithScrollComfort } from './navigation/focus.ts'
 import { Statusline } from './navigation/Statusline.tsx'
@@ -45,6 +49,10 @@ import {
 import {
   TransactionsPanel,
 } from './transactions/TransactionsPanel.tsx'
+import {
+  createDefaultTransactionViewState,
+  type TransactionViewState,
+} from './transactions/viewState.ts'
 import './App.css'
 import './terminal.css'
 import './theme.css'
@@ -690,6 +698,9 @@ function AuthenticatedShell({
   const { signOut } = useAuth()
   const [activeView, setActiveView] = useState<AppView>('budgets')
   const [selectedMonth, setSelectedMonth] = useState(currentMonth)
+  const [transactionViewState, setTransactionViewState] =
+    useState<TransactionViewState>(createDefaultTransactionViewState)
+  const [reportMode, setReportMode] = useState<ReportMode>(defaultReportMode)
   const [isSigningOut, setIsSigningOut] = useState(false)
   const [signOutError, setSignOutError] = useState<string | null>(null)
   const [categoriesRevision, setCategoriesRevision] = useState(0)
@@ -748,6 +759,12 @@ function AuthenticatedShell({
     (isOpen: boolean, query: string) => {
       setIsTransactionSearchOpen(isOpen)
       setTransactionSearchQuery(query)
+    },
+    [],
+  )
+  const handleTransactionViewStateChange = useCallback(
+    (update: Partial<TransactionViewState>) => {
+      setTransactionViewState((current) => ({ ...current, ...update }))
     },
     [],
   )
@@ -1217,6 +1234,7 @@ function AuthenticatedShell({
             categoriesRevision={categoriesRevision}
             focusTransactionRequest={transactionFocusRequest}
             selectedMonth={selectedMonth}
+            viewState={transactionViewState}
             onCategoriesChanged={handleCategoriesChanged}
             onControlDialogChange={setTransactionControlDialog}
             onDetailInteractionChange={setTransactionDetailInteraction}
@@ -1224,6 +1242,7 @@ function AuthenticatedShell({
             onSearchStateChange={handleTransactionSearchStateChange}
             onTransactionsChanged={handleTransactionsChanged}
             onUncategorizedCountChange={handleUncategorizedCountChange}
+            onViewStateChange={handleTransactionViewStateChange}
           />
         )}
         {activeView === 'insights' && (
@@ -1231,8 +1250,10 @@ function AuthenticatedShell({
             activityRevision={budgetActivityRevision}
             categoriesRevision={categoriesRevision}
             selectedMonth={selectedMonth}
+            mode={reportMode}
             onInteractionChange={setInsightsInteraction}
             onMonthChange={setSelectedMonth}
+            onModeChange={setReportMode}
           />
         )}
         {activeView === 'settings' && (

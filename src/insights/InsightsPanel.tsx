@@ -194,13 +194,17 @@ export function InsightsPanel({
   categoriesRevision,
   activityRevision,
   selectedMonth,
+  mode,
   onMonthChange,
+  onModeChange,
   onInteractionChange,
 }: {
   categoriesRevision: number
   activityRevision: number
   selectedMonth: string
+  mode: ReportMode
   onMonthChange: (month: string) => void
+  onModeChange: (mode: ReportMode) => void
   onInteractionChange: (interaction: InsightsInteraction | null) => void
 }) {
   const [data, setData] = useState<InsightsData>({
@@ -212,7 +216,6 @@ export function InsightsPanel({
     transactions: [],
     splits: [],
   })
-  const [mode, setMode] = useState<ReportMode>('all')
   const [modal, setModal] = useState<ReportModal>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -432,7 +435,7 @@ export function InsightsPanel({
                   data-status-label={`reports / mode / ${option.label.toLocaleLowerCase()}`}
                   key={option.value}
                   type="button"
-                  onClick={() => setMode(option.value)}
+                  onClick={() => onModeChange(option.value)}
                 >
                   {option.label}
                 </button>

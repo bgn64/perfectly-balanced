@@ -41,6 +41,11 @@ import {
   transactionTimeRanges,
   type TransactionTimeRange,
 } from './timeRange.ts'
+import type {
+  TransactionFilter,
+  TransactionSort,
+  TransactionViewState,
+} from './viewState.ts'
 
 interface TransactionsData {
   transactions: Transaction[]
@@ -53,17 +58,6 @@ interface PlaidItemSummary {
   institution_name: string | null
 }
 
-type TransactionSort =
-  | 'newest'
-  | 'oldest'
-  | 'merchant'
-  | 'amount-high'
-  | 'amount-low'
-type TransactionFilter =
-  | 'categorized'
-  | 'uncategorized'
-  | 'included'
-  | 'ignored'
 type TransactionControlDialog = 'time' | 'filter' | 'sort'
 
 const nonUsdCategoryMessage = 'Only USD transactions can be categorized.'
@@ -184,6 +178,7 @@ export function TransactionsPanel({
   categoriesRevision,
   focusTransactionRequest,
   selectedMonth,
+  viewState,
   onCategoriesChanged,
   onControlDialogChange,
   onDetailInteractionChange,
@@ -191,10 +186,12 @@ export function TransactionsPanel({
   onSearchStateChange,
   onTransactionsChanged,
   onUncategorizedCountChange,
+  onViewStateChange,
 }: {
   categoriesRevision: number
   focusTransactionRequest: { transactionId: string; sequence: number } | null
   selectedMonth: string
+  viewState: TransactionViewState
   onCategoriesChanged: () => void
   onControlDialogChange: (dialog: TransactionControlDialog | null) => void
   onDetailInteractionChange: (
@@ -204,6 +201,7 @@ export function TransactionsPanel({
   onSearchStateChange: (isOpen: boolean, query: string) => void
   onTransactionsChanged: () => void
   onUncategorizedCountChange: (count: number) => void
+  onViewStateChange: (update: Partial<TransactionViewState>) => void
 }) {
   const { user } = useAuth()
   const [transactions, setTransactions] = useState<Transaction[]>([])
@@ -213,15 +211,10 @@ export function TransactionsPanel({
   const [dataError, setDataError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [isSearchOpen, setIsSearchOpen] = useState(false)
-  const [timeRange, setTimeRange] =
-    useState<TransactionTimeRange>('current-month')
-  const [transactionFilters, setTransactionFilters] = useState<
-    TransactionFilter[]
-  >([])
+  const { filters: transactionFilters, sort, timeRange } = viewState
   const [draftTransactionFilters, setDraftTransactionFilters] = useState<
     TransactionFilter[]
   >([])
-  const [sort, setSort] = useState<TransactionSort>('newest')
   const [controlDialog, setControlDialog] =
     useState<TransactionControlDialog | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
@@ -972,7 +965,7 @@ export function TransactionsPanel({
       const remainingFilters = transactionFilters.filter(
         (candidate) => candidate !== filter,
       )
-      setTransactionFilters(remainingFilters)
+      onViewStateChange({ filters: remainingFilters })
       setCurrentPage(1)
       window.requestAnimationFrame(() => {
         const nextFilter =
@@ -987,7 +980,7 @@ export function TransactionsPanel({
         }
       })
     },
-    [transactionFilters],
+    [onViewStateChange, transactionFilters],
   )
 
   useEffect(() => {
@@ -1279,19 +1272,19 @@ export function TransactionsPanel({
   }
 
   function selectTimeRange(value: TransactionTimeRange) {
-    setTimeRange(value)
+    onViewStateChange({ timeRange: value })
     setCurrentPage(1)
     closeControlDialog()
   }
 
   function selectSort(value: TransactionSort) {
-    setSort(value)
+    onViewStateChange({ sort: value })
     setCurrentPage(1)
     closeControlDialog()
   }
 
   function applyTransactionFilters() {
-    setTransactionFilters(draftTransactionFilters)
+    onViewStateChange({ filters: draftTransactionFilters })
     setCurrentPage(1)
     closeControlDialog()
   }
@@ -1484,7 +1477,7 @@ export function TransactionsPanel({
                 data-status-label="transactions / filters"
                 type="button"
                 onClick={() => {
-                  setTransactionFilters([])
+                  onViewStateChange({ filters: [] })
                   setCurrentPage(1)
                 }}
               >

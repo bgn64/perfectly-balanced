@@ -13,6 +13,8 @@ import {
 
 export type ReportMode = 'all' | 'planned' | 'categorized'
 
+export const defaultReportMode: ReportMode = 'all'
+
 export interface ReportTransactionContribution {
   id: string
   transactionId: string
