@@ -72,8 +72,9 @@ legacy_references:
   - mockup/hud.html
   - mockup/theme.html
 navigation_followup:
-  status: approved
+  status: implemented
   approved_at: 2026-09-14
+  implemented_at: 2026-09-14
   reconciled_at: 2026-09-14
   preview: focus.html
   interaction_fidelity: simulated
@@ -115,3 +116,25 @@ navigation_followup:
     - Separate budget focus, editing, selection, and accessibility attributes.
     - Add report modal containment and safe restoration fallbacks; verify other dialogs and editors.
     - Add focused unit and browser regression coverage for the interaction contract.
+  implementation:
+    - Shared theme-aware hover tint and two-pixel inset keyboard focus indicator, including selected-theme contrast.
+    - Budget focus no longer marks rows or subsections selected or aria-current; editing remains explicit.
+    - Transaction and split shortcuts require actual row focus context.
+    - Focusout clears stale shell focus tracking; combobox options retain input focus during pointer selection.
+    - Report dialogs trap Tab and use a fallback opener; Settings restoration has a navigation fallback.
+  verification:
+    unit: 48 tests passed, including four focused Tab-containment tests.
+    browser: Seven native Chromium tests passed using real local Auth and intercepted read-only financial fixtures.
+    commands: npm test, npm run test:browser, npm run lint, npm run build, git diff --check.
+    screenshots: Native focus-and-hover desktop and Dark/Light desktop/mobile screenshots inspected under ignored test-results.
+    coverage:
+      - Hover preserves the keyboard target and typed text.
+      - Click and Enter open details and restore the specific opener.
+      - Nested category controls do not open transaction details.
+      - Row shortcuts do not act from outside the row context.
+      - Combobox hover changes the active descendant while input keeps focus.
+      - Report Tab and Shift+Tab containment and missing-opener fallback.
+      - Blur clears the previous shell target; keyboard focus remains visible in both themes and viewport sizes.
+    warnings:
+      - Production build retains the existing large-chunk advisory.
+      - Browser automation currently targets Chromium; Safari and Firefox are not covered by this suite.

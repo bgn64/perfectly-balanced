@@ -58,3 +58,26 @@ export function focusWithScrollComfort(element: HTMLElement) {
     window.requestAnimationFrame(() => scrollIntoComfortView(element))
   })
 }
+
+export function trapTabFocus(
+  event: Pick<KeyboardEvent, 'key' | 'shiftKey' | 'preventDefault'>,
+  container: HTMLElement,
+) {
+  if (event.key !== 'Tab') return
+  const controls = Array.from(container.querySelectorAll<HTMLElement>(
+    'button, a[href], input, select, textarea, [tabindex]',
+  )).filter((control) =>
+    control.tabIndex >= 0 &&
+    !control.matches(':disabled') &&
+    !control.closest('[hidden], [inert], [aria-hidden="true"]') &&
+    control.getClientRects().length > 0,
+  )
+  const currentIndex = controls.indexOf(document.activeElement as HTMLElement)
+  if (currentIndex < 0 ||
+      (event.shiftKey && currentIndex === 0) ||
+      (!event.shiftKey && currentIndex === controls.length - 1)) {
+    event.preventDefault()
+    const target = (event.shiftKey ? controls.at(-1) : controls[0]) ?? container
+    target.focus({ preventScroll: true })
+  }
+}

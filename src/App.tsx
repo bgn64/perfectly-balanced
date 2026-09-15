@@ -897,6 +897,7 @@ function AuthenticatedShell({
     }
     const observer = new MutationObserver(scheduleFocusStatusUpdate)
     root.addEventListener('focusin', scheduleFocusStatusUpdate)
+    root.addEventListener('focusout', scheduleFocusStatusUpdate)
     observer.observe(root, {
       attributeFilter: [
         'aria-hidden',
@@ -913,6 +914,7 @@ function AuthenticatedShell({
     return () => {
       window.cancelAnimationFrame(animationFrame)
       root.removeEventListener('focusin', scheduleFocusStatusUpdate)
+      root.removeEventListener('focusout', scheduleFocusStatusUpdate)
       observer.disconnect()
     }
   }, [activeView])

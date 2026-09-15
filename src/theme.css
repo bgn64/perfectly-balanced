@@ -1,5 +1,7 @@
 :root,
 :root[data-theme="dark"] {
+  --theme-hover: color-mix(in srgb, var(--theme-accent) 7%, var(--theme-surface));
+  --theme-focus: var(--theme-accent-strong);
   color-scheme: dark;
   --theme-accent: #7aa2f7;
   --theme-accent-strong: #7dcfff;
@@ -128,7 +130,7 @@ body {
   color: var(--theme-accent);
 }
 
-.authenticated-app.terminal-app :is(.nav-item:hover, .nav-item:focus-visible, .nav-item.is-focused, .nav-item.is-active) {
+.authenticated-app.terminal-app .nav-item.is-active {
   background: var(--theme-selection);
   color: var(--theme-text);
 }
@@ -165,7 +167,7 @@ body {
 
 .authenticated-app.terminal-app :is(.month-jump-controls button:hover, .month-jump-controls button:focus-visible, .terminal-button:hover, .terminal-button:focus-visible, .amount-cell:hover, .amount-cell:focus-visible) {
   border-color: var(--theme-accent);
-  background: var(--theme-selection);
+  background: var(--theme-hover);
   color: var(--theme-text);
 }
 
@@ -231,7 +233,7 @@ body {
   color: var(--theme-text);
 }
 
-.authenticated-app.terminal-app :is(.budget-row:hover, .budget-row:focus-visible, .budget-row.is-selected, .budget-subsection-head.is-selected) {
+.authenticated-app.terminal-app :is(.budget-row.is-editing, .budget-row.is-selected, .budget-subsection-head.is-editing, .budget-subsection-head.is-selected) {
   background: var(--theme-selection);
   color: var(--theme-text);
 }
@@ -346,7 +348,7 @@ body {
   color: var(--theme-text);
 }
 
-.authenticated-app.terminal-app :is(.transaction-row-simple:hover, .transaction-row-simple:focus-visible, .transaction-row-simple:focus-within, .transaction-row-simple.is-selected) {
+.authenticated-app.terminal-app .transaction-row-simple.is-selected {
   background: var(--theme-selection);
   color: var(--theme-text);
 }
@@ -501,7 +503,7 @@ body {
   color: var(--theme-text-secondary);
 }
 
-.authenticated-app.terminal-app :is(.reports-v2-slice-row:hover, .reports-v2-slice-row:focus-visible, .reports-v2-slice-row.is-focused, .reports-v2-transaction-row:hover, .reports-v2-transaction-row:focus-visible, .reports-v2-transaction-row.is-focused, .reports-v2-variance-list li:focus-visible) {
+.authenticated-app.terminal-app :is(.reports-v2-slice-row:focus-visible, .reports-v2-transaction-row:focus-visible, .reports-v2-variance-list li:focus-visible) {
   background: var(--theme-selection);
   color: var(--theme-text);
 }
@@ -650,4 +652,35 @@ body {
 .authenticated-app.terminal-app :is(.command-list li:hover, .command-list li.is-highlighted) {
   background: var(--theme-selection);
   color: var(--theme-text);
+}
+
+@media (hover: hover) {
+  :root .authenticated-app.terminal-app :is(
+    .nav-item:not(.is-active), .budget-row:not(.is-editing),
+    .budget-subsection-head:not(.is-editing), .transaction-row-simple:not(.is-selected),
+    .transaction-split-row:not(.is-editing), .reports-v2-slice-row,
+    .reports-v2-transaction-row, .terminal-button:not(:disabled),
+    .amount-cell, .direction-tag, .hud-identity
+  ):hover {
+    background: var(--theme-hover);
+  }
+
+  :root :is(.auth-terminal, .setup-terminal) .terminal-button:not(:disabled):hover {
+    background: var(--theme-hover);
+    color: var(--theme-text);
+  }
+}
+
+:root body :is(.authenticated-app, .auth-terminal, .setup-terminal)
+  :is(button, a[href], input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--theme-focus) !important;
+  outline-offset: -2px !important;
+}
+
+:root body .authenticated-app .hud-theme-control button[aria-pressed="true"]:focus-visible {
+  outline-color: var(--theme-status-text) !important;
+}
+
+.authenticated-app.terminal-app :is(.budget-row, .budget-subsection-head):not(:focus-visible):not(.is-editing) .selection-caret {
+  visibility: hidden;
 }

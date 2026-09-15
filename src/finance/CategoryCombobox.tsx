@@ -311,6 +311,8 @@ export function CategoryCombobox({
               key={option.id}
               role="option"
               type="button"
+              tabIndex={-1}
+              onMouseDown={(event) => event.preventDefault()}
               onMouseEnter={() => setActiveIndex(index)}
               onClick={() => {
                 if (option.kind === 'category') {

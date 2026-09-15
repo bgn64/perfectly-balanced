@@ -47,6 +47,28 @@ production Supabase project.
    Supabase Auth, so the application continues to exercise normal JWT, RLS,
    and RPC authorization.
 
+### Interaction regression checks
+
+With the local app running at `http://localhost:5173`, run:
+
+```sh
+npx playwright install chromium
+npm run test:browser
+```
+
+These tests use the seeded local account for real authentication, intercept
+finance reads with deterministic fixtures, and reject financial writes. They
+cover hover/focus separation, click and Enter activation, shortcut scope,
+combobox input focus, modal containment and restoration, and both themes at
+desktop/mobile sizes. Screenshots are written to the ignored `test-results/`
+directory. `npm test` runs the unit suite separately.
+
+Interaction rules: hover never moves DOM focus; keyboard focus has a distinct
+inset outline; selection and editing do not imply focus. Row shortcuts require
+the focused row context. Composite comboboxes may change the active option on
+hover while keeping focus in the input. Dialogs contain Tab navigation and
+restore their opener or a valid fallback.
+
 ### Local database lifecycle
 
 | Command | Purpose |

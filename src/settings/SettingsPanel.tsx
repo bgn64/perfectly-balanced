@@ -192,8 +192,10 @@ export function SettingsPanel({
     const origin = actionOriginRef.current
     actionOriginRef.current = null
     window.requestAnimationFrame(() => {
-      if (origin?.isConnected) {
-        focusWithScrollComfort(origin)
+      const target = origin?.isConnected && !origin.matches(':disabled') ? origin :
+        document.querySelector<HTMLElement>('[data-semantic-id="nav-settings"]')
+      if (target) {
+        focusWithScrollComfort(target)
       }
     })
   }, [])

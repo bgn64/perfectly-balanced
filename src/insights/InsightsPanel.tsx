@@ -23,7 +23,7 @@ import {
 } from '../finance/utils.ts'
 import { collectPages } from '../finance/query.ts'
 import { getSupabaseClient } from '../lib/supabase.ts'
-import { focusWithScrollComfort } from '../navigation/focus.ts'
+import { focusWithScrollComfort, trapTabFocus } from '../navigation/focus.ts'
 import { WorkspaceMonthHeading } from '../navigation/WorkspaceMonthHeading.tsx'
 import {
   buildReportModel,
@@ -290,7 +290,8 @@ export function InsightsPanel({
     const originId = reportOriginIdRef.current
     setModal(null)
     window.requestAnimationFrame(() => {
-      const origin = originId ? document.getElementById(originId) : null
+      const origin = (originId ? document.getElementById(originId) : null) ??
+        document.querySelector<HTMLElement>('[data-semantic-id="nav-insights"]')
       if (origin) {
         focusWithScrollComfort(origin)
       }
@@ -323,9 +324,8 @@ export function InsightsPanel({
     const animationFrame = window.requestAnimationFrame(() => {
       const pendingId = pendingModalFocusIdRef.current
       pendingModalFocusIdRef.current = null
-      const target = pendingId
-        ? document.getElementById(pendingId)
-        : modalRef.current?.querySelector<HTMLElement>(
+      const target = (pendingId ? document.getElementById(pendingId) : null) ??
+        modalRef.current?.querySelector<HTMLElement>(
             '[data-report-autofocus="true"]',
           )
       if (target) {
@@ -658,6 +658,8 @@ function ReportModalView({
         className="reports-v2-modal"
         ref={modalRef}
         role="dialog"
+        tabIndex={-1}
+        onKeyDown={(event) => trapTabFocus(event, event.currentTarget)}
       >
         <header className="reports-v2-modal-head">
           <div>
@@ -757,6 +759,8 @@ function ReportModalView({
       className="reports-v2-modal"
       ref={modalRef}
       role="dialog"
+      tabIndex={-1}
+      onKeyDown={(event) => trapTabFocus(event, event.currentTarget)}
     >
       <header className="reports-v2-modal-head">
         <div>

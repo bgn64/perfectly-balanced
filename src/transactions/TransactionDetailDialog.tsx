@@ -542,7 +542,8 @@ export function TransactionDetailDialog({
       onToggleIgnored()
       return
     }
-    if (!focusedSplitKey) {
+    if (!focusedSplitKey || !(event.target instanceof HTMLElement) ||
+        !event.target.closest('[data-semantic-kind="transaction-split"]')) {
       return
     }
     if (key === 'a') {
@@ -744,13 +745,12 @@ export function TransactionDetailDialog({
                       const category = draft.categoryId
                         ? categoriesById.get(draft.categoryId) ?? null
                         : null
-                      const isFocused = draft.key === focusedSplitKey
                       const isEditingAmount = draft.key === amountEditKey
                       const isEditingCategory = draft.key === categoryEditKey
                       return (
                         <div
                           className={`transaction-split-row${
-                            isFocused ? ' is-focused' : ''
+                            isEditingAmount || isEditingCategory ? ' is-editing' : ''
                           }${
                             isEditingAmount
                               ? ' transaction-split-row--amount-edit'
