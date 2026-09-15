@@ -1,0 +1,80 @@
+surface: authentication-startup
+status: implemented
+reconciled_at: 2026-09-14
+approved_at: 2026-09-14
+implemented_at: 2026-09-14
+route: /
+owners:
+  - src/main.tsx
+  - src/Root.tsx
+  - src/App.tsx
+  - src/auth/AuthProvider.tsx
+  - src/theme.css
+viewports:
+  desktop: 1024x768
+  mobile: 390x844
+themes:
+  proposed:
+    - dark
+    - light
+    - system
+  behavior:
+    - Apply the saved preference before React renders any state.
+    - Resolve system preference before first paint and follow later system changes.
+    - Keep browser color scheme and theme color synchronized with the resolved theme.
+states:
+  - session-loading
+  - sign-in
+  - session-initialization-error
+  - configuration-error
+interactions:
+  keyboard:
+    - Tab moves through sign-in controls.
+    - Enter submits the focused sign-in form.
+  mouse:
+    - Sign-in buttons submit their associated forms.
+    - Theme preview buttons switch every startup state together.
+fixtures:
+  unauthenticated: Clear the local Supabase auth session.
+  authenticated: Use the seeded local account from AGENTS.md.
+  saved_light: Set perfectly-balanced.theme to light before navigation.
+interaction_fidelity: functional
+reconciliation:
+  source: Running application at http://localhost:5173
+  outcome: The saved light fixture renders all four startup states with the dark default palette.
+proposal:
+  visual_change: Palette only; layout, copy, spacing, and control hierarchy are unchanged.
+  implementation:
+    - Move theme preference ownership above authentication and configuration branches.
+    - Initialize the resolved theme before the first application render.
+    - Remove theme-specific fallback colors outside the shared token definitions.
+    - Keep chart colors as intentional data visualization colors unless contrast verification fails.
+implementation:
+  files:
+    - index.html
+    - src/main.tsx
+    - src/Root.tsx
+    - src/App.tsx
+    - src/theme.ts
+    - src/theme.test.ts
+    - src/index.css
+    - src/App.css
+  outcomes:
+    - Saved and system preferences apply before configuration and authentication state selection.
+    - Resolved theme, browser color scheme, and browser theme color stay synchronized.
+    - UI color literals are confined to shared theme tokens; report series retain intentional data colors.
+verification:
+  automated:
+    - npm test: 47 tests passed.
+    - npm run lint: passed.
+    - npm run build: passed with the existing large-chunk advisory.
+    - git diff --check: passed.
+  browser:
+    - Light startup trace rendered session loading and sign-in without a dark frame.
+    - Dark mobile sign-in at 390x844 had no horizontal overflow or viewport clipping.
+    - Light desktop sign-in and configuration error at 1024x768 matched the approved palette without overflow.
+    - A deterministic JWT refresh failure rendered the session initialization error in the saved light theme.
+    - System preference resolved on startup in both schemes and followed a runtime media-query change.
+legacy_references:
+  - mockup/index.html
+  - mockup/configuration-error.html

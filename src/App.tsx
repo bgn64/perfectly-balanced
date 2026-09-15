@@ -1,7 +1,6 @@
 import {
   useCallback,
   useEffect,
-  useLayoutEffect,
   useRef,
   useState,
   type FormEvent,
@@ -41,7 +40,6 @@ import {
   type SettingsInteraction,
 } from './settings/SettingsPanel.tsx'
 import {
-  resolveTheme,
   type ThemePreference,
 } from './settings/model.ts'
 import {
@@ -53,6 +51,8 @@ import './theme.css'
 
 interface AppProps {
   appName: string
+  themePreference: ThemePreference
+  onThemePreferenceChange: (preference: ThemePreference) => void
 }
 
 type AppView = 'budgets' | 'transactions' | 'insights' | 'settings'
@@ -84,20 +84,6 @@ const navigationItems: ReadonlyArray<{
   { view: 'transactions', label: 'Transactions' },
   { view: 'insights', label: 'Reports' },
 ]
-
-const themePreferenceKey = 'perfectly-balanced.theme'
-
-function readInitialThemePreference(): ThemePreference {
-  const savedTheme = window.localStorage.getItem(themePreferenceKey)
-  if (
-    savedTheme === 'dark' ||
-    savedTheme === 'light' ||
-    savedTheme === 'system'
-  ) {
-    return savedTheme
-  }
-  return 'system'
-}
 
 function getSemanticControls(
   root: HTMLElement,
@@ -452,7 +438,11 @@ function AuthenticatedSidebar({
   )
 }
 
-function App({ appName }: AppProps) {
+function App({
+  appName,
+  themePreference,
+  onThemePreferenceChange,
+}: AppProps) {
   const { isLoading, initializationError, session, user } = useAuth()
 
   if (isLoading) {
@@ -489,11 +479,13 @@ function App({ appName }: AppProps) {
     <AuthenticatedShell
       appName={appName}
       email={user.email ?? ''}
+      themePreference={themePreference}
+      onThemePreferenceChange={onThemePreferenceChange}
     />
   )
 }
 
-function LoadingScreen({ appName }: AppProps) {
+function LoadingScreen({ appName }: { appName: string }) {
   return (
     <main className="auth-page">
       <section className="auth-terminal" aria-live="polite">
@@ -515,7 +507,7 @@ function LoadingScreen({ appName }: AppProps) {
   )
 }
 
-function SignInScreen({ appName }: AppProps) {
+function SignInScreen({ appName }: { appName: string }) {
   const { localDemoMode, localTestCredentials, siteUrl } =
     getClientConfiguration()
   const [email, setEmail] = useState('')
@@ -687,9 +679,13 @@ function SignInScreen({ appName }: AppProps) {
 function AuthenticatedShell({
   appName,
   email,
+  themePreference,
+  onThemePreferenceChange,
 }: {
   appName: string
   email: string
+  themePreference: ThemePreference
+  onThemePreferenceChange: (preference: ThemePreference) => void
 }) {
   const { signOut } = useAuth()
   const [activeView, setActiveView] = useState<AppView>('budgets')
@@ -715,12 +711,6 @@ function AuthenticatedShell({
   const [settingsFocusRequest, setSettingsFocusRequest] =
     useState<SettingsFocusRequest | null>(null)
   const [commandQuery, setCommandQuery] = useState('go')
-  const [themePreference, setThemePreference] =
-    useState<ThemePreference>(readInitialThemePreference)
-  const [systemPrefersLight, setSystemPrefersLight] = useState(() =>
-    window.matchMedia('(prefers-color-scheme: light)').matches,
-  )
-  const theme = resolveTheme(themePreference, systemPrefersLight)
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
   const [isAmountEditorOpen, setIsAmountEditorOpen] = useState(false)
   const [amountEditRequest, setAmountEditRequest] =
@@ -853,21 +843,6 @@ function AuthenticatedShell({
     setCommandQuery('go')
     setIsCommandPaletteOpen(true)
     window.requestAnimationFrame(() => commandInputRef.current?.focus())
-  }, [])
-
-  useEffect(() => {
-    window.localStorage.setItem(themePreferenceKey, themePreference)
-  }, [themePreference])
-
-  useLayoutEffect(() => {
-    document.documentElement.dataset.theme = theme
-  }, [theme])
-
-  useEffect(() => {
-    const media = window.matchMedia('(prefers-color-scheme: light)')
-    const updatePreference = () => setSystemPrefersLight(media.matches)
-    media.addEventListener('change', updatePreference)
-    return () => media.removeEventListener('change', updatePreference)
   }, [])
 
   useEffect(() => {
@@ -1270,7 +1245,7 @@ function AuthenticatedShell({
             onActivityChanged={handleTransactionsChanged}
             onInteractionChange={setSettingsInteraction}
             onSignOut={() => void handleSignOut()}
-            onThemePreferenceChange={setThemePreference}
+            onThemePreferenceChange={onThemePreferenceChange}
           />
         )}
       </main>

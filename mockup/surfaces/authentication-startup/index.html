@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="theme-color" content="#d5d6db" />
+    <title>Perfectly Balanced - Authentication startup contract</title>
+    <link rel="stylesheet" href="../../neovim-tokyonight.css" />
+    <style>
+      .review-frame__viewport {
+        border-color: var(--theme-border);
+        background: var(--theme-canvas);
+      }
+    </style>
+  </head>
+  <body class="review-page">
+    <nav class="review-nav" aria-label="Mockup review navigation">
+      <strong>Authentication startup</strong>
+      <span class="review-nav__group">
+        <a href="#session-loading">Loading</a>
+        <a href="#sign-in">Sign in</a>
+        <a href="#session-error">Session error</a>
+        <a href="#configuration-error">Configuration error</a>
+      </span>
+      <span class="review-nav__group" aria-label="Theme preview">
+        <button class="terminal-button" type="button" data-preview-theme="dark">Dark</button>
+        <button class="terminal-button is-selected" type="button" data-preview-theme="light" aria-pressed="true">Light</button>
+        <button class="terminal-button" type="button" data-preview-theme="system">System</button>
+      </span>
+    </nav>
+
+    <main class="review-sections">
+      <section class="review-section" id="session-loading" aria-labelledby="session-loading-label">
+        <header class="review-section__label">
+          <p>Proposed theme-aware startup</p>
+          <h1 id="session-loading-label">Session loading</h1>
+        </header>
+        <div class="review-frame">
+          <div class="review-frame__viewport auth-page">
+            <section class="auth-terminal" aria-live="polite">
+              <header class="auth-terminal__head">
+                <span class="brand">
+                  <span class="brand-mark" aria-hidden="true">pb</span>
+                  <span>perfectly-balanced</span>
+                </span>
+                <span>secure session</span>
+              </header>
+              <div class="auth-terminal__body">
+                <p class="eyebrow">Authentication</p>
+                <h1>Checking your session</h1>
+                <p>One moment while we securely sign you in.</p>
+                <span class="terminal-pill">Working...</span>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <section class="review-section" id="sign-in" aria-labelledby="sign-in-label">
+        <header class="review-section__label">
+          <p>Proposed theme-aware startup</p>
+          <h2 id="sign-in-label">Sign in</h2>
+        </header>
+        <div class="review-frame">
+          <div class="review-frame__viewport auth-page">
+            <section class="auth-terminal" aria-labelledby="sign-in-title">
+              <header class="auth-terminal__head">
+                <span class="brand">
+                  <span class="brand-mark" aria-hidden="true">pb</span>
+                  <span>perfectly-balanced</span>
+                </span>
+                <span>secure session</span>
+              </header>
+              <div class="auth-terminal__body">
+                <p class="eyebrow">Welcome back</p>
+                <h1 id="sign-in-title">Sign in with email</h1>
+                <p>Your invitation is tied to your email address. We will send a single-use sign-in link.</p>
+                <form class="auth-form">
+                  <label for="email">Email address</label>
+                  <input id="email" name="email" type="email" autocomplete="email" required />
+                  <button class="terminal-button terminal-button--primary" type="submit">Send sign-in link</button>
+                </form>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <section class="review-section" id="session-error" aria-labelledby="session-error-label">
+        <header class="review-section__label">
+          <p>Proposed theme-aware startup</p>
+          <h2 id="session-error-label">Session initialization error</h2>
+        </header>
+        <div class="review-frame">
+          <div class="review-frame__viewport auth-page">
+            <section class="auth-terminal" aria-labelledby="auth-error-title">
+              <header class="auth-terminal__head">
+                <span class="brand">
+                  <span class="brand-mark" aria-hidden="true">pb</span>
+                  <span>perfectly-balanced</span>
+                </span>
+                <span class="spent">session unavailable</span>
+              </header>
+              <div class="auth-terminal__body">
+                <p class="eyebrow">Authentication</p>
+                <h1 id="auth-error-title">We could not verify your session</h1>
+                <p>JWT issued at future</p>
+                <p class="auth-footnote">Refresh the page to try again.</p>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <section class="review-section" id="configuration-error" aria-labelledby="configuration-error-label">
+        <header class="review-section__label">
+          <p>Proposed theme-aware startup</p>
+          <h2 id="configuration-error-label">Configuration error</h2>
+        </header>
+        <div class="review-frame">
+          <div class="review-frame__viewport setup-page">
+            <section class="setup-terminal" aria-labelledby="setup-error-title">
+              <header class="setup-terminal__head">
+                <span class="brand">
+                  <span class="brand-mark" aria-hidden="true">pb</span>
+                  <span>perfectly-balanced</span>
+                </span>
+                <span class="spent">configuration error</span>
+              </header>
+              <div class="setup-terminal__body">
+                <p class="eyebrow">Environment required</p>
+                <h1 id="setup-error-title">The workspace cannot start yet.</h1>
+                <p>Copy <code>.env.example</code> to <code>.env</code>, then provide the required local environment values.</p>
+                <div class="config-command">
+                  <span aria-hidden="true">$</span>
+                  <code>cp .env.example .env</code>
+                </div>
+                <p class="config-error">Missing required environment variables.</p>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+    </main>
+    <script>
+      const themeColor = document.querySelector('meta[name="theme-color"]')
+      const systemTheme = window.matchMedia('(prefers-color-scheme: light)')
+      let preference = 'light'
+
+      function applyTheme() {
+        const theme = preference === 'system'
+          ? systemTheme.matches ? 'light' : 'dark'
+          : preference
+        document.documentElement.dataset.theme = theme
+        themeColor.content = theme === 'light' ? '#d5d6db' : '#16161e'
+        document.querySelectorAll('[data-preview-theme]').forEach((button) => {
+          const isSelected = button.dataset.previewTheme === preference
+          button.classList.toggle('is-selected', isSelected)
+          button.setAttribute('aria-pressed', String(isSelected))
+        })
+      }
+
+      document.querySelectorAll('[data-preview-theme]').forEach((button) => {
+        button.addEventListener('click', () => {
+          preference = button.dataset.previewTheme
+          applyTheme()
+        })
+      })
+      systemTheme.addEventListener('change', applyTheme)
+    </script>
+  </body>
+</html>
