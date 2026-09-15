@@ -1449,9 +1449,7 @@ summary:focus-visible {
   background: var(--theme-shell);
   color: var(--theme-text);
   font-family: "Cascadia Code", "SFMono-Regular", Consolas, monospace;
-  height: calc(100dvh - 3rem);
   min-height: 0;
-  margin: 1.5rem auto;
 }
 
 .authenticated-app.terminal-app h1,

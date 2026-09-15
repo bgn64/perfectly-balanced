@@ -88,7 +88,6 @@ body {
   border-color: var(--theme-border);
   background: var(--theme-shell);
   color: var(--theme-text);
-  box-shadow: var(--theme-shadow);
 }
 
 .authenticated-app.terminal-app :is(h1, h2, h3) {
