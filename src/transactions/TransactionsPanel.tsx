@@ -568,9 +568,6 @@ export function TransactionsPanel({
     return items
   }, [displayedPage, totalPages])
 
-  const selectedTransaction =
-    transactions.find((transaction) => transaction.id === selectedTransactionId) ??
-    null
   const detailTransaction =
     transactions.find((transaction) => transaction.id === detailTransactionId) ??
     null
@@ -1042,7 +1039,7 @@ export function TransactionsPanel({
         ? transactions.find(
             (transaction) => transaction.id === focusedTransactionId,
           ) ?? null
-        : selectedTransaction
+        : null
       const actionRecommendation = actionTransaction
         ? recommendationForTransaction(actionTransaction)
         : null
@@ -1094,7 +1091,6 @@ export function TransactionsPanel({
     recommendationForTransaction,
     removeTransactionFilter,
     selectTransaction,
-    selectedTransaction,
     toggleTransactionIgnored,
     transactionFilters,
     transactions,
@@ -1538,7 +1534,6 @@ export function TransactionsPanel({
               return (
                 <div
                   aria-busy={isApplyingRecommendations || undefined}
-                  aria-current={isSelected ? 'true' : undefined}
                   className={`transaction-row-simple${
                     isSelected ? ' is-selected' : ''
                   }${

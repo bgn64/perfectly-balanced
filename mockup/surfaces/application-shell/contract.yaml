@@ -71,3 +71,70 @@ verification:
 legacy_references:
   - mockup/hud.html
   - mockup/theme.html
+navigation_followup:
+  status: implemented
+  approved_at: 2026-09-14
+  implemented_at: 2026-09-14
+  reconciled_at: 2026-09-14
+  preview: focus.html
+  interaction_fidelity: simulated
+  fixture: Synthetic Cedar Cafe and Local Market rows; no backend writes.
+  observations:
+    - Live Settings hover leaves DOM focus on the previously focused theme control.
+    - Transaction hover, focus-within, and editing selection share a background in current styles.
+    - Click and Enter open transaction details; closing restores the recorded opener.
+    - Preview dialog uses native dialog containment to simulate the existing transaction focus trap.
+  source_audit:
+    - Transaction c and t shortcuts fall back to remembered selection outside a focused row.
+    - Budget is-selected and aria-current mix temporary focus with editing state.
+    - Report dialogs have no Tab trap and lack a fallback when the opener disappears.
+  limitations:
+    - Preview is a representative interaction specimen, not a reproduction of transaction data or editor layout.
+    - Live Settings returned a 401 during observation; backend authorization is outside this change.
+  viewports: [1440x900, 390x844]
+  themes: [dark, light]
+  proposed_states:
+    - Keyboard-focused row alongside a separately hovered neighbor.
+    - Persistently selected theme alongside keyboard focus on a different control.
+    - Nested category action without activating transaction details twice.
+    - Text entry and caret retained while hovering other controls.
+    - Combobox active descendant changes on hover while input retains DOM focus.
+    - Dialog open, trapped Tab focus, Escape close, and opener restoration.
+    - Loading, disabled, empty, and error states preserve existing layout and never receive stale row shortcuts.
+  rules:
+    - Hover adds only a subtle theme-aware tint and never changes DOM focus or row shortcut targets.
+    - Keyboard focus has a distinct two-pixel inset outline without layout movement.
+    - Selection and editing remain separate from focus; aria-current is not a focus indicator.
+    - Click and Enter share activation; nested controls never activate their parent row.
+    - Row shortcuts require a focused row context; remembered IDs are only restoration aids.
+    - Focus and statusline update together when targets blur, disappear, or open a modal.
+    - Combobox hover may change the active descendant but must not steal text-entry focus.
+  implementation_plan:
+    - Reuse theme tokens and existing semantic navigation attributes; no global hover-to-focus system.
+    - Apply shared interaction styles across shell, budgets, transactions, reports, Settings, and authentication controls.
+    - Scope transaction shortcuts to actual focused context and preserve click/Enter parity.
+    - Separate budget focus, editing, selection, and accessibility attributes.
+    - Add report modal containment and safe restoration fallbacks; verify other dialogs and editors.
+    - Add focused unit and browser regression coverage for the interaction contract.
+  implementation:
+    - Shared theme-aware hover tint and two-pixel inset keyboard focus indicator, including selected-theme contrast.
+    - Budget focus no longer marks rows or subsections selected or aria-current; editing remains explicit.
+    - Transaction and split shortcuts require actual row focus context.
+    - Focusout clears stale shell focus tracking; combobox options retain input focus during pointer selection.
+    - Report dialogs trap Tab and use a fallback opener; Settings restoration has a navigation fallback.
+  verification:
+    unit: 48 tests passed, including four focused Tab-containment tests.
+    browser: Seven native Chromium tests passed using real local Auth and intercepted read-only financial fixtures.
+    commands: npm test, npm run test:browser, npm run lint, npm run build, git diff --check.
+    screenshots: Native focus-and-hover desktop and Dark/Light desktop/mobile screenshots inspected under ignored test-results.
+    coverage:
+      - Hover preserves the keyboard target and typed text.
+      - Click and Enter open details and restore the specific opener.
+      - Nested category controls do not open transaction details.
+      - Row shortcuts do not act from outside the row context.
+      - Combobox hover changes the active descendant while input keeps focus.
+      - Report Tab and Shift+Tab containment and missing-opener fallback.
+      - Blur clears the previous shell target; keyboard focus remains visible in both themes and viewport sizes.
+    warnings:
+      - Production build retains the existing large-chunk advisory.
+      - Browser automation currently targets Chromium; Safari and Firefox are not covered by this suite.

@@ -176,7 +176,7 @@ kbd {
   color: var(--theme-accent-strong);
 }
 
-.nav-item.is-focused {
+.nav-item:focus-visible {
   position: relative;
   border-left-color: var(--theme-accent);
   background: var(--theme-selection);
@@ -185,7 +185,7 @@ kbd {
   outline-offset: -2px;
 }
 
-.nav-item.is-focused::after {
+.nav-item:focus-visible::after {
   position: absolute;
   right: 0.5rem;
   color: var(--theme-accent-strong);
@@ -362,8 +362,7 @@ h3 {
 
 .workspace-month-rail button:not(:disabled):hover,
 .workspace-month-rail button:not(:disabled):focus-visible {
-  background: var(--theme-selection);
-  box-shadow: inset 0 0 0 2px var(--theme-accent);
+  background: var(--theme-hover);
   color: var(--theme-accent-strong);
   outline: none;
 }
@@ -1401,14 +1400,14 @@ h3 {
   text-align: left;
 }
 
-.first-budget-item.is-selected {
+.first-budget-item:focus-visible {
   position: relative;
   background: var(--theme-selection);
   outline: 2px solid var(--theme-accent-strong);
   outline-offset: -2px;
 }
 
-.first-budget-item.is-selected::before {
+.first-budget-item:focus-visible::before {
   position: absolute;
   inset: 0 auto 0 0;
   width: 2px;
@@ -1843,9 +1842,8 @@ button.filter-token.is-selected {
   background: var(--theme-surface);
 }
 
-.transaction-split-row:hover,
 .transaction-split-row:focus-visible,
-.transaction-split-row.is-focused {
+.transaction-split-row.is-editing {
   border-color: var(--theme-accent);
   background: var(--theme-selection);
   outline: none;
@@ -1911,9 +1909,8 @@ button.filter-token.is-selected {
   opacity: 0;
 }
 
-.transaction-split-row:hover .transaction-split-caret,
 .transaction-split-row:focus-visible .transaction-split-caret,
-.transaction-split-row.is-focused .transaction-split-caret {
+.transaction-split-row.is-editing .transaction-split-caret {
   width: auto;
   opacity: 1;
 }
@@ -2565,17 +2562,12 @@ button.filter-token.is-selected {
   text-align: left;
 }
 
-.transaction-row-simple:hover,
-.transaction-row-simple:focus-visible,
-.transaction-row-simple:focus-within,
 .transaction-row-simple.is-selected {
   outline: 0;
   background: var(--theme-selection);
   color: var(--theme-text);
 }
 
-.transaction-row-simple:focus-visible::before,
-.transaction-row-simple:focus-within::before,
 .transaction-row-simple.is-selected::before {
   position: absolute;
   inset: 0 auto 0 0;
@@ -4051,7 +4043,6 @@ button.filter-token.is-selected {
   white-space: nowrap;
 }
 
-.reports-v2-transaction-row:hover,
 .reports-v2-transaction-row:focus-visible,
 .reports-v2-transaction-row.is-focused {
   background: var(--theme-selection);

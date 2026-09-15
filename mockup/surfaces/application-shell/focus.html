@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Perfectly Balanced - Interaction contract</title>
+    <link rel="stylesheet" href="../../../src/App.css" />
+    <link rel="stylesheet" href="../../../src/terminal.css" />
+    <link rel="stylesheet" href="../../../src/theme.css" />
+    <style>
+      html, body { height: auto; overflow: auto; }
+      .focus-review { min-height: 100dvh; background: var(--theme-shell); color: var(--theme-text); }
+      .focus-review > header, .focus-review > main { padding: 1.5rem; }
+      .focus-review > header { border-bottom: 1px solid var(--theme-border); }
+      .focus-review h1 { font-size: 1.25rem; }
+      .focus-review main { display: grid; gap: 1.5rem; max-width: 64rem; margin: auto; }
+      .focus-review section { min-width: 0; }
+      .focus-review .transaction-row-simple { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 1rem; align-items: center; }
+      .focus-review .transaction-row-simple__select { text-align: left; }
+      .focus-review .transaction-row-simple button { min-height: 2.75rem; }
+      .focus-review .auth-form { max-width: 30rem; }
+      .focus-review .hud-theme-control { width: fit-content; }
+      .focus-review dialog { width: min(32rem, calc(100% - 2rem)); max-height: calc(100dvh - 2rem); overflow: auto; margin: auto; padding: 1.5rem; border: 1px solid var(--theme-border); border-radius: 0.4rem; background: var(--theme-surface); color: var(--theme-text); }
+      .focus-review dialog::backdrop { background: var(--theme-overlay); }
+      .focus-review dialog h2 { font-size: 1.1rem; }
+      .focus-review .statusline { position: sticky; bottom: 0; }
+      .focus-review {
+        --interaction-hover: color-mix(in srgb, var(--theme-accent) 7%, var(--theme-surface));
+        --interaction-focus: var(--theme-accent-strong);
+      }
+      .focus-review [data-row] { background: var(--theme-surface); }
+      .focus-review [data-row]:focus-within::before,
+      .focus-review [data-row].is-selected::before { content: none; }
+      .focus-review [data-row].is-selected { background: var(--theme-selection); }
+      @media (hover: hover) {
+        .focus-review [data-row]:hover,
+        .focus-review button:not(:disabled):not([aria-pressed="true"]):hover {
+          background: var(--interaction-hover);
+        }
+      }
+      .focus-review :is(button, input, select, [tabindex]):focus-visible {
+        outline: 2px solid var(--interaction-focus);
+        outline-offset: -2px;
+      }
+      .focus-review [data-row]:focus-visible { background: var(--theme-surface); }
+      .focus-review .category-combobox { max-width: 30rem; }
+      .focus-review [role="option"] { width: 100%; padding: 0.75rem; color: var(--theme-text); }
+      .focus-review [role="option"][aria-selected="true"] { background: var(--theme-selection); box-shadow: inset 2px 0 var(--interaction-focus); }
+      .focus-review [hidden] { display: none; }
+      @media (max-width: 34rem) {
+        .focus-review > header, .focus-review > main { padding: 1rem; }
+        .focus-review .transaction-row-simple { gap: 0.5rem; padding: 0.75rem 0.25rem; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="authenticated-app focus-review">
+      <header>
+        <h1>Interaction proposal</h1>
+        <a href="./">Application shell contract</a>
+      </header>
+      <main>
+        <section aria-labelledby="appearance-title">
+          <h2 id="appearance-title">Appearance</h2>
+          <div class="hud-theme-control" role="group" aria-label="Color theme">
+            <button type="button" data-theme-choice="dark" aria-pressed="true" class="is-selected">Dark</button>
+            <button type="button" data-theme-choice="light" aria-pressed="false">Light</button>
+          </div>
+        </section>
+        <section aria-labelledby="transactions-title">
+          <h2 id="transactions-title">Transactions</h2>
+          <div class="transaction-row-simple" tabindex="0" data-row="Cedar Cafe">
+            <button class="transaction-row-simple__select" type="button" data-open="Cedar Cafe"><span class="transaction-row-simple__name"><strong>Cedar Cafe</strong><span>September 8 / Credit card</span></span></button>
+            <button class="category-chip" type="button" data-category="Cedar Cafe">Dining</button>
+            <strong>-$42.00</strong>
+          </div>
+          <div class="transaction-row-simple" tabindex="0" data-row="Local Market">
+            <button class="transaction-row-simple__select" type="button" data-open="Local Market"><span class="transaction-row-simple__name"><strong>Local Market</strong><span>September 9 / Checking</span></span></button>
+            <button class="category-chip" type="button" data-category="Local Market">Groceries</button>
+            <strong>-$75.00</strong>
+          </div>
+        </section>
+        <section aria-labelledby="search-title">
+          <h2 id="search-title">Search</h2>
+          <div class="auth-form"><label for="search">Merchant</label><input id="search" type="search" /></div>
+        </section>
+        <section aria-labelledby="category-title">
+          <h2 id="category-title">Category</h2>
+          <div class="category-combobox auth-form">
+            <label for="category-search">Find category</label>
+            <input id="category-search" role="combobox" aria-autocomplete="list" aria-controls="category-options" aria-expanded="false" autocomplete="off" />
+            <div id="category-options" role="listbox" aria-label="Categories" hidden>
+              <button type="button" role="option" id="option-dining" aria-selected="false" tabindex="-1">Dining</button>
+              <button type="button" role="option" id="option-groceries" aria-selected="false" tabindex="-1">Groceries</button>
+            </div>
+          </div>
+        </section>
+      </main>
+      <footer class="statusline" aria-live="polite"><strong>NAVIGATE</strong><span id="focus-status">Transactions</span></footer>
+      <dialog aria-labelledby="detail-title" id="detail-dialog">
+        <h2 id="detail-title">Transaction</h2>
+        <div class="auth-form"><label for="category">Category</label><select id="category"><option>Dining</option><option>Groceries</option></select></div>
+        <form method="dialog"><button class="terminal-button" autofocus>Close</button></form>
+      </dialog>
+    </div>
+    <script>
+      const dialog = document.querySelector('#detail-dialog')
+      let origin = null
+      function openDetail(control, categoryOnly = false) {
+        origin = control
+        const row = control.closest('[data-row]')
+        row.classList.add('is-selected')
+        document.querySelector('#detail-title').textContent = categoryOnly ? `${row.dataset.row} / Category` : row.dataset.row
+        dialog.showModal()
+      }
+      document.querySelectorAll('[data-theme-choice]').forEach((button) => {
+        button.addEventListener('click', () => {
+          document.documentElement.dataset.theme = button.dataset.themeChoice
+          document.querySelectorAll('[data-theme-choice]').forEach((option) => {
+            option.classList.toggle('is-selected', option === button)
+            option.setAttribute('aria-pressed', String(option === button))
+          })
+        })
+      })
+      document.querySelectorAll('[data-open]').forEach((button) => button.addEventListener('click', () => openDetail(button)))
+      document.querySelectorAll('[data-category]').forEach((button) => button.addEventListener('click', () => openDetail(button, true)))
+      document.querySelectorAll('[data-row]').forEach((row) => {
+        row.addEventListener('click', (event) => {
+          if (!event.target.closest('button')) openDetail(row)
+        })
+        row.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' && event.target === row) { event.preventDefault(); openDetail(row) }
+          if (event.target !== row) return
+          if (event.key === 'c') { event.preventDefault(); openDetail(row.querySelector('[data-category]'), true) }
+          if (event.key === 'j' || event.key === 'k') {
+            event.preventDefault()
+            const rows = [...document.querySelectorAll('[data-row]')]
+            const nextIndex = (rows.indexOf(row) + (event.key === 'j' ? 1 : -1) + rows.length) % rows.length
+            rows[nextIndex].focus()
+          }
+        })
+      })
+      dialog.addEventListener('close', () => {
+        document.querySelectorAll('[data-row]').forEach((row) => row.classList.remove('is-selected'))
+        origin?.focus({ preventScroll: true })
+      })
+      document.addEventListener('focusin', (event) => {
+        document.querySelector('#focus-status').textContent = event.target.getAttribute('aria-label') || event.target.dataset.row || event.target.textContent.trim() || 'Search'
+      })
+      const categoryInput = document.querySelector('#category-search')
+      const categoryOptions = document.querySelector('#category-options')
+      const options = [...categoryOptions.querySelectorAll('[role="option"]')]
+      let activeIndex = 0
+      function activateOption(index) {
+        activeIndex = index
+        options.forEach((option, optionIndex) => option.setAttribute('aria-selected', String(index === optionIndex)))
+        categoryInput.setAttribute('aria-activedescendant', options[index].id)
+      }
+      function closeOptions() {
+        categoryOptions.hidden = true
+        categoryInput.setAttribute('aria-expanded', 'false')
+        categoryInput.removeAttribute('aria-activedescendant')
+      }
+      function chooseOption() {
+        categoryInput.value = options[activeIndex].textContent
+        closeOptions()
+      }
+      categoryInput.addEventListener('focus', () => {
+        categoryOptions.hidden = false
+        categoryInput.setAttribute('aria-expanded', 'true')
+        activateOption(0)
+      })
+      categoryInput.addEventListener('input', () => {
+        categoryOptions.hidden = false
+        categoryInput.setAttribute('aria-expanded', 'true')
+        activateOption(0)
+      })
+      categoryInput.addEventListener('blur', closeOptions)
+      categoryInput.addEventListener('keydown', (event) => {
+        if (categoryOptions.hidden) return
+        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+          event.preventDefault()
+          activateOption((activeIndex + (event.key === 'ArrowDown' ? 1 : -1) + options.length) % options.length)
+        } else if (event.key === 'Enter') { event.preventDefault(); chooseOption() }
+        else if (event.key === 'Escape') { event.preventDefault(); closeOptions() }
+      })
+      options.forEach((option, index) => {
+        option.addEventListener('mouseenter', () => activateOption(index))
+        option.addEventListener('mousedown', (event) => event.preventDefault())
+        option.addEventListener('click', () => { activateOption(index); chooseOption() })
+      })
+    </script>
+  </body>
+</html>

@@ -9,6 +9,7 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "test": "vitest run",
+    "test:browser": "playwright test --config tests/navigation.config.ts",
     "mockup": "vite mockup",
     "preview": "vite preview",
     "local:up": "node scripts/bootstrap-local-supabase.mjs",
@@ -23,6 +24,7 @@
     "recharts": "^3.10.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",

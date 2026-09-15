@@ -1647,9 +1647,7 @@ export function BudgetPanel({
             </div>
             {displayedTopLevelEntries.length === 0 && !pendingCreation && (
               <button
-                className={`first-budget-item${
-                  focusedSemanticId === 'budget-first-item' ? ' is-selected' : ''
-                }`}
+                className="first-budget-item"
                 data-semantic-id="budget-first-item"
                 data-semantic-kind="budget-first-item"
                 data-semantic-region="workspace"
@@ -1812,11 +1810,8 @@ function BudgetGroup({
     >
       {showHeader && (
         <header
-          aria-current={
-            isSubsectionSelected || isSubsectionRenaming ? 'true' : undefined
-          }
           className={`budget-subsection-head${
-            isSubsectionSelected || isSubsectionRenaming ? ' is-selected' : ''
+            isSubsectionRenaming ? ' is-editing' : ''
           }`}
           data-semantic-id={subsectionSemanticId ?? undefined}
           data-semantic-kind={subsection ? 'budget-subsection' : undefined}
@@ -1954,15 +1949,12 @@ function BudgetAllocationRow({
   const remaining = plannedAmount - activityAmount
   const isOverPlan = activityAmount > plannedAmount
   const isIncomeOverPlan = allocation.direction === 'income' && isOverPlan
-  const isSelected =
-    focusedSemanticId === `budget-row-${allocation.allocation_id}` ||
-    isRenaming
+  const isSelected = focusedSemanticId === `budget-row-${allocation.allocation_id}`
 
   return (
     <div
-      aria-current={isSelected ? 'true' : undefined}
       className={`budget-row${isSectioned ? ' budget-row--sectioned' : ''}${
-        isSelected ? ' is-selected' : ''
+        isRenaming ? ' is-editing' : ''
       }${
         isPickedUp ? ' is-picked-up' : ''
       }${
