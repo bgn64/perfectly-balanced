@@ -1,7 +1,8 @@
 surface: application-shell
-status: approved
+status: implemented
 reconciled_at: 2026-09-14
 approved_at: 2026-09-14
+implemented_at: 2026-09-14
 route: /
 owners:
   - src/App.tsx
@@ -47,6 +48,26 @@ proposal:
     - Titlebar stays pinned to the top and statusline stays pinned to the bottom through the existing grid.
     - Workspace remains the only independently scrolling region.
   rationale: Internal separators already provide the application structure; the outer window treatment duplicates the browser boundary and reduces usable workspace.
+implementation:
+  files:
+    - src/terminal.css
+    - src/App.css
+    - src/theme.css
+  outcomes:
+    - The authenticated shell fills the browser viewport without an outer border, radius, shadow, width cap, or gutter.
+    - Existing desktop and mobile grid regions, internal separators, and workspace scrolling remain unchanged.
+verification:
+  automated:
+    - npm test: 44 tests passed.
+    - npm run lint: passed.
+    - npm run build: passed with the existing large-chunk advisory.
+    - git diff --check: passed.
+  browser:
+    - Shell bounds matched 1920x1080, 1440x900, and 390x844 viewports exactly.
+    - Budget, Transactions, Reports, and Settings rendered inside the full-bleed shell.
+    - Desktop Light and mobile Dark preserved titlebar, sidebar, workspace, and statusline ordering without horizontal overflow.
+    - Mobile Settings remained independently scrollable and ended the statusline at the viewport bottom.
+    - A clean authenticated reload produced no console or page errors.
 legacy_references:
   - mockup/hud.html
   - mockup/theme.html
