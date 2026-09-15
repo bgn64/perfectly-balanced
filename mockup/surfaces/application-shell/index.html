@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Perfectly Balanced - Application shell contract</title>
+    <link rel="stylesheet" href="../../neovim-tokyonight.css" />
+    <style>
+      .shell-contract-stage {
+        position: relative;
+        height: 52rem;
+        min-height: 0;
+        overflow: hidden;
+        border: 1px solid var(--theme-border);
+        background:
+          linear-gradient(var(--theme-grid) 1px, transparent 1px),
+          linear-gradient(90deg, var(--theme-grid) 1px, transparent 1px),
+          var(--theme-canvas);
+        background-size: 1.5rem 1.5rem;
+      }
+
+      .shell-contract-stage > .authenticated-app.terminal-app {
+        grid-template:
+          "title title" auto
+          "sidebar main" minmax(0, 1fr)
+          "status status" auto
+          / 15.5rem minmax(0, 1fr);
+        width: min(calc(100% - 3rem), 96rem);
+        height: calc(100% - 3rem);
+        min-height: 0;
+        margin: 1.5rem auto;
+        border: 1px solid var(--theme-border);
+        border-radius: 0.65rem;
+        box-shadow: var(--theme-shadow);
+      }
+
+      .shell-contract-stage .sidebar {
+        border-top: 0;
+        border-right: 1px solid var(--theme-border);
+      }
+
+      .shell-contract-stage .main-nav {
+        grid-template-columns: 1fr;
+      }
+
+      .shell-contract-mobile.review-frame {
+        width: 390px;
+        max-width: 100%;
+        height: 844px;
+        min-height: 844px;
+        margin: 0 auto;
+      }
+
+      .shell-contract-mobile > .authenticated-app.terminal-app {
+        grid-template:
+          "title" auto
+          "sidebar" auto
+          "main" minmax(0, 1fr)
+          "status" auto
+          / 1fr;
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        height: calc(100% - 3rem);
+        min-height: 0;
+        margin: 1.5rem 0;
+        border: 0;
+        border-radius: 0;
+      }
+
+      .shell-contract-mobile .workspace {
+        min-width: 0;
+      }
+
+      .shell-contract-mobile .sidebar {
+        border-top: 1px solid var(--theme-border);
+        border-right: 0;
+      }
+
+      .shell-contract-mobile .main-nav {
+        grid-template-columns: repeat(3, 1fr);
+      }
+
+      .shell-contract-mobile .workspace {
+        padding: 1.5rem 1rem;
+      }
+
+      .shell-contract-mobile .hud-utility-nav,
+      .shell-contract-mobile .hud-identity small,
+      .shell-contract-mobile .statusline > div:last-child {
+        display: none;
+      }
+    </style>
+  </head>
+  <body class="review-page">
+    <nav class="review-nav" aria-label="Mockup review navigation">
+      <strong>Application shell baseline</strong>
+      <span class="review-nav__group">
+        <a href="#desktop">Desktop</a>
+        <a href="#mobile">Mobile</a>
+      </span>
+      <span class="review-nav__group" aria-label="Theme preview">
+        <button class="terminal-button is-selected" type="button" data-preview-theme="dark" aria-pressed="true">Dark</button>
+        <button class="terminal-button" type="button" data-preview-theme="light">Light</button>
+      </span>
+    </nav>
+
+    <main class="review-sections">
+      <section class="review-section" id="desktop" aria-labelledby="desktop-label">
+        <header class="review-section__label">
+          <p>Current authenticated chrome</p>
+          <h1 id="desktop-label">Inset desktop window</h1>
+        </header>
+        <div class="review-frame">
+          <div class="shell-contract-stage">
+            <div class="authenticated-app terminal-app command-closed hud-app">
+              <header class="titlebar hud-titlebar">
+                <button class="brand" type="button"><span class="brand-mark" aria-hidden="true">pb</span><span>perfectly-balanced</span></button>
+                <button class="hud-identity" type="button"><span>D</span><span><strong>dev</strong><small>Account settings</small></span></button>
+              </header>
+              <aside class="sidebar hud-sidebar" aria-label="Application navigation">
+                <nav class="main-nav">
+                  <button class="nav-item is-active" aria-current="page" type="button"><span>Budget</span></button>
+                  <button class="nav-item" type="button"><span>Transactions</span><strong>0</strong></button>
+                  <button class="nav-item" type="button"><span>Reports</span></button>
+                </nav>
+                <nav class="main-nav hud-utility-nav" aria-label="Settings navigation">
+                  <button class="nav-item" type="button"><span>Settings</span></button>
+                </nav>
+              </aside>
+              <main class="workspace">
+                <section class="page insights-page insights-page--terminal">
+                  <header class="workspace-head workspace-head--compact">
+                    <div><p class="eyebrow">Monthly plan</p><h1>Budget / September 2026</h1><p class="subtitle">Plan with the keyboard. Review with a glance.</p></div>
+                  </header>
+                  <section class="screen-panel empty-terminal">
+                    <p class="eyebrow">Buffer empty</p>
+                    <h2>Create the September 2026 budget.</h2>
+                    <p>Start empty or reuse last month's structure and planned amounts.</p>
+                    <button class="terminal-button terminal-button--primary" type="button">+ Create empty budget</button>
+                  </section>
+                </section>
+              </main>
+              <footer class="statusline"><div><strong>NAVIGATE</strong><span>budget / navigation</span></div><div><span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> focus</span><span><kbd>:</kbd> command</span></div></footer>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="review-section" id="mobile" aria-labelledby="mobile-label">
+        <header class="review-section__label">
+          <p>Current compact chrome</p>
+          <h2 id="mobile-label">Borderless shell with vertical inset</h2>
+        </header>
+        <div class="review-frame shell-contract-mobile">
+          <div class="authenticated-app terminal-app command-closed hud-app">
+            <header class="titlebar hud-titlebar">
+              <button class="brand" type="button"><span class="brand-mark" aria-hidden="true">pb</span><span>perfectly-balanced</span></button>
+              <button class="hud-identity" type="button"><span>D</span><span><strong>dev</strong><small>Account settings</small></span></button>
+            </header>
+            <aside class="sidebar hud-sidebar" aria-label="Application navigation">
+              <nav class="main-nav">
+                <button class="nav-item is-active" aria-current="page" type="button"><span>Budget</span></button>
+                <button class="nav-item" type="button"><span>Transactions</span><strong>0</strong></button>
+                <button class="nav-item" type="button"><span>Reports</span></button>
+              </nav>
+              <nav class="main-nav hud-utility-nav" aria-label="Settings navigation"><button class="nav-item" type="button"><span>Settings</span></button></nav>
+            </aside>
+            <main class="workspace">
+              <section class="page insights-page insights-page--terminal">
+                <header class="workspace-head"><div><p class="eyebrow">Monthly plan</p><h1>Budget</h1><p class="subtitle">September 2026</p></div></header>
+                <section class="screen-panel empty-terminal"><p class="eyebrow">Buffer empty</p><h2>Create this month's budget.</h2></section>
+              </section>
+            </main>
+            <footer class="statusline"><div><strong>NAVIGATE</strong><span>budget / navigation</span></div><div><span><kbd>:</kbd> command</span></div></footer>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      document.querySelectorAll('[data-preview-theme]').forEach((button) => {
+        button.addEventListener('click', () => {
+          const theme = button.dataset.previewTheme
+          document.documentElement.dataset.theme = theme
+          document.querySelectorAll('[data-preview-theme]').forEach((candidate) => {
+            const isSelected = candidate === button
+            candidate.classList.toggle('is-selected', isSelected)
+            candidate.setAttribute('aria-pressed', String(isSelected))
+          })
+        })
+      })
+    </script>
+  </body>
+</html>

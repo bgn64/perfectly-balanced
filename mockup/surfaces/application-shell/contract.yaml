@@ -1,0 +1,41 @@
+surface: application-shell
+status: reconciled
+reconciled_at: 2026-09-14
+route: /
+owners:
+  - src/App.tsx
+  - src/App.css
+  - src/terminal.css
+  - src/theme.css
+viewports:
+  wide_desktop: 1920x1080
+  desktop: 1440x900
+  mobile: 390x844
+themes:
+  - dark
+  - light
+states:
+  - authenticated-budget
+  - authenticated-settings
+interactions:
+  keyboard:
+    - Existing titlebar, sidebar, workspace, and statusline focus regions remain unchanged.
+  mouse:
+    - Theme preview buttons switch the entire review surface.
+fixtures:
+  authenticated: Use the seeded local account from AGENTS.md.
+  budget: September 2026 empty budget state.
+interaction_fidelity: simulated
+reconciliation:
+  source: Running application at http://localhost:5173
+  measurements:
+    - At 1440x900 the shell is 1392x852 with a 24px perimeter, 10.4px radius, 1px border, and outer shadow.
+    - At 1920x1080 the 1536px width cap leaves 192px of canvas on each side.
+    - At 390x844 the border and radius disappear, but the authenticated shell retains a 24px vertical margin.
+  controlling_styles:
+    - src/terminal.css defines the inset window width, height, margin, border, radius, clipping, and shadow.
+    - src/App.css repeats height and margin on a more specific authenticated-shell selector.
+  outcome: Authenticated application chrome is presented as a rounded desktop window inside the browser canvas.
+legacy_references:
+  - mockup/hud.html
+  - mockup/theme.html
