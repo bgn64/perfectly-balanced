@@ -71,3 +71,21 @@ verification:
 legacy_references:
   - mockup/hud.html
   - mockup/theme.html
+navigation_followup:
+  status: reconciled
+  reconciled_at: 2026-09-14
+  preview: focus.html
+  interaction_fidelity: simulated
+  fixture: Synthetic Cedar Cafe and Local Market rows; no backend writes.
+  observations:
+    - Live Settings hover leaves DOM focus on the previously focused theme control.
+    - Transaction hover, focus-within, and editing selection share a background in current styles.
+    - Click and Enter open transaction details; closing restores the recorded opener.
+    - Preview dialog uses native dialog containment to simulate the existing transaction focus trap.
+  source_audit:
+    - Transaction c and t shortcuts fall back to remembered selection outside a focused row.
+    - Budget is-selected and aria-current mix temporary focus with editing state.
+    - Report dialogs have no Tab trap and lack a fallback when the opener disappears.
+  limitations:
+    - Preview is a representative interaction specimen, not a reproduction of transaction data or editor layout.
+    - Live Settings returned a 401 during observation; backend authorization is outside this change.
