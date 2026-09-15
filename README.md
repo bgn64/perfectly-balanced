@@ -69,6 +69,23 @@ the focused row context. Composite comboboxes may change the active option on
 hover while keeping focus in the input. Dialogs contain Tab navigation and
 restore their opener or a valid fallback.
 
+### Future-issued JWT recovery
+
+If Supabase rejects a data read with `401` and `JWT issued at future`, the
+client refreshes the current session and retries that read once. Concurrent
+rejections share a refresh attempt. Recovery does not replay writes, intercept
+Auth requests, change JWT validation, or sign out other devices. Startup session
+initialization also tries one refresh for this specific error.
+
+A repeated rejection remains visible. This client recovery cannot correct
+ongoing clock skew between Supabase Auth and the service validating its tokens.
+For local development, check Windows time synchronization and Docker's clock;
+restart the local stack after correcting drift, then sign in again if needed.
+For hosted deployments, inspect the failed request and service clocks/logs.
+Do not disable JWT time validation or share raw tokens when diagnosing this.
+
+The `jwtRecovery` unit and browser tests cover bounded retries and failures.
+
 ### Local database lifecycle
 
 | Command | Purpose |
