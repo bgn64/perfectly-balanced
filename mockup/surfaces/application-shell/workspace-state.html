@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Perfectly Balanced - Workspace state contract</title>
+    <link rel="stylesheet" href="../../../src/App.css" />
+    <link rel="stylesheet" href="../../../src/terminal.css" />
+    <link rel="stylesheet" href="../../../src/theme.css" />
+    <style>
+      .workspace-state-review { min-height: 100dvh; background: var(--theme-shell); color: var(--theme-text); }
+      .workspace-state-review > header, .workspace-state-review > main { padding: 1.5rem; }
+      .workspace-state-review > header { border-bottom: 1px solid var(--theme-border); }
+      .workspace-state-review h1 { font-size: 1.25rem; }
+      .workspace-state-review main { display: grid; gap: 1.5rem; max-width: 70rem; margin: auto; }
+      .workspace-state-nav, .workspace-state-controls { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+      .workspace-state-panel { min-height: 22rem; padding: 1rem; border: 1px solid var(--theme-border); background: var(--theme-surface); }
+      .workspace-state-panel[hidden] { display: none; }
+      .workspace-state-controls { margin-top: 1rem; }
+      .workspace-state-controls label { display: grid; gap: 0.35rem; color: var(--theme-text-muted); font-size: 0.7rem; }
+      .workspace-state-controls select { min-width: 10rem; padding: 0.55rem; border: 1px solid var(--theme-border); background: var(--theme-shell); color: var(--theme-text); }
+      .workspace-state-observation { padding: 0.75rem; border-left: 2px solid var(--theme-warning); background: var(--theme-surface-raised); color: var(--theme-text-secondary); }
+      @media (max-width: 34rem) { .workspace-state-review > header, .workspace-state-review > main { padding: 1rem; } }
+    </style>
+  </head>
+  <body>
+    <div class="authenticated-app workspace-state-review">
+      <header>
+        <h1>Persistent workspace view state</h1>
+        <a href="./">Application shell contract</a>
+        <div class="hud-theme-control" role="group" aria-label="Preview theme">
+          <button type="button" data-theme="dark" aria-pressed="true" class="is-selected">Dark</button>
+          <button type="button" data-theme="light" aria-pressed="false">Light</button>
+        </div>
+      </header>
+      <main>
+        <nav class="workspace-state-nav" aria-label="Workspace navigation">
+          <button class="terminal-button is-selected" type="button" data-view="budget" aria-pressed="true">Budget</button>
+          <button class="terminal-button" type="button" data-view="transactions" aria-pressed="false">Transactions</button>
+          <button class="terminal-button" type="button" data-view="reports" aria-pressed="false">Reports</button>
+        </nav>
+        <p class="workspace-state-observation" role="status">Configure a workspace, leave it, and return. Committed controls persist until this authenticated app session reloads.</p>
+        <section class="workspace-state-panel" data-panel="budget"><p class="eyebrow">Budget</p><h2>September 2026</h2><p>Budget is the shared navigation destination between transaction and report checks.</p></section>
+        <section class="workspace-state-panel" data-panel="transactions" hidden><p class="eyebrow">Transactions</p><h2>Queue controls</h2><div class="workspace-state-controls"><label>Time<select data-control="time"><option>Current month</option><option>Last 3 months</option></select></label><label>Filter<select data-control="filter"><option>None</option><option>Uncategorized</option></select></label><label>Sort<select data-control="sort"><option>Newest first</option><option>Merchant A-Z</option></select></label></div></section>
+        <section class="workspace-state-panel" data-panel="reports" hidden><p class="eyebrow">Reports</p><h2>Report mode</h2><div class="hud-theme-control" role="group" aria-label="Report mode"><button type="button" data-mode="all" aria-pressed="true" class="is-selected">All</button><button type="button" data-mode="planned" aria-pressed="false">Planned</button><button type="button" data-mode="categorized" aria-pressed="false">Categorized</button></div></section>
+      </main>
+    </div>
+    <script>
+      let activeView = 'budget'
+      document.querySelectorAll('[data-view]').forEach((button) => button.addEventListener('click', () => {
+        activeView = button.dataset.view
+        document.querySelectorAll('[data-view]').forEach((candidate) => {
+          const selected = candidate === button
+          candidate.classList.toggle('is-selected', selected)
+          candidate.setAttribute('aria-pressed', String(selected))
+        })
+        document.querySelectorAll('[data-panel]').forEach((panel) => { panel.hidden = panel.dataset.panel !== activeView })
+      }))
+      document.querySelectorAll('[data-mode]').forEach((button) => button.addEventListener('click', () => {
+        document.querySelectorAll('[data-mode]').forEach((candidate) => {
+          const selected = candidate === button
+          candidate.classList.toggle('is-selected', selected)
+          candidate.setAttribute('aria-pressed', String(selected))
+        })
+      }))
+      document.querySelectorAll('[data-theme]').forEach((button) => button.addEventListener('click', () => {
+        document.documentElement.dataset.theme = button.dataset.theme
+        document.querySelectorAll('[data-theme]').forEach((candidate) => {
+          const selected = candidate === button
+          candidate.classList.toggle('is-selected', selected)
+          candidate.setAttribute('aria-pressed', String(selected))
+        })
+      }))
+    </script>
+  </body>
+</html>
