@@ -138,3 +138,20 @@ navigation_followup:
     warnings:
       - Production build retains the existing large-chunk advisory.
       - Browser automation currently targets Chromium; Safari and Firefox are not covered by this suite.
+workspace_state_followup:
+  status: reconciled
+  reconciled_at: 2026-09-14
+  preview: workspace-state.html
+  interaction_fidelity: functional
+  viewports: [1440x900, 390x844]
+  themes: [dark, light]
+  fixture: Synthetic transaction controls and report modes; no backend access or writes.
+  current_behavior:
+    - Active view conditionally mounts exactly one workspace panel.
+    - Leaving Transactions destroys committed time range, filters, and sort with the panel.
+    - Leaving Reports destroys its All, Planned, or Categorized mode with the panel.
+    - Shared selected month already survives navigation because AuthenticatedShell owns it.
+    - Open dialogs, draft filters, editors, loading, data, focus, and errors also reset on panel unmount.
+  architecture:
+    cause: Durable workspace configuration and temporary panel interaction state share the same component-local lifetime.
+    constraint: Workspace configuration lasts only for the current authenticated shell and must not use URL, localStorage, or sessionStorage.
