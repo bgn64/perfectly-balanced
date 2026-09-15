@@ -26,8 +26,12 @@
   <body>
     <div class="authenticated-app workspace-state-review">
       <header>
-        <h1>Current workspace navigation state</h1>
+        <h1>Persistent workspace view state</h1>
         <a href="./">Application shell contract</a>
+        <div class="hud-theme-control" role="group" aria-label="Preview theme">
+          <button type="button" data-theme="dark" aria-pressed="true" class="is-selected">Dark</button>
+          <button type="button" data-theme="light" aria-pressed="false">Light</button>
+        </div>
       </header>
       <main>
         <nav class="workspace-state-nav" aria-label="Workspace navigation">
@@ -35,30 +39,15 @@
           <button class="terminal-button" type="button" data-view="transactions" aria-pressed="false">Transactions</button>
           <button class="terminal-button" type="button" data-view="reports" aria-pressed="false">Reports</button>
         </nav>
-        <p class="workspace-state-observation" role="status">Configure a workspace, leave it, and return. Current behavior restores that panel's defaults.</p>
+        <p class="workspace-state-observation" role="status">Configure a workspace, leave it, and return. Committed controls persist until this authenticated app session reloads.</p>
         <section class="workspace-state-panel" data-panel="budget"><p class="eyebrow">Budget</p><h2>September 2026</h2><p>Budget is the shared navigation destination between transaction and report checks.</p></section>
         <section class="workspace-state-panel" data-panel="transactions" hidden><p class="eyebrow">Transactions</p><h2>Queue controls</h2><div class="workspace-state-controls"><label>Time<select data-control="time"><option>Current month</option><option>Last 3 months</option></select></label><label>Filter<select data-control="filter"><option>None</option><option>Uncategorized</option></select></label><label>Sort<select data-control="sort"><option>Newest first</option><option>Merchant A-Z</option></select></label></div></section>
         <section class="workspace-state-panel" data-panel="reports" hidden><p class="eyebrow">Reports</p><h2>Report mode</h2><div class="hud-theme-control" role="group" aria-label="Report mode"><button type="button" data-mode="all" aria-pressed="true" class="is-selected">All</button><button type="button" data-mode="planned" aria-pressed="false">Planned</button><button type="button" data-mode="categorized" aria-pressed="false">Categorized</button></div></section>
       </main>
     </div>
     <script>
-      function resetPanel(view) {
-        if (view === 'transactions') {
-          document.querySelector('[data-control="time"]').selectedIndex = 0
-          document.querySelector('[data-control="filter"]').selectedIndex = 0
-          document.querySelector('[data-control="sort"]').selectedIndex = 0
-        }
-        if (view === 'reports') {
-          document.querySelectorAll('[data-mode]').forEach((button) => {
-            const selected = button.dataset.mode === 'all'
-            button.classList.toggle('is-selected', selected)
-            button.setAttribute('aria-pressed', String(selected))
-          })
-        }
-      }
       let activeView = 'budget'
       document.querySelectorAll('[data-view]').forEach((button) => button.addEventListener('click', () => {
-        resetPanel(activeView)
         activeView = button.dataset.view
         document.querySelectorAll('[data-view]').forEach((candidate) => {
           const selected = candidate === button
@@ -69,6 +58,14 @@
       }))
       document.querySelectorAll('[data-mode]').forEach((button) => button.addEventListener('click', () => {
         document.querySelectorAll('[data-mode]').forEach((candidate) => {
+          const selected = candidate === button
+          candidate.classList.toggle('is-selected', selected)
+          candidate.setAttribute('aria-pressed', String(selected))
+        })
+      }))
+      document.querySelectorAll('[data-theme]').forEach((button) => button.addEventListener('click', () => {
+        document.documentElement.dataset.theme = button.dataset.theme
+        document.querySelectorAll('[data-theme]').forEach((candidate) => {
           const selected = candidate === button
           candidate.classList.toggle('is-selected', selected)
           candidate.setAttribute('aria-pressed', String(selected))

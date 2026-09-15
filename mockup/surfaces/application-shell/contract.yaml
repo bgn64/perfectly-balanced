@@ -139,7 +139,8 @@ navigation_followup:
       - Production build retains the existing large-chunk advisory.
       - Browser automation currently targets Chromium; Safari and Firefox are not covered by this suite.
 workspace_state_followup:
-  status: reconciled
+  status: approved
+  approved_at: 2026-09-14
   reconciled_at: 2026-09-14
   preview: workspace-state.html
   interaction_fidelity: functional
@@ -155,3 +156,22 @@ workspace_state_followup:
   architecture:
     cause: Durable workspace configuration and temporary panel interaction state share the same component-local lifetime.
     constraint: Workspace configuration lasts only for the current authenticated shell and must not use URL, localStorage, or sessionStorage.
+  proposal:
+    durable_workspace_state:
+      - Transaction time range, committed filters, and sort.
+      - Report All, Planned, or Categorized mode.
+      - Shared selected month, which already has the intended lifetime.
+    disposable_panel_state:
+      - Open control and detail dialogs.
+      - Unapplied filter drafts, search query, pagination, editors, loading, data, focus, and errors.
+    behavior:
+      - Switching among Budget, Transactions, and Reports preserves each workspace's committed controls.
+      - Reloading, signing out, or remounting AuthenticatedShell restores defaults.
+      - Navigation does not write URL history, localStorage, or sessionStorage.
+      - Inactive panels remain unmounted so hidden queries, dialogs, controls, and keyboard listeners cannot stay active.
+    visual_change: None; existing control labels and selected treatments simply retain their committed values after navigation.
+    implementation:
+      - Define typed default transaction and report view state in pure model modules.
+      - Own those view states beside activeView and selectedMonth in AuthenticatedShell.
+      - Make TransactionsPanel and InsightsPanel controlled for committed workspace state only.
+      - Keep transient panel state local and reset it naturally on unmount.
