@@ -7,6 +7,7 @@ import {
   type RefObject,
 } from 'react'
 import { Cell, Pie, PieChart, ResponsiveContainer } from 'recharts'
+import { DataRow } from '../finance/DataRow.tsx'
 import type {
   Budget,
   BudgetAllocation,
@@ -392,11 +393,9 @@ export function InsightsPanel({
     <section className="page insights-page insights-page--terminal reports-v2-page">
       <header className="workspace-head workspace-head--compact">
         <WorkspaceMonthHeading
-          eyebrow="Income and spending"
           selectedMonth={selectedMonth}
           semanticIdPrefix="report-month"
           statusLabel="reports"
-          subtitle="Compare activity, then drill into any legend row."
           title="Reports"
           onMonthChange={onMonthChange}
         />
@@ -791,7 +790,7 @@ function ReportModalView({
           <p className="reports-v2-empty">No included transactions in this slice.</p>
         ) : (
           transactions.map((transaction, index) => (
-            <div
+            <DataRow
               aria-label={`${transaction.name}, ${formatDisplayMoney(transaction.amount)}`}
               className={`reports-v2-transaction-row is-${modal.direction}`}
               data-report-autofocus={index === 0 ? 'true' : undefined}
@@ -804,14 +803,14 @@ function ReportModalView({
               role="listitem"
               tabIndex={0}
             >
-              <span>
+              <span className="data-row__primary">
                 <strong>{transaction.name}</strong>
                 <small>
                   {formatReportDate(transaction.transactionDate)} /{' '}
                   {transaction.accountName}
                 </small>
               </span>
-              <strong>
+              <strong className="data-row__amount">
                 {formatDisplayMoney(
                   modal.direction === 'income'
                     ? transaction.amount
@@ -820,7 +819,7 @@ function ReportModalView({
                   modal.direction === 'income',
                 )}
               </strong>
-            </div>
+            </DataRow>
           ))
         )}
       </div>

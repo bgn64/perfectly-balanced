@@ -1,8 +1,8 @@
 surface: application-shell
-status: approved
+status: implemented
 reconciled_at: 2026-09-15
 approved_at: 2026-09-15
-implemented_at: null
+implemented_at: 2026-09-15
 route: /
 owners:
   - src/App.tsx
@@ -203,10 +203,11 @@ workspace_state_followup:
       - git diff --check: passed.
       - Browser workflow preserved transaction controls and report mode across Budget navigation, discarded unapplied filter drafts, and reset on reload and sign-out.
 visual_unification_followup:
-  status: approved
+  status: implemented
   reconciled_at: 2026-09-15
   proposed_at: 2026-09-15
   approved_at: 2026-09-15
+  implemented_at: 2026-09-15
   preview: index.html
   source: Running application at http://localhost:5173 plus current component styles and read-only navigation fixtures.
   owners:
@@ -266,3 +267,30 @@ visual_unification_followup:
   responsive:
     - Desktop review at 1440x900 shows the month at the left and the compact arrow pair at the right of one toolbar.
     - Mobile review at 390x844 keeps the month and arrow pair on one row without clipping or overlap.
+  implementation:
+    files:
+      - src/finance/DataRow.tsx
+      - src/budgets/BudgetPanel.tsx
+      - src/transactions/TransactionsPanel.tsx
+      - src/insights/InsightsPanel.tsx
+      - src/navigation/WorkspaceMonthHeading.tsx
+      - src/navigation/WorkspaceMonthHeading.test.tsx
+      - src/terminal.css
+      - src/theme.css
+      - src/theme.ts
+      - src/theme.test.ts
+      - tests/navigation.pw.ts
+    outcomes:
+      - The current month is the sole workspace h1; previous and next icon buttons align to the far right with unchanged semantic navigation behavior.
+      - The active sidebar item carries view identity through a theme-aware selection fill, stronger text, and a desktop left rail or mobile bottom rail.
+      - Light mode uses white content surfaces, a near-white workspace, blue-tinted chrome, and higher-separation borders while preserving semantic accent colors.
+      - Budget, transaction, and report drill-down rows use one ref-safe DataRow component and shared geometry, separator, hover, focus, and selection styles.
+      - Transaction status pills render below the shared month toolbar so all three workspace views retain identical header geometry.
+  verification:
+    - npm test: 69 tests passed.
+    - npm run test:browser: 11 Chromium tests passed, including the new cross-surface data-row geometry and focus contract.
+    - npm run lint: passed.
+    - npm run build: passed with the existing large-chunk advisory.
+    - git diff --check: passed before the implementation record update.
+    - Live app checked at 1440x900 and 390x844 in Light and Dark with no horizontal overflow or month/action overlap.
+    - Live report drill-down verified the shared DataRow class, 56px minimum height, 0.7rem vertical padding, and subtle bottom separator.

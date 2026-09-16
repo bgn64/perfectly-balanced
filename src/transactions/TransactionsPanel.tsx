@@ -9,6 +9,7 @@ import {
 } from 'react'
 import { useAuth } from '../auth/useAuth.ts'
 import { CategoryCombobox } from '../finance/CategoryCombobox.tsx'
+import { DataRow } from '../finance/DataRow.tsx'
 import type {
   Category,
   Transaction,
@@ -1303,25 +1304,23 @@ export function TransactionsPanel({
     >
       <header className="workspace-head workspace-head--compact">
         <WorkspaceMonthHeading
-          eyebrow="All accounts"
           selectedMonth={selectedMonth}
           semanticIdPrefix="transaction-month"
           statusLabel="transactions"
-          subtitle="Search, filter, sort, and categorize every imported transaction from one simple queue."
           title="Transactions"
           onMonthChange={onMonthChange}
         />
-        <div className="transaction-state-pills">
-          <span className="terminal-pill terminal-pill--warning">
-            {uncategorizedTransactionCount} uncategorized
-          </span>
-          {ignoredTransactionCount > 0 && (
-            <span className="terminal-pill terminal-pill--muted">
-              {ignoredTransactionCount} ignored
-            </span>
-          )}
-        </div>
       </header>
+      <div className="transaction-state-pills">
+        <span className="terminal-pill terminal-pill--warning">
+          {uncategorizedTransactionCount} uncategorized
+        </span>
+        {ignoredTransactionCount > 0 && (
+          <span className="terminal-pill terminal-pill--muted">
+            {ignoredTransactionCount} ignored
+          </span>
+        )}
+      </div>
 
       {dataError && (
         <p className="form-message form-message--error" role="alert">
@@ -1525,7 +1524,7 @@ export function TransactionsPanel({
               const isApplyingRecommendations =
                 applyingRecommendationTransactionId === transaction.id
               return (
-                <div
+                <DataRow
                   aria-busy={isApplyingRecommendations || undefined}
                   className={`transaction-row-simple${
                     isSelected ? ' is-selected' : ''
@@ -1575,7 +1574,7 @@ export function TransactionsPanel({
                       openTransactionDetail(transaction, event.currentTarget)
                     }
                   >
-                    <span className="transaction-row-simple__name">
+                    <span className="data-row__primary transaction-row-simple__name">
                       <strong>{transactionDescription(transaction)}</strong>
                       <span>
                         {new Intl.DateTimeFormat(undefined, {
@@ -1737,7 +1736,7 @@ export function TransactionsPanel({
                     )}
                   </div>
                   <strong
-                    className={`transaction-amount ${
+                    className={`data-row__amount transaction-amount ${
                       transaction.amount >= 0 ? 'positive' : 'negative'
                     }`}
                   >
@@ -1746,7 +1745,7 @@ export function TransactionsPanel({
                       transaction.currency_code ?? 'USD',
                     )}
                   </strong>
-                </div>
+                </DataRow>
               )
             })
           )}

@@ -106,6 +106,44 @@ test('report dialog traps Tab and restores its opener', async ({ page }) => {
   await expect(opener).toBeFocused()
 })
 
+test('financial data rows share geometry and focus treatment', async ({ page }) => {
+  const rowStyle = (element: HTMLElement) => {
+    const style = getComputedStyle(element)
+    return {
+      borderBottomWidth: style.borderBottomWidth,
+      minHeight: style.minHeight,
+      paddingBottom: style.paddingBottom,
+      paddingTop: style.paddingTop,
+    }
+  }
+
+  const budgetRow = page.locator('.budget-row.data-row').first()
+  await expect(budgetRow).toBeVisible()
+  const budgetStyle = await budgetRow.evaluate(rowStyle)
+
+  await page.locator('[data-semantic-id="nav-transactions"]').click()
+  const transactionRow = page.locator('.transaction-row-simple.data-row').first()
+  await expect(transactionRow).toBeVisible()
+  await expect(transactionRow.evaluate(rowStyle)).resolves.toEqual(budgetStyle)
+
+  await page.locator('[data-semantic-id="nav-insights"]').click()
+  await page.locator('.reports-v2-slice-row').first().click()
+  const dialog = page.getByRole('dialog')
+  let reportRow = dialog.locator('.reports-v2-transaction-row.data-row').first()
+  if (await reportRow.count() === 0) {
+    await dialog.locator('.reports-v2-slice-row').first().click()
+    reportRow = page.getByRole('dialog').locator('.reports-v2-transaction-row.data-row').first()
+  }
+  await expect(reportRow).toBeVisible()
+  await expect(reportRow.evaluate(rowStyle)).resolves.toEqual(budgetStyle)
+
+  await reportRow.focus()
+  await page.keyboard.press('Tab')
+  await page.keyboard.press('Shift+Tab')
+  await expect(reportRow).toBeFocused()
+  await expect(reportRow).toHaveCSS('outline-style', 'solid')
+})
+
 test('keyboard navigation keeps visible focus in both themes and sizes', async ({ page }, testInfo) => {
   for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: 844 })
