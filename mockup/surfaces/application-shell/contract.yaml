@@ -196,3 +196,30 @@ workspace_state_followup:
       - npm run build: passed with the existing large-chunk advisory.
       - git diff --check: passed.
       - Browser workflow preserved transaction controls and report mode across Budget navigation, discarded unapplied filter drafts, and reset on reload and sign-out.
+visual_unification_followup:
+  status: reconciled
+  reconciled_at: 2026-09-15
+  preview: index.html
+  source: Running application at http://localhost:5173 plus current component styles and read-only navigation fixtures.
+  owners:
+    - src/navigation/WorkspaceMonthHeading.tsx
+    - src/budgets/BudgetPanel.tsx
+    - src/transactions/TransactionsPanel.tsx
+    - src/insights/InsightsPanel.tsx
+    - src/terminal.css
+    - src/theme.css
+  viewports: [1440x900, 390x844]
+  themes: [dark, light]
+  fixtures:
+    shell: Seeded September 2026 empty budget.
+    rows: Synthetic Dining budget allocation and Cedar Cafe transaction; no backend writes.
+  current_behavior:
+    - At 1440x900 the authenticated shell bounds are exactly 1440x900 at the viewport origin, with no outer border, radius, margin, or shadow.
+    - The canonical shell preview had drifted behind the implementation and still showed the pre-rail month heading.
+    - The light canvas, chrome, surface, and raised surface use nearby cool-gray values, producing little visual separation and a muted overall appearance.
+    - The month rail renders the view name, slash, and month as separate inline elements with different measured vertical bounds; the month sits about 3.6px lower than the view name.
+    - Budget and transaction rows share 0.75rem by 1rem spacing, subtle separators, selection fill, and a two-pixel left selection marker, but duplicate those rules independently.
+    - Report transaction rows use 0.7rem vertical spacing and a two-pixel inset outline instead of the left selection marker used by budget and transaction rows.
+  baseline_outcome:
+    - Canonical preview now matches the current full-bleed shell and month rail.
+    - Canonical preview shows current budget, transaction, and report row treatments together in both themes for direct comparison.

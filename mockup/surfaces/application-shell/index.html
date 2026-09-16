@@ -86,14 +86,68 @@
       .shell-contract-mobile .statusline > div:last-child {
         display: none;
       }
+
+      .row-contract-stage.authenticated-app.terminal-app {
+        display: block;
+        width: 100%;
+        height: auto;
+        min-height: 0;
+        margin: 0;
+        border: 1px solid var(--theme-border);
+        border-radius: 0;
+        box-shadow: none;
+      }
+
+      .row-contract-sample {
+        min-width: 0;
+        overflow-x: auto;
+        border-bottom: 1px solid var(--theme-border);
+      }
+
+      .row-contract-sample:last-child {
+        border-bottom: 0;
+      }
+
+      .row-contract-sample > header {
+        padding: 0.8rem 1rem;
+        border-bottom: 1px solid var(--theme-border);
+        background: var(--theme-chrome);
+      }
+
+      .row-contract-sample > header :is(h2, p) {
+        margin: 0;
+      }
+
+      .row-contract-sample > header h2 {
+        margin-top: 0.2rem;
+        font-size: 0.85rem;
+      }
+
+      .row-contract-stage :is(.budget-table, .screen-panel) {
+        min-width: 42rem;
+        margin: 0;
+        border: 0;
+        border-radius: 0;
+      }
+
+      .row-contract-stage .budget-group {
+        margin: 0;
+        border: 0;
+        border-radius: 0;
+      }
+
+      .row-contract-stage .reports-v2-transactions {
+        max-height: none;
+      }
     </style>
   </head>
   <body class="review-page">
     <nav class="review-nav" aria-label="Mockup review navigation">
-      <strong>Full-bleed application shell proposal</strong>
+      <strong>Application shell current-state baseline</strong>
       <span class="review-nav__group">
         <a href="#desktop">Desktop</a>
         <a href="#mobile">Mobile</a>
+        <a href="#rows">Rows</a>
         <a href="focus.html">Interaction model</a>
         <a href="workspace-state.html">Workspace state</a>
       </span>
@@ -106,7 +160,7 @@
     <main class="review-sections">
       <section class="review-section" id="desktop" aria-labelledby="desktop-label">
         <header class="review-section__label">
-          <p>Proposed browser-native chrome</p>
+          <p>Current browser-native chrome</p>
           <h1 id="desktop-label">Full-bleed desktop workspace</h1>
         </header>
         <div class="review-frame">
@@ -129,7 +183,15 @@
               <main class="workspace">
                 <section class="page insights-page insights-page--terminal">
                   <header class="workspace-head workspace-head--compact">
-                    <div><p class="eyebrow">Monthly plan</p><h1>Budget / September 2026</h1><p class="subtitle">Plan with the keyboard. Review with a glance.</p></div>
+                    <div class="workspace-month-heading">
+                      <p class="eyebrow">Monthly plan</p>
+                      <nav class="workspace-month-rail" aria-label="Budget month">
+                        <button type="button" aria-label="Previous month, August 2026"><span aria-hidden="true">&larr;</span></button>
+                        <span class="workspace-month-rail__current"><h1>Budget</h1><span class="workspace-month-rail__separator" aria-hidden="true">/</span><strong>September 2026</strong></span>
+                        <button type="button" aria-label="Next month, October 2026"><span aria-hidden="true">&rarr;</span></button>
+                      </nav>
+                      <p class="subtitle">Plan with the keyboard. Review with a glance.</p>
+                    </div>
                   </header>
                   <section class="screen-panel empty-terminal">
                     <p class="eyebrow">Buffer empty</p>
@@ -147,7 +209,7 @@
 
       <section class="review-section" id="mobile" aria-labelledby="mobile-label">
         <header class="review-section__label">
-          <p>Proposed compact chrome</p>
+          <p>Current compact chrome</p>
           <h2 id="mobile-label">Exact mobile viewport fit</h2>
         </header>
         <div class="review-frame shell-contract-mobile">
@@ -166,11 +228,55 @@
             </aside>
             <main class="workspace">
               <section class="page insights-page insights-page--terminal">
-                <header class="workspace-head"><div><p class="eyebrow">Monthly plan</p><h1>Budget</h1><p class="subtitle">September 2026</p></div></header>
+                <header class="workspace-head">
+                  <div class="workspace-month-heading">
+                    <p class="eyebrow">Monthly plan</p>
+                    <nav class="workspace-month-rail" aria-label="Budget month">
+                      <button type="button" aria-label="Previous month, August 2026"><span aria-hidden="true">&larr;</span></button>
+                      <span class="workspace-month-rail__current"><h1>Budget</h1><span class="workspace-month-rail__separator" aria-hidden="true">/</span><strong>September 2026</strong></span>
+                      <button type="button" aria-label="Next month, October 2026"><span aria-hidden="true">&rarr;</span></button>
+                    </nav>
+                    <p class="subtitle">Plan with the keyboard. Review with a glance.</p>
+                  </div>
+                </header>
                 <section class="screen-panel empty-terminal"><p class="eyebrow">Buffer empty</p><h2>Create this month's budget.</h2></section>
               </section>
             </main>
             <footer class="statusline"><div><strong>NAVIGATE</strong><span>budget / navigation</span></div><div><span><kbd>:</kbd> command</span></div></footer>
+          </div>
+        </div>
+      </section>
+
+      <section class="review-section" id="rows" aria-labelledby="rows-label">
+        <header class="review-section__label">
+          <p>Current implementation before visual unification</p>
+          <h2 id="rows-label">Three related row treatments</h2>
+        </header>
+        <div class="review-frame">
+          <div class="row-contract-stage authenticated-app terminal-app">
+            <section class="row-contract-sample">
+              <header><p class="eyebrow">Budget</p><h2>Planning row</h2></header>
+              <div class="budget-table">
+                <div class="column-head"><span>Category</span><span>Planned</span><span>Activity</span><span>Remaining</span></div>
+                <section class="budget-group">
+                  <header><h3><span>01</span> Everyday</h3></header>
+                  <div class="budget-row is-selected" tabindex="0"><span class="category-name"><i class="selection-caret">&rsaquo;</i>Dining<button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$100.00</button><span class="activity-cell">$42.00</span><span class="remaining-cell">$58.00</span></div>
+                </section>
+              </div>
+            </section>
+            <section class="row-contract-sample">
+              <header><p class="eyebrow">Transactions</p><h2>Search result row</h2></header>
+              <div class="screen-panel transaction-table">
+                <div class="transaction-column-head"><span>Transaction</span><span>Category</span><span>Status</span><span>Amount</span></div>
+                <div class="transaction-row-simple is-selected" tabindex="0"><button class="transaction-row-simple__select" type="button"><span class="transaction-row-simple__name"><strong>Cedar Cafe</strong><span>Sep 1 &middot; Local Checking</span></span></button><div class="transaction-category-cell"><button class="category-chip" type="button">Dining</button></div><button class="transaction-state-button" type="button">Included</button><strong class="transaction-amount is-outflow">-$42.00</strong></div>
+              </div>
+            </section>
+            <section class="row-contract-sample">
+              <header><p class="eyebrow">Reports</p><h2>Drill-down transaction row</h2></header>
+              <div class="screen-panel reports-v2-transactions">
+                <div class="reports-v2-transaction-row is-spending is-focused" tabindex="0"><span><strong>Cedar Cafe</strong><small>Sep 1 / Local Checking</small></span><strong>-$42.00</strong></div>
+              </div>
+            </section>
           </div>
         </div>
       </section>
