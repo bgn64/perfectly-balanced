@@ -1,14 +1,18 @@
 surface: application-shell
 status: implemented
-reconciled_at: 2026-09-14
-approved_at: 2026-09-14
-implemented_at: 2026-09-14
+reconciled_at: 2026-09-15
+approved_at: 2026-09-15
+implemented_at: 2026-09-15
 route: /
 owners:
   - src/App.tsx
   - src/App.css
   - src/terminal.css
   - src/theme.css
+  - src/navigation/WorkspaceMonthHeading.tsx
+  - src/budgets/BudgetPanel.tsx
+  - src/transactions/TransactionsPanel.tsx
+  - src/insights/InsightsPanel.tsx
 viewports:
   wide_desktop: 1920x1080
   desktop: 1440x900
@@ -18,6 +22,8 @@ themes:
   - light
 states:
   - authenticated-budget
+  - authenticated-transactions
+  - authenticated-report-transactions
   - authenticated-settings
 interactions:
   keyboard:
@@ -196,3 +202,95 @@ workspace_state_followup:
       - npm run build: passed with the existing large-chunk advisory.
       - git diff --check: passed.
       - Browser workflow preserved transaction controls and report mode across Budget navigation, discarded unapplied filter drafts, and reset on reload and sign-out.
+visual_unification_followup:
+  status: implemented
+  reconciled_at: 2026-09-15
+  proposed_at: 2026-09-15
+  approved_at: 2026-09-15
+  implemented_at: 2026-09-15
+  preview: index.html
+  source: Running application at http://localhost:5173 plus current component styles and read-only navigation fixtures.
+  owners:
+    - src/navigation/WorkspaceMonthHeading.tsx
+    - src/budgets/BudgetPanel.tsx
+    - src/transactions/TransactionsPanel.tsx
+    - src/insights/InsightsPanel.tsx
+    - src/terminal.css
+    - src/theme.css
+  viewports: [1440x900, 390x844]
+  themes: [dark, light]
+  fixtures:
+    shell: Seeded September 2026 empty budget.
+    rows: Synthetic Dining budget allocation and Cedar Cafe transaction; no backend writes.
+  current_behavior:
+    - At 1440x900 the authenticated shell bounds are exactly 1440x900 at the viewport origin, with no outer border, radius, margin, or shadow.
+    - The canonical shell preview had drifted behind the implementation and still showed the pre-rail month heading.
+    - The light canvas, chrome, surface, and raised surface use nearby cool-gray values, producing little visual separation and a muted overall appearance.
+    - The month rail renders the view name, slash, and month as separate inline elements with different measured vertical bounds; the month sits about 3.6px lower than the view name.
+    - Budget and transaction rows share 0.75rem by 1rem spacing, subtle separators, selection fill, and a two-pixel left selection marker, but duplicate those rules independently.
+    - Report transaction rows use 0.7rem vertical spacing and a two-pixel inset outline instead of the left selection marker used by budget and transaction rows.
+  baseline_outcome:
+    - Canonical preview now matches the current full-bleed shell and month rail.
+    - Canonical preview shows current budget, transaction, and report row treatments together in both themes for direct comparison.
+  research:
+    sources:
+      - W3C ARIA APG Date Picker Dialog: previous and next buttons surround one live month/year heading.
+      - Adobe React Aria Calendar: previous button, flexible centered CalendarHeading, then next button.
+      - IBM Carbon Date Picker: previous and next chevrons sit at the left and right edges of the month header.
+      - FullCalendar header toolbar: current period title and navigation are distinct toolbar elements, separate from view identity.
+      - MUI, Fluent UI, and React DayPicker retain one month/year caption plus dedicated previous and next controls.
+    common_pattern:
+      - Keep the page or view name separate from the temporal navigation.
+      - Present month and year as one stable label controlled by adjacent icon-only previous and next buttons.
+      - Announce the changing period through a polite live region and give both icon buttons explicit accessible names.
+    selected_variant:
+      - Apply the full-page toolbar variation used by calendar products: current period as the workspace heading with a compact navigation pair aligned at the opposite edge.
+      - Let persistent navigation and page content communicate the current view instead of repeating Budget, Transactions, or Reports in the workspace heading.
+  proposal:
+    light_theme:
+      - Use white content surfaces on a near-white workspace with blue-tinted chrome instead of neighboring gray fills.
+      - Increase structural separation through cooler subtle borders while retaining Tokyo Night blue, green, red, amber, and violet semantic accents.
+      - Keep text and controls at WCAG AA contrast or better in default, hover, selected, and focused states.
+    month_heading:
+      - Remove the repeated Budget, Transactions, or Reports page title and the explanatory eyebrow and subtitle from the workspace heading.
+      - Render the current month and year as the sole h1 and polite live region.
+      - Group icon-only previous and next buttons at the far right of the same toolbar, with explicit accessible names and no visible labels.
+      - Strengthen the active navigation item with the selection fill, higher-contrast text, bold weight, and an accent rail so the sidebar carries view identity.
+    shared_rows:
+      - Introduce a shared data-row visual primitive for minimum height, padding, surface, separator, hover, keyboard focus, and persistent selection.
+      - Use shared primary-content and amount roles for consistent type hierarchy and alignment.
+      - Keep budget, transaction, and report-specific grid templates and nested actions; the shared primitive must not flatten their information architecture.
+      - Keyboard focus uses a two-pixel inset outline, hover uses the lighter hover tint, and persistent selection uses the selection fill plus a two-pixel left marker.
+  interactions:
+    - Existing month navigation, row activation, nested controls, focus containment, and restoration behavior remains unchanged.
+    - Theme preview switches the whole canonical surface between unchanged dark tokens and the proposed brighter light tokens.
+  responsive:
+    - Desktop review at 1440x900 shows the month at the left and the compact arrow pair at the right of one toolbar.
+    - Mobile review at 390x844 keeps the month and arrow pair on one row without clipping or overlap.
+  implementation:
+    files:
+      - src/finance/DataRow.tsx
+      - src/budgets/BudgetPanel.tsx
+      - src/transactions/TransactionsPanel.tsx
+      - src/insights/InsightsPanel.tsx
+      - src/navigation/WorkspaceMonthHeading.tsx
+      - src/navigation/WorkspaceMonthHeading.test.tsx
+      - src/terminal.css
+      - src/theme.css
+      - src/theme.ts
+      - src/theme.test.ts
+      - tests/navigation.pw.ts
+    outcomes:
+      - The current month is the sole workspace h1; previous and next icon buttons align to the far right with unchanged semantic navigation behavior.
+      - The active sidebar item carries view identity through a theme-aware selection fill, stronger text, and a desktop left rail or mobile bottom rail.
+      - Light mode uses white content surfaces, a near-white workspace, blue-tinted chrome, and higher-separation borders while preserving semantic accent colors.
+      - Budget, transaction, and report drill-down rows use one ref-safe DataRow component and shared geometry, separator, hover, focus, and selection styles.
+      - Transaction status pills render below the shared month toolbar so all three workspace views retain identical header geometry.
+  verification:
+    - npm test: 69 tests passed.
+    - npm run test:browser: 11 Chromium tests passed, including the new cross-surface data-row geometry and focus contract.
+    - npm run lint: passed.
+    - npm run build: passed with the existing large-chunk advisory.
+    - git diff --check: passed before the implementation record update.
+    - Live app checked at 1440x900 and 390x844 in Light and Dark with no horizontal overflow or month/action overlap.
+    - Live report drill-down verified the shared DataRow class, 56px minimum height, 0.7rem vertical padding, and subtle bottom separator.

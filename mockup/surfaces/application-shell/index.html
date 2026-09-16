@@ -86,14 +86,215 @@
       .shell-contract-mobile .statusline > div:last-child {
         display: none;
       }
+
+      .row-contract-stage.authenticated-app.terminal-app {
+        display: block;
+        width: 100%;
+        height: auto;
+        min-height: 0;
+        margin: 0;
+        border: 1px solid var(--theme-border);
+        border-radius: 0;
+        box-shadow: none;
+      }
+
+      .row-contract-sample {
+        min-width: 0;
+        overflow-x: auto;
+        border-bottom: 1px solid var(--theme-border);
+      }
+
+      .row-contract-sample:last-child {
+        border-bottom: 0;
+      }
+
+      .row-contract-sample > header {
+        padding: 0.8rem 1rem;
+        border-bottom: 1px solid var(--theme-border);
+        background: var(--theme-chrome);
+      }
+
+      .row-contract-sample > header :is(h2, p) {
+        margin: 0;
+      }
+
+      .row-contract-sample > header h2 {
+        margin-top: 0.2rem;
+        font-size: 0.85rem;
+      }
+
+      .row-contract-stage :is(.budget-table, .screen-panel) {
+        min-width: 42rem;
+        margin: 0;
+        border: 0;
+        border-radius: 0;
+      }
+
+      .row-contract-stage .budget-group {
+        margin: 0;
+        border: 0;
+        border-radius: 0;
+      }
+
+      .row-contract-stage .reports-v2-transactions {
+        max-height: none;
+      }
+
+      :root[data-theme="light"] {
+        --theme-accent: #2456a6;
+        --theme-accent-strong: #0f5f9f;
+        --theme-accent-fill: #2456a6;
+        --theme-on-accent: #fff;
+        --theme-canvas: #eef3f9;
+        --theme-shell: #f8fafc;
+        --theme-chrome: #e8eef6;
+        --theme-surface: #fff;
+        --theme-surface-raised: #f1f5fa;
+        --theme-selection: #dfeaff;
+        --theme-border: #b7c2d0;
+        --theme-border-subtle: #d8e0ea;
+        --theme-border-strong: #7c8ca3;
+        --theme-control-border: #a5b2c4;
+        --theme-text: #1f2a44;
+        --theme-text-secondary: #3c4b64;
+        --theme-text-muted: #5f6f86;
+        --theme-text-faint: #7b899d;
+        --theme-positive: #19705c;
+        --theme-negative: #a23c50;
+        --theme-warning: #8a5a0a;
+        --theme-secondary: #6e4b9a;
+        --theme-overlay: rgb(31 42 68 / 32%);
+        --theme-shadow: 0 1.5rem 4.5rem rgb(31 42 68 / 12%);
+        --theme-dialog-shadow: 0 1.5rem 4rem rgb(31 42 68 / 18%);
+        --theme-lift-shadow: 0 0.45rem 0.8rem rgb(31 42 68 / 14%);
+        --theme-grid: rgb(36 86 166 / 3%);
+        --theme-status-text: #fff;
+        --theme-status-key-border: rgb(255 255 255 / 42%);
+        --theme-status-key-background: rgb(255 255 255 / 16%);
+      }
+
+      :is(.shell-contract-stage, .shell-contract-mobile) .nav-item.is-active {
+        position: relative;
+        background: var(--theme-selection);
+        color: var(--theme-text);
+        box-shadow: inset 3px 0 0 var(--theme-accent);
+        font-weight: 700;
+      }
+
+      .workspace-month-heading {
+        width: 100%;
+      }
+
+      .workspace-month-toolbar {
+        display: flex;
+        width: 100%;
+        min-width: 0;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+      }
+
+      .workspace-month-toolbar h1 {
+        margin: 0;
+        letter-spacing: 0;
+        white-space: nowrap;
+      }
+
+      .workspace-period-actions {
+        display: inline-flex;
+        flex: 0 0 auto;
+        align-items: center;
+        gap: 0.35rem;
+      }
+
+      .workspace-period-actions button {
+        display: grid;
+        width: 2.5rem;
+        height: 2.5rem;
+        border: 1px solid var(--theme-control-border);
+        border-radius: 0.3rem;
+        background: var(--theme-surface-raised);
+        color: var(--theme-text-secondary);
+        place-items: center;
+      }
+
+      .workspace-period-actions button:is(:hover, :focus-visible) {
+        border-color: var(--theme-accent);
+        background: var(--theme-hover);
+        color: var(--theme-accent-strong);
+        outline: none;
+      }
+
+      @media (max-width: 34rem) {
+        :is(.shell-contract-stage, .shell-contract-mobile) .nav-item.is-active {
+          box-shadow: inset 0 -2px 0 var(--theme-accent);
+        }
+
+        .workspace-month-toolbar h1 {
+          overflow: hidden;
+          font-size: 1.25rem;
+          text-overflow: ellipsis;
+        }
+      }
+
+      .shell-contract-mobile .nav-item.is-active {
+        box-shadow: inset 0 -2px 0 var(--theme-accent);
+      }
+
+      .shell-contract-mobile .workspace-month-toolbar h1 {
+        overflow: hidden;
+        font-size: 1.25rem;
+        text-overflow: ellipsis;
+      }
+
+      .data-row {
+        position: relative;
+        min-height: 3.5rem;
+        padding: 0.7rem 1rem;
+        border-top: 0;
+        border-bottom: 1px solid var(--theme-border-subtle);
+        background: var(--theme-surface);
+        color: var(--theme-text-secondary);
+      }
+
+      .data-row:is(:hover, :focus-visible, .is-focused) {
+        background: var(--theme-hover);
+        color: var(--theme-text);
+        outline: 2px solid var(--theme-accent-strong);
+        outline-offset: -2px;
+      }
+
+      .data-row.is-selected {
+        background: var(--theme-selection);
+        color: var(--theme-text);
+      }
+
+      .data-row.is-selected::before {
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 2px;
+        background: var(--theme-accent);
+        content: "";
+      }
+
+      .data-row__primary {
+        min-width: 0;
+      }
+
+      .data-row__amount {
+        color: var(--theme-text);
+        font-weight: 700;
+        text-align: right;
+      }
     </style>
   </head>
   <body class="review-page">
     <nav class="review-nav" aria-label="Mockup review navigation">
-      <strong>Full-bleed application shell proposal</strong>
+      <strong>Application shell visual refresh proposal</strong>
       <span class="review-nav__group">
         <a href="#desktop">Desktop</a>
         <a href="#mobile">Mobile</a>
+        <a href="#rows">Rows</a>
         <a href="focus.html">Interaction model</a>
         <a href="workspace-state.html">Workspace state</a>
       </span>
@@ -106,8 +307,8 @@
     <main class="review-sections">
       <section class="review-section" id="desktop" aria-labelledby="desktop-label">
         <header class="review-section__label">
-          <p>Proposed browser-native chrome</p>
-          <h1 id="desktop-label">Full-bleed desktop workspace</h1>
+          <p>Proposed month-only workspace heading and right-aligned navigation</p>
+          <h1 id="desktop-label">Desktop workspace</h1>
         </header>
         <div class="review-frame">
           <div class="shell-contract-stage">
@@ -129,13 +330,26 @@
               <main class="workspace">
                 <section class="page insights-page insights-page--terminal">
                   <header class="workspace-head workspace-head--compact">
-                    <div><p class="eyebrow">Monthly plan</p><h1>Budget / September 2026</h1><p class="subtitle">Plan with the keyboard. Review with a glance.</p></div>
+                    <div class="workspace-month-heading">
+                      <div class="workspace-month-toolbar">
+                        <h1 aria-live="polite">September 2026</h1>
+                        <nav class="workspace-period-actions" aria-label="Budget month">
+                          <button type="button" aria-label="Previous month, August 2026"><span aria-hidden="true">&larr;</span></button>
+                          <button type="button" aria-label="Next month, October 2026"><span aria-hidden="true">&rarr;</span></button>
+                        </nav>
+                      </div>
+                    </div>
                   </header>
-                  <section class="screen-panel empty-terminal">
-                    <p class="eyebrow">Buffer empty</p>
-                    <h2>Create the September 2026 budget.</h2>
-                    <p>Start empty or reuse last month's structure and planned amounts.</p>
-                    <button class="terminal-button terminal-button--primary" type="button">+ Create empty budget</button>
+                  <section class="screen-panel empty-terminal empty-terminal--streamlined">
+                    <div class="empty-terminal__copy">
+                      <p class="eyebrow">Buffer empty</p>
+                      <h2>Create the September 2026 budget.</h2>
+                      <p>Start empty or reuse last month's structure and planned amounts.</p>
+                      <div class="empty-budget-actions">
+                        <button class="terminal-button terminal-button--primary" type="button">+ Create empty September 2026 budget</button>
+                        <button class="terminal-button empty-budget-copy" type="button">Copy August 2026 budget</button>
+                      </div>
+                    </div>
                   </section>
                 </section>
               </main>
@@ -147,8 +361,8 @@
 
       <section class="review-section" id="mobile" aria-labelledby="mobile-label">
         <header class="review-section__label">
-          <p>Proposed compact chrome</p>
-          <h2 id="mobile-label">Exact mobile viewport fit</h2>
+          <p>Proposed compact month-only workspace heading</p>
+          <h2 id="mobile-label">Mobile workspace</h2>
         </header>
         <div class="review-frame shell-contract-mobile">
           <div class="authenticated-app terminal-app command-closed hud-app">
@@ -166,11 +380,55 @@
             </aside>
             <main class="workspace">
               <section class="page insights-page insights-page--terminal">
-                <header class="workspace-head"><div><p class="eyebrow">Monthly plan</p><h1>Budget</h1><p class="subtitle">September 2026</p></div></header>
-                <section class="screen-panel empty-terminal"><p class="eyebrow">Buffer empty</p><h2>Create this month's budget.</h2></section>
+                <header class="workspace-head">
+                  <div class="workspace-month-heading">
+                    <div class="workspace-month-toolbar">
+                      <h1 aria-live="polite">September 2026</h1>
+                      <nav class="workspace-period-actions" aria-label="Budget month">
+                        <button type="button" aria-label="Previous month, August 2026"><span aria-hidden="true">&larr;</span></button>
+                        <button type="button" aria-label="Next month, October 2026"><span aria-hidden="true">&rarr;</span></button>
+                      </nav>
+                    </div>
+                  </div>
+                </header>
+                <section class="screen-panel empty-terminal empty-terminal--streamlined"><div class="empty-terminal__copy"><p class="eyebrow">Buffer empty</p><h2>Create this month's budget.</h2><p>Set up an empty workspace, then add categories in the order that makes sense.</p><div class="empty-budget-actions"><button class="terminal-button terminal-button--primary" type="button">+ Create empty budget</button></div></div></section>
               </section>
             </main>
             <footer class="statusline"><div><strong>NAVIGATE</strong><span>budget / navigation</span></div><div><span><kbd>:</kbd> command</span></div></footer>
+          </div>
+        </div>
+      </section>
+
+      <section class="review-section" id="rows" aria-labelledby="rows-label">
+        <header class="review-section__label">
+          <p>Proposed shared geometry, separator, focus, and selection states</p>
+          <h2 id="rows-label">One data-row language, three column layouts</h2>
+        </header>
+        <div class="review-frame">
+          <div class="row-contract-stage authenticated-app terminal-app">
+            <section class="row-contract-sample">
+              <header><p class="eyebrow">Budget</p><h2>Planning row</h2></header>
+              <div class="budget-table">
+                <div class="column-head"><span>Category</span><span>Planned</span><span>Activity</span><span>Remaining</span></div>
+                <section class="budget-group">
+                  <header><h3><span>01</span> Everyday</h3></header>
+                  <div class="data-row budget-row is-focused" tabindex="0"><span class="data-row__primary category-name">Dining<button class="direction-tag" type="button">Spending</button></span><button class="amount-cell" type="button">$100.00</button><span class="activity-cell">$42.00</span><span class="data-row__amount remaining-cell">$58.00</span></div>
+                </section>
+              </div>
+            </section>
+            <section class="row-contract-sample">
+              <header><p class="eyebrow">Transactions</p><h2>Search result row</h2></header>
+              <div class="screen-panel transaction-table">
+                <div class="transaction-column-head"><span>Transaction</span><span>Category</span><span>Status</span><span>Amount</span></div>
+                <div class="data-row transaction-row-simple is-focused" tabindex="0"><button class="transaction-row-simple__select" type="button"><span class="data-row__primary transaction-row-simple__name"><strong>Cedar Cafe</strong><span>Sep 1 &middot; Local Checking</span></span></button><div class="transaction-category-cell"><button class="category-chip" type="button">Dining</button></div><button class="transaction-state-button" type="button">Included</button><strong class="data-row__amount transaction-amount is-outflow">-$42.00</strong></div>
+              </div>
+            </section>
+            <section class="row-contract-sample">
+              <header><p class="eyebrow">Reports</p><h2>Drill-down transaction row</h2></header>
+              <div class="screen-panel reports-v2-transactions">
+                <div class="data-row reports-v2-transaction-row is-spending is-focused" tabindex="0"><span class="data-row__primary"><strong>Cedar Cafe</strong><small>Sep 1 / Local Checking</small></span><strong class="data-row__amount">-$42.00</strong></div>
+              </div>
+            </section>
           </div>
         </div>
       </section>

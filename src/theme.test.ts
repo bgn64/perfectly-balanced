@@ -41,7 +41,7 @@ describe('theme', () => {
     applyDocumentTheme('light', targetDocument)
 
     expect(documentElement.dataset.theme).toBe('light')
-    expect(themeColor.content).toBe('#d5d6db')
+    expect(themeColor.content).toBe('#eef3f9')
   })
 
   it('initializes system preference before the application renders', () => {

@@ -25,6 +25,7 @@ import {
   parseMagnitude,
   shiftMonth,
 } from '../finance/utils.ts'
+import { DataRow } from '../finance/DataRow.tsx'
 import { getSupabaseClient } from '../lib/supabase.ts'
 import { focusWithScrollComfort } from '../navigation/focus.ts'
 import { WorkspaceMonthHeading } from '../navigation/WorkspaceMonthHeading.tsx'
@@ -1525,11 +1526,9 @@ export function BudgetPanel({
       <header className="workspace-head">
         <WorkspaceMonthHeading
           disabled={busyId !== null}
-          eyebrow="Monthly plan"
           selectedMonth={selectedMonth}
           semanticIdPrefix="month"
           statusLabel="budget"
-          subtitle="Plan with the keyboard. Review with a glance."
           title="Budget"
           onMonthChange={onMonthChange}
         />
@@ -1952,7 +1951,7 @@ function BudgetAllocationRow({
   const isSelected = focusedSemanticId === `budget-row-${allocation.allocation_id}`
 
   return (
-    <div
+    <DataRow
       className={`budget-row${isSectioned ? ' budget-row--sectioned' : ''}${
         isRenaming ? ' is-editing' : ''
       }${
@@ -1969,7 +1968,7 @@ function BudgetAllocationRow({
       id={`budget-row-${allocation.allocation_id}`}
       tabIndex={0}
     >
-      <span className="category-name">
+      <span className="data-row__primary category-name">
         {isSelected ? <i className="selection-caret">›</i> : null}
         {isRenaming ? (
           <input
@@ -2042,12 +2041,12 @@ function BudgetAllocationRow({
         </button>
       )}
       <span className="activity-cell">{formatDisplayMoney(activityAmount)}</span>
-      <span className="remaining-cell">
+      <span className="data-row__amount remaining-cell">
         {isIncomeOverPlan
           ? `+${formatDisplayMoney(Math.abs(remaining))}`
           : formatDisplayMoney(remaining)}
       </span>
-    </div>
+    </DataRow>
   )
 }
 
@@ -2073,12 +2072,12 @@ function PendingBudgetAllocation({
   onSelect: (category: Category) => Promise<void>
 }) {
   return (
-    <div
+    <DataRow
       className={`budget-row is-selected pending-budget-entry${
         isSectioned ? ' budget-row--sectioned' : ''
       }`}
     >
-      <span className="category-name">
+      <span className="data-row__primary category-name">
         <i className="selection-caret">›</i>
         <CategoryCombobox
           autoFocus
@@ -2098,7 +2097,7 @@ function PendingBudgetAllocation({
       <span className="amount-cell">$0</span>
       <span className="activity-cell">$0</span>
       <span className="remaining-cell">$0</span>
-    </div>
+    </DataRow>
   )
 }
 

@@ -15,7 +15,7 @@ export const themePreferenceKey = 'perfectly-balanced.theme'
 
 const themeColors: Record<ResolvedTheme, string> = {
   dark: '#16161e',
-  light: '#d5d6db',
+  light: '#eef3f9',
 }
 
 export function readThemePreference(
