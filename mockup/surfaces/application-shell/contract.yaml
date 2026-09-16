@@ -1,14 +1,18 @@
 surface: application-shell
-status: implemented
-reconciled_at: 2026-09-14
-approved_at: 2026-09-14
-implemented_at: 2026-09-14
+status: approved
+reconciled_at: 2026-09-15
+approved_at: 2026-09-15
+implemented_at: null
 route: /
 owners:
   - src/App.tsx
   - src/App.css
   - src/terminal.css
   - src/theme.css
+  - src/navigation/WorkspaceMonthHeading.tsx
+  - src/budgets/BudgetPanel.tsx
+  - src/transactions/TransactionsPanel.tsx
+  - src/insights/InsightsPanel.tsx
 viewports:
   wide_desktop: 1920x1080
   desktop: 1440x900
@@ -18,6 +22,8 @@ themes:
   - light
 states:
   - authenticated-budget
+  - authenticated-transactions
+  - authenticated-report-transactions
   - authenticated-settings
 interactions:
   keyboard:
@@ -197,8 +203,10 @@ workspace_state_followup:
       - git diff --check: passed.
       - Browser workflow preserved transaction controls and report mode across Budget navigation, discarded unapplied filter drafts, and reset on reload and sign-out.
 visual_unification_followup:
-  status: reconciled
+  status: approved
   reconciled_at: 2026-09-15
+  proposed_at: 2026-09-15
+  approved_at: 2026-09-15
   preview: index.html
   source: Running application at http://localhost:5173 plus current component styles and read-only navigation fixtures.
   owners:
@@ -223,3 +231,38 @@ visual_unification_followup:
   baseline_outcome:
     - Canonical preview now matches the current full-bleed shell and month rail.
     - Canonical preview shows current budget, transaction, and report row treatments together in both themes for direct comparison.
+  research:
+    sources:
+      - W3C ARIA APG Date Picker Dialog: previous and next buttons surround one live month/year heading.
+      - Adobe React Aria Calendar: previous button, flexible centered CalendarHeading, then next button.
+      - IBM Carbon Date Picker: previous and next chevrons sit at the left and right edges of the month header.
+      - FullCalendar header toolbar: current period title and navigation are distinct toolbar elements, separate from view identity.
+      - MUI, Fluent UI, and React DayPicker retain one month/year caption plus dedicated previous and next controls.
+    common_pattern:
+      - Keep the page or view name separate from the temporal navigation.
+      - Present month and year as one stable label controlled by adjacent icon-only previous and next buttons.
+      - Announce the changing period through a polite live region and give both icon buttons explicit accessible names.
+    selected_variant:
+      - Apply the full-page toolbar variation used by calendar products: current period as the workspace heading with a compact navigation pair aligned at the opposite edge.
+      - Let persistent navigation and page content communicate the current view instead of repeating Budget, Transactions, or Reports in the workspace heading.
+  proposal:
+    light_theme:
+      - Use white content surfaces on a near-white workspace with blue-tinted chrome instead of neighboring gray fills.
+      - Increase structural separation through cooler subtle borders while retaining Tokyo Night blue, green, red, amber, and violet semantic accents.
+      - Keep text and controls at WCAG AA contrast or better in default, hover, selected, and focused states.
+    month_heading:
+      - Remove the repeated Budget, Transactions, or Reports page title and the explanatory eyebrow and subtitle from the workspace heading.
+      - Render the current month and year as the sole h1 and polite live region.
+      - Group icon-only previous and next buttons at the far right of the same toolbar, with explicit accessible names and no visible labels.
+      - Strengthen the active navigation item with the selection fill, higher-contrast text, bold weight, and an accent rail so the sidebar carries view identity.
+    shared_rows:
+      - Introduce a shared data-row visual primitive for minimum height, padding, surface, separator, hover, keyboard focus, and persistent selection.
+      - Use shared primary-content and amount roles for consistent type hierarchy and alignment.
+      - Keep budget, transaction, and report-specific grid templates and nested actions; the shared primitive must not flatten their information architecture.
+      - Keyboard focus uses a two-pixel inset outline, hover uses the lighter hover tint, and persistent selection uses the selection fill plus a two-pixel left marker.
+  interactions:
+    - Existing month navigation, row activation, nested controls, focus containment, and restoration behavior remains unchanged.
+    - Theme preview switches the whole canonical surface between unchanged dark tokens and the proposed brighter light tokens.
+  responsive:
+    - Desktop review at 1440x900 shows the month at the left and the compact arrow pair at the right of one toolbar.
+    - Mobile review at 390x844 keeps the month and arrow pair on one row without clipping or overlap.
