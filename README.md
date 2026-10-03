@@ -1,292 +1,339 @@
-# Invite-only React app
+# Perfectly Balanced
 
-A Vite, React, and TypeScript application with Supabase Magic Link authentication. Users must already be invited or pre-created in Supabase; the browser client never creates accounts.
+A budgeting web app with monthly budgets, efficient transaction categorization,
+and drill-down income/spending reports. USD only. Live Plaid is intentionally
+deferred; no bank credentials are required.
 
-## Local Docker development
+## Requirements
 
-Use the local development stack for everyday UI, migration, and database
-testing. It runs Supabase entirely in Docker and never connects to the
-production Supabase project.
+- Node.js 24 LTS and npm.
+- Docker Engine running and accessible to your user (`docker info`).
+- Git and curl are useful for setup. Supabase CLI is a project dependency.
 
-### Prerequisites
+## Run locally
 
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) must be
-  installed and running.
-- Node.js and npm must be installed.
+From this directory:
 
-### Start the app
-
-1. Install dependencies:
-
-   ```sh
-   npm install
-   ```
-
-2. Start local Supabase and Vite:
-
-   ```sh
-   npm run dev
-   ```
-
-   The `predev` hook checks Docker, starts or reuses the Supabase CLI Docker
-   stack, and generates `.env.development.local` from `supabase status --output
-   env` before Vite starts. This file is loaded only by development-mode Vite
-   runs, never production builds. It contains only browser-safe local client
-   configuration: app name, site URL, API URL, anonymous key, local-demo flag,
-   and local fixture credentials. It never contains a service-role key or
-   production credential.
-
-3. Sign in with the development-only test account:
-
-   | Field | Value |
-   | --- | --- |
-   | Email | `dev@example.test` |
-   | Password | `local-dev-password` |
-
-   This account is recreated by the local seed fixture and signs in through
-   Supabase Auth, so the application continues to exercise normal JWT, RLS,
-   and RPC authorization.
-
-### Interaction regression checks
-
-With the local app running at `http://localhost:5173`, run:
-
-```sh
-npx playwright install chromium
-npm run test:browser
+```bash
+npm ci
+npm run backend:start
 ```
 
-These tests use the seeded local account for real authentication, intercept
-finance reads with deterministic fixtures, and reject financial writes. They
-cover hover/focus separation, click and Enter activation, shortcut scope,
-combobox input focus, modal containment and restoration, and both themes at
-desktop/mobile sizes. Screenshots are written to the ignored `test-results/`
-directory. `npm test` runs the unit suite separately.
+The initial start downloads Supabase Docker images. Local services:
 
-Interaction rules: hover never moves DOM focus; keyboard focus has a distinct
-inset outline; selection and editing do not imply focus. Row shortcuts require
-the focused row context. Composite comboboxes may change the active option on
-hover while keeping focus in the input. Dialogs contain Tab navigation and
-restore their opener or a valid fallback.
-
-### Future-issued JWT recovery
-
-If Supabase rejects a data read with `401` and `JWT issued at future`, the
-client refreshes the current session and retries that read once. Concurrent
-rejections share a refresh attempt. Recovery does not replay writes, intercept
-Auth requests, change JWT validation, or sign out other devices. Startup session
-initialization also tries one refresh for this specific error.
-
-A repeated rejection remains visible. This client recovery cannot correct
-ongoing clock skew between Supabase Auth and the service validating its tokens.
-For local development, check Windows time synchronization and Docker's clock;
-restart the local stack after correcting drift, then sign in again if needed.
-For hosted deployments, inspect the failed request and service clocks/logs.
-Do not disable JWT time validation or share raw tokens when diagnosing this.
-
-The `jwtRecovery` unit and browser tests cover bounded retries and failures.
-
-### Local database lifecycle
-
-| Command | Purpose |
+| Service | Address |
 | --- | --- |
-| `npm run local:up` | Start or reuse local Supabase and generate `.env.development.local`. |
-| `npm run local:reset` | Rebuild the local database, apply every migration, and recreate deterministic seed data. |
-| `npm run local:down` | Stop the local Supabase Docker stack while preserving its volumes. |
-| `npm run dev` | Run `local:up`, then start Vite. |
+| API | http://127.0.0.1:54321 |
+| Studio | http://127.0.0.1:54323 |
+| Mailpit (development email) | http://127.0.0.1:54324 |
+| Postgres | localhost:54322 |
 
-The local seed includes a confirmed development user, an August 2026 budget
-with root and sectioned allocations, categorized transactions, and one
-uncategorized transaction. It creates no Plaid Items, webhook events, Vault
-secrets, or bank data.
+Copy `.env.example` to `apps/web/.env.local`. Set the API URL and the local
+**publishable/anon** key printed by `npx supabase status`. Never use the secret
+or service-role key in the browser. The environment file is gitignored.
 
-`VITE_LOCAL_DEMO_MODE` is generated only for local development. The client
-rejects it in production builds or when its Supabase URL is not localhost.
-Do not put a Supabase service-role key, Vercel token, Plaid credential, or
-other secret in a `VITE_` value.
+```bash
+npm run dev
+```
 
-Local Supabase keeps `[auth].enable_signup = false` to prevent new user
-registration while enabling the email provider for the seeded account. The
-separate `[auth.email].enable_signup = true` setting is required by the local
-Supabase CLI to permit email/password and Magic Link login.
-After changing `supabase/config.toml`, run `npm run local:down` followed by
-`npm run local:reset` to recreate the local Auth container with the new
-configuration.
+Open http://127.0.0.1:5173 and create an account with a password of at least eight
+characters. Local email confirmation is disabled. Password-reset emails appear
+in Mailpit; follow the recovery link to set a new password. Redirects are
+configured for `127.0.0.1:5173`, so use that host rather than `localhost`.
 
-### Hosted client configuration
+For a guided example, open **Budget actions** and select **Load demo data** in an
+empty month. Demo records are clearly labeled, belong only to the signed-in
+user, and can be loaded once per month. Otherwise create your own budget and
+use **Add transaction** or **Import CSV** in Transactions. No demo users or credentials
+are shipped.
 
-For Vercel or another hosted client deployment, provide the browser-safe values
-below. Do not set `VITE_LOCAL_DEMO_MODE=true` for a remote project.
+Use `npm run backend:stop` to stop local Supabase. Docker-backed data persists
+between ordinary stops/starts. **`npm run backend:reset` destroys the project's
+local database and reapplies migrations; do not run it against data you need.**
+After adding migrations to an existing local instance, use:
 
-| Variable | Purpose |
-| --- | --- |
-| `VITE_APP_NAME` | Product name displayed in the app. |
-| `VITE_SUPABASE_URL` | Hosted Supabase project URL. |
-| `VITE_SUPABASE_ANON_KEY` | Supabase browser-safe anonymous/publishable key. |
-| `VITE_SITE_URL` | Exact URL to receive Magic Link redirects. |
+```bash
+npx supabase migration up --local
+npm run types
+```
 
-## Supabase configuration
+## Financial semantics
 
-1. Create a Supabase project and enable the Email provider under **Authentication**.
-2. In **Authentication** URL configuration, set the Site URL to the canonical production `VITE_SITE_URL`. Add both `http://localhost:5173` and the production Vercel URL to Redirect URLs.
-3. In **Authentication** settings, disable new-user signups. This makes the Supabase project enforce invite-only access server-side.
-4. Invite each authorized user from **Authentication** > **Users**. Invited or pre-created users can subsequently use the app's Magic Link sign-in screen.
+- Positive means money received; negative means money paid. Integer cents are
+  used throughout, with exact input parsing and explicit supported ranges.
+- A category's section determines income versus spending, even for unusual
+  signs. Uncategorized allocations use their own sign.
+- Income is the signed sum in the permanent Income section. Spending is the
+  negative of the signed spending sum, so a $100 charge and $25 refund produce
+  $75 net spending, not $125 gross activity.
+- Planned amounts are nonnegative. Spending remaining is planned minus net
+  spent; income still expected is planned minus received.
+- Splits may mix signs, but must sum exactly to the parent amount. Unassigned
+  remainders are explicit allocations. Parents are never added on top of splits.
+- **Exclude from budget & reports** removes the entire parent and all splits
+  from balances, reports, and recommendation history. It is reversible through
+  the excluded-transaction filter, not deletion.
+- Effective dates determine the selected calendar month; original dates remain
+  intact. Splits share the parent's effective date and exclusion state.
+- A date move into a month without the assigned category preserves assignment
+  and displays unplanned activity at zero planned dollars. Add the existing
+  category to that month explicitly if desired.
+- Each month has its own planned amounts, membership, ordering, and name
+  snapshots. Copying is explicit, requires an empty destination, and carries no
+  transactions or remaining balances. Archived catalog entries are not copied.
+- Renames change the selected monthly snapshot and the catalog for future use,
+  not other existing monthly snapshots. Category parent sections and section
+  income/spending classification are immutable to preserve historical meaning.
+- Remove a monthly category only after reassigning all its transactions for
+  that month, including excluded ones. Clicking its name opens the relevant
+  transaction filter. Sections must be emptied before monthly removal. Archiving
+  catalog entries preserves history but hides them from new assignments.
+- Charts retain signed net values. Negative buckets use a signed list with the
+  same drill-down controls rather than taking absolute values. Empty or
+  all-zero totals have an empty state. Every chart has keyboard-operable textual
+  alternatives. Zero-valued buckets stay in the breakdown, not pie wedges.
+- Actual reports can omit uncategorized allocations without omitting assigned
+  portions of split transactions. Planned reports show only planned amounts.
+- There is one Income section, so its section-level pie is normally one slice
+  (plus uncategorized income, if enabled); drill into it to see income categories.
 
-The sign-in request passes `shouldCreateUser: false`, so the application does not create an account for an uninvited email address. The Supabase signup setting is still required to prevent other clients from directly invoking signup.
+## Transactions and import
 
-## Plaid transaction synchronization
+Search description/merchant, filter by category or uncategorized remainder,
+include/hide/show only excluded records, sort, and paginate. Recommendations
+learn from prior nonexcluded categorizations across months using normalized
+merchant/payee first, then description; frequency and recency break ties.
+Ambiguous mixed-category histories are not learned. Suggestions explain their
+match and never assign anything automatically. Split suggestions target one
+allocation.
 
-The authenticated app connects multiple financial institutions and imports up
-to 90 days of initially available transaction history. The import stores only
-the transaction date, merchant name, a cleaned transaction-name fallback only
-when no merchant is available, signed amount, ISO currency code, pending state,
-category, account name, and source connection. It does not retain
-account/routing numbers, balances, raw transaction descriptions, location data,
-or identity data.
+CSV format:
 
-Each active Plaid Item access token is stored encrypted at rest in Supabase
-Vault. Only narrowly scoped database routines called by server-side Edge
-Functions can decrypt a token, and only while making a Plaid API request. The
-browser cannot query the Vault, token records, sync cursors, or webhook events.
+```csv
+date,description,amount,merchant,external_id
+2026-10-01,Salary,4200.00,Employer,payroll-1
+2026-10-02,Weekly groceries,-82.34,Market,purchase-1
+```
 
-Plaid's standard `SYNC_UPDATES_AVAILABLE` webhooks trigger cursor-based
-transaction synchronization. This avoids the paid Transactions Refresh add-on;
-Plaid normally checks institutions one to four times per day. A newly connected
-bank can take time to prepare historical data, so the UI shows connection status
-and displays transaction batches as they become available.
+`date`, `description`, and signed `amount` are required. `merchant` and
+`external_id` are optional. Use `YYYY-MM-DD` dates and at most two decimal
+places; currency is USD. Maximum 1,000 rows and 2 MB per file.
 
-If a connection is still preparing history after a delayed webhook, the
-**Check available transactions** action safely retries `/transactions/sync`
-against the retained Item. It reads data Plaid has already prepared and does not
-call the paid Transactions Refresh endpoint.
+The preview validates all rows before writing. An identical file is blocked.
+External IDs are unique per user/CSV source and block duplicate imports
+atomically. Without IDs, file fingerprint plus row identity preserves genuinely
+identical purchases within a file. Similar purchases in different files are
+flagged for explicit review, not silently deduplicated. Keep stable external
+IDs when importing overlapping exports. Any commit failure rolls back the
+entire batch.
 
-Disconnecting a bank removes the Plaid Item and deletes its encrypted access
-token, stopping future updates while retaining already imported history. A user
-can permanently delete saved history only after disconnecting that Item.
+## Architecture
 
-### Local Plaid boundary
+- `apps/web`: React/Vite, React Router, TanStack Query, accessible forms and
+  Recharts with textual drill-down alternatives.
+- `packages/domain`: framework-independent exact-money parsing, allocation
+  validation, budgeting/reporting, CSV input contracts, and recommendations.
+- `packages/data`: typed repository interface and Supabase adapter. Database
+  types are generated using `npm run types`; JSON responses are schema-validated.
+- `supabase/migrations`: tables, RLS, transactional authenticated RPCs, fixed
+  Income protection, and deferred exact-allocation constraints.
+- `tests`: real Supabase integration, pgTAP invariants, and browser workflows.
 
-The local development bootstrap does not serve Edge Functions or configure
-Plaid credentials. The local fixture deliberately contains no Plaid Items or
-transaction-ingestion state. Do not add live Plaid credentials to
-`.env.development.local`, and do not use the local stack to authorize financial
-institutions or ingest bank data.
+Clients share domain contracts without depending on React. Authenticated table
+reads are protected by per-user RLS; table writes are not granted to clients.
+Mutations go through owner-scoped, transactional database functions. Composite
+foreign keys prevent cross-user references. User operations are serialized per
+owner to protect copies and imports. Errors are shown with user input retained
+for retry, and relevant cached reads are invalidated after successful writes.
 
-### Live Plaid setup
+The source ingestion contract is separate from user-owned category assignments,
+exclusions, and date overrides. A future Plaid adapter should normalize provider
+records to this contract, storing secrets/tokens and executing calls/webhooks on
+a trusted backend. Provider updates must preserve user edits. Pending-to-posted
+reconciliation, removed transactions, and sync cursors remain explicit future
+work; this version does not pretend to synchronize bank data.
 
-1. Obtain a live Plaid production application with the **Transactions** product
-   enabled for every country your prototype supports.
-2. Configure the production app's Link OAuth redirect URI as the app's
-   canonical `VITE_SITE_URL`. Add the same URL to Plaid's Allowed Redirect URIs.
-3. Install the [Supabase CLI](https://supabase.com/docs/guides/cli), log in, and
-   link the local project to the target Supabase project.
-4. Set these **Supabase Edge Function secrets**. Do not use `VITE_` names and
-   do not put them in the Vercel project environment:
+Local development uses real Supabase, not browser-only/mock persistence. It is
+not offline-first. Shared households, multi-currency,
+rollover, multi-month reports, custom rules, and alternate clients are deferred.
+The Supabase configuration is for local development. Hosted authentication and
+the legacy cutover require the production configuration below.
 
-   | Name | Purpose |
-   | --- | --- |
-   | `PLAID_CLIENT_ID` | Plaid production client ID. |
-   | `PLAID_SECRET` | Plaid production secret. |
-   | `PLAID_ENVIRONMENT` | Must be `production` for this live integration. |
-   | `PLAID_CLIENT_NAME` | Name displayed in Plaid Link. |
-   | `PLAID_COUNTRY_CODES` | Comma-separated supported country codes, such as `US`. |
-   | `PLAID_REDIRECT_URI` | Exact canonical app URL registered with Plaid. |
-   | `PLAID_WEBHOOK_URL` | Exact deployed `plaid-transactions-webhook` Function URL. |
-   | `APP_ALLOWED_ORIGINS` | Comma-separated local and production app origins permitted to call the Functions. |
+## Private production hosting
 
-   The Supabase-managed `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and
-   `SUPABASE_SERVICE_ROLE_KEY` remain server-only Function settings. Never
-   expose the service-role key in the browser application.
+The existing deployment uses GitHub repository `bgn64/perfectly-balanced`,
+Supabase project `hqeoxulnpkksxvoyxlvq`, and
+https://perfectly-balanced.vercel.app/. No second hosted backend is required.
 
-5. Set `PLAID_WEBHOOK_URL` to the production Supabase Function endpoint:
+- Vercel's root directory is the repository root. `vercel.json` installs the
+  npm workspaces, runs the root build, and serves `apps/web/dist`. Its filesystem
+  handler serves real assets before the SPA fallback handles deep links.
+- Native Vercel Git deployment is disabled by configuration. Verify that it is
+  also gated in the existing project before pushing replacement code; the old
+  deployment does not have this configuration.
+- The replacement Actions production workflow is **manual only** and performs
+  no database migration or Edge Function deployment. It requires `main`, the
+  confirmation `deploy`, and the Production environment variable
+  `BUDGET_SCHEMA_READY=true`. Set that variable only after the cutover and
+  reconciliation pass. The legacy workflow must stay disabled during preparation.
+- Retain `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`, and the `VERCEL_TOKEN` secret in
+  GitHub. CI uses Node 24. Configure only the hosted project's browser-safe
+  `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` for the production build.
+  Never expose privileged keys through `VITE_*`.
+- Production builds offer sign-in and recovery but **no signup**. Local Vite
+  development retains signup for local accounts and tests. Disable hosted
+  signup in Supabase too: hiding the UI is not an authorization boundary.
+- Preserve the existing Auth user and UUID. Set Supabase's Site URL and recovery
+  redirect allowlist to the canonical HTTPS production URL. Do not push local
+  auth configuration to production.
+- Test recovery email delivery. Supabase's built-in email service only supports
+  organization-team recipients and has tight limits; use custom SMTP if delivery
+  is blocked. Email/password login does not itself require sending email.
+- Do not point preview builds or local test suites at production financial data.
 
-   ```text
-   https://<supabase-project-ref>.supabase.co/functions/v1/plaid-transactions-webhook
-   ```
+## Legacy data cutover tooling
 
-   The endpoint is public so Plaid can call it, but it verifies every
-   `Plaid-Verification` signature, request-body digest, and timestamp before
-   accepting a webhook.
+`npm run cutover` provides administrator-only export, preparation, and local
+verification. It **never applies production SQL**. It uses saved Supabase CLI
+authentication and the fixed production project reference for read-only export.
 
-6. Apply the database migration and deploy the Functions:
+```bash
+npm run cutover -- export backups/rehearsal/legacy.json
+npm run cutover -- prepare backups/rehearsal/legacy.json backups/rehearsal/prepared
+npm run cutover:rehearse -- backups/rehearsal/legacy.json
+# After importing into an isolated local Supabase rehearsal instance:
+npm run cutover -- verify-local backups/rehearsal/legacy.json
+```
 
-   ```sh
-   supabase db push
-   supabase functions deploy
-   ```
+New export directories are private (0700); files are created exclusively with
+0600 permissions. Existing output files are never overwritten. Backups are
+gitignored and must not be uploaded, committed, or included in deployment
+artifacts. Copy verified backups to private secure storage. The financial export
+is **not a complete database backup**: rollback additionally needs legacy schema,
+RPCs/grants, migration history, and the appropriate Auth/configuration inventory.
+Provider token handling and any Vault-dependent restoration require separate care.
 
-The production GitHub Action applies migrations and deploys all Functions before
-releasing the Vercel client. Configure the required GitHub `production`
-environment secrets and variable described below before merging a deployment.
+`cutover:rehearse` creates a separate, uniquely named database in the existing
+local Supabase Postgres container without resetting or replacing its `postgres`
+database. It applies the new migrations to a minimal Auth scaffold, imports the
+snapshot, verifies every row and field, tests cross-owner RLS and rerun rejection,
+and retains a private verification manifest. It refuses to overwrite a previous
+rehearsal. This validates the new schema/import, not legacy replacement or full
+rollback; those remain separate approval prerequisites.
 
-## Vercel configuration
+Run `npm run test:hosting` to test the production build's private authentication,
+recovery messaging, and route refreshes locally. These browser tests send no
+production writes; the recovery request is intercepted.
 
-`vercel.json` configures Vite's `npm run build` command and the `dist` output directory. Create or link a Vercel project, then set the four `VITE_` variables above in the Vercel project for **Production**. Set `VITE_SITE_URL` to the exact canonical production URL.
+Preparation preserves category IDs, monthly planned amounts, transaction IDs,
+exact signed cents, original dates/overrides, exclusions, source IDs, and
+user-applied splits. It adds explicit uncategorized remainders. Income is
+consolidated into Income; root spending and unplaced categories go to General.
+Categories absent from a monthly budget do not acquire invented planned amounts.
+Empty spending subsections remain monthly snapshots. Pending status and account
+metadata remain in the private source archive; imported pending records are
+ordinary transactions because this app does not synchronize banks.
 
-If you also enable Vercel preview deployments, set the same browser-safe values for the Preview environment and add the preview redirect URL or a suitable Vercel wildcard redirect rule in Supabase. Keep the Supabase service-role key out of every Vercel `VITE_` variable.
+Incompatible currencies, amounts, descriptions, references, ownership, or
+cross-month section/direction changes fail preparation explicitly. Nothing is
+silently omitted. The private plan includes exact financial reconciliation totals;
+local verification compares every imported row/field and the cutover fingerprint.
+The SQL import requires the existing auth user and an empty destination for that
+user, runs in one transaction, and checks the allocation constraints before commit.
 
-## Production deployment workflow
+**Do not run `supabase db push` against the legacy production schema.** Its table
+names collide with this implementation. An explicitly approved maintenance
+operation must freeze writes, take a final verified backup, disconnect all Plaid
+Items, retire legacy ingestion, replace only allowlisted app objects while
+preserving Auth/managed schemas, import and reconcile, and establish the new
+migration ledger before releasing the frontend. Rehearse replacement and rollback
+locally first; never reset the user's existing local database for rehearsal.
+Disconnecting Plaid cannot be undone by restoring a database; reconnection needs
+new bank authorization.
 
-[.github/workflows/deploy.yml](.github/workflows/deploy.yml) builds the Vite
-application, then conditionally applies Supabase migrations and deploys
-Supabase Edge Functions before publishing the prebuilt client to Vercel
-Production in either case:
+The replacement rehearsal also needs private `legacy-schema.sql` and
+`legacy-data.sql` dumps scoped to `public,supabase_migrations`. With those in the
+snapshot directory, run:
 
-- A pull request targeting `main` is closed after being merged.
-- Someone selects **Run workflow** from GitHub Actions.
+```bash
+npm run cutover:rehearse-replacement -- backups/rehearsal
+```
 
-For a merged pull request, the workflow only runs `supabase db push` when files
-under `supabase/migrations/` changed, and only deploys Functions when
-`supabase/functions/` or `supabase/config.toml` changed. Supabase migration
-history also makes `db push` safe when all committed migrations are already
-applied. A manual workflow run intentionally deploys both migrations and
-Functions so an operator can reconcile the full configured state.
+This restores the actual legacy backup into another isolated local database,
+simulates disconnection there, tests an injected replacement failure, applies
+the replacement, compares every imported field, checks the new migration ledger,
+then restores and verifies legacy financial data and migration history. It
+generates private replacement/rollback SQL only after those checks pass. Rollback
+deliberately keeps bank connections disconnected rather than resurrecting revoked
+token references. The allowlisted operations do not drop Auth, Vault, managed
+event triggers, or the public schema. A fresh frozen backup and a separate approval
+are still required before production execution.
 
-Before running it, add the GitHub configuration below at repository scope or in
-the `production` environment:
+Imported history retains source `plaid` and its stable provider IDs, but no live
+connection. CSV duplicate IDs are scoped to the CSV source and do **not**
+automatically deduplicate against migrated Plaid records. Choose a nonoverlapping
+CSV date range or explicitly review overlaps.
 
-| Type | Name | Purpose |
-| --- | --- |
-| Secret | `VERCEL_TOKEN` | Vercel access token with permission to deploy the project. |
-| Variable | `VERCEL_ORG_ID` | Vercel team or personal account ID. |
-| Variable | `VERCEL_PROJECT_ID` | Vercel project ID. |
-| Secret | `SUPABASE_ACCESS_TOKEN` | Personal access token used by the Supabase CLI in GitHub Actions. |
-| Secret | `SUPABASE_DB_PASSWORD` | Production Supabase database password used to apply migrations. |
-| Variable | `SUPABASE_PROJECT_ID` | Production Supabase project reference. This is not a secret. |
+## Validation
 
-Run `npx vercel link` locally to find the organization and project IDs in the generated `.vercel/project.json`; that directory is intentionally ignored. The workflow pulls Production variables from Vercel, builds with the Vercel CLI, and deploys the resulting prebuilt output. If the project is also connected to Vercel's Git integration, disable its automatic Production deployment to avoid a duplicate deployment for each merge.
+With local Supabase running:
 
-Add the Supabase values to the same GitHub `production` environment before
-merging. Plaid credentials remain Supabase Edge Function secrets and must not be
-copied into GitHub Actions.
+```bash
+npm run test:unit       # Pure domain tests; no backend required
+npm test               # Domain + real Supabase integration
+npm run test:db         # pgTAP database invariants
+npx playwright install chromium
+npm run test:e2e        # Starts Vite if necessary
+npm run typecheck
+npm run lint
+npm run build
+```
 
-## Available commands
+Integration/browser tests create uniquely named local test accounts and delete
+them after completion. They read local test credentials from Supabase CLI
+status, not a committed privileged key. Browser artifacts go to gitignored
+`test-results/`. Tests cover exact mixed-sign allocations, signed report
+fallbacks, exclusions, ownership isolation, duplicate/atomic imports, monthly
+copying and snapshots, date moves/unplanned activity, recommendations, browser
+persistence, and mobile layout.
 
-| Command | Purpose |
-| --- | --- |
-| `npm run dev` | Start the local Supabase Docker stack and Vite. |
-| `npm run local:up` | Start/reuse local Supabase and generate local browser configuration. |
-| `npm run local:reset` | Rebuild local Supabase from migrations and deterministic seed data. |
-| `npm run local:down` | Stop local Supabase Docker containers. |
-| `npm run lint` | Run Oxlint. |
-| `npm run build` | Type-check and create the production build in `dist`. |
-| `npm run mockup` | Serve the static UI mockup from `mockup/` for review. |
-| `npm run preview` | Preview the production build locally. |
+Browser tests also verify sign-up and complete password recovery through the
+actual local Mailpit email link, as well as keyboard-operated report drill-down.
 
-## UI mockup and agent workflow
+## Workspace interactions
 
-`mockup/` is the committed, static, current-state rendering of the app's UI.
-It contains no application logic, authentication, network requests, database
-calls, or Plaid behavior. When multiple mockup pages are needed, their shared
-navigation keeps the screens connected.
+- Desktop uses a compact sidebar; mobile uses navigation tabs. The shared month
+  picker and previous/next controls apply to all three views.
+- Budget amounts are read-only until selected. Click a planned amount to edit;
+  **Save / Enter** commits, while **Cancel / Escape** discards the draft.
+  Changing focus never saves an amount. Validation or connection failures keep
+  the draft available for retry.
+- Section/category menus contain rename, move, monthly removal, and archive
+  actions. **Add section** and **Add category** open focused forms. Copying and
+  attaching existing entries are under **Budget actions**.
+- Transaction rows expose inline categorization and one-click suggestions.
+  Select a transaction's description or details arrow to open its detail sheet:
+  allocations/splits, effective-date override/reset, and exclude/restore.
+  Partially categorized splits retain independent allocation controls.
+- **Filters** reveals category, excluded-state, and sort controls. Search and
+  the uncategorized toggle remain directly accessible. Editing a transaction
+  can remove it from the current list; a notification explains the result.
+- Manual entry and CSV import each have their own dialog. CSV preview and
+  duplicate protections are unchanged.
+- Unsaved financial drafts prompt before dismissal, navigation, month changes,
+  or sign-out. Dialogs and menus support keyboard interaction and restore focus;
+  saved data stays in Supabase regardless of whether the web server is running.
+- Reports group actual activity separately from the plan, with consistent
+  section/category colors, keyboard-operable legends, and responsive signed
+  allocation detail. Negative and all-zero totals remain explicit, not pies.
 
-Before making a UI-changing feature, Copilot must update and serve the mockup
-with `npm run mockup`, obtain explicit visual approval, then create a
-database-aware implementation plan and obtain approval again before changing
-application code. Every shipped UI change must include its matching `mockup/`
-update in the same commit or pull request.
+The expanded browser suite checks explicit money-edit semantics, failed-save
+retry state, draft dialogs, keyboard/focus behavior, and signed/overspent states.
+It measures at least eight ordinary transaction rows visible at 1280x800 and
+verifies mobile balances without horizontal scrolling at 360px/390px. Automated
+axe accessibility scans cover authentication and all three views; screenshots
+are also inspected at desktop, intermediate, and mobile widths.
 
-The repository expects an externally configured `ui-automation` MCP for final
-UI smoke testing. Until a safe local or staging Plaid integration exists, UI
-automation must never operate any live Plaid bank-connection control or mutate
-real transaction data.
+Run Vite in your own terminal using `npm run dev`. Tests manage a temporary web
+server when needed and clean it up; no assistant-managed background server is
+required.

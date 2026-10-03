@@ -1,0 +1,7 @@
+{
+  "name": "@balanced/domain",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": "./src/index.ts",
+  "dependencies": { "papaparse": "^5.5.3", "zod": "^4.1.0" }
+}

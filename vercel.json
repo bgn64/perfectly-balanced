@@ -1,5 +1,13 @@
 {
   "framework": "vite",
+  "installCommand": "npm ci",
   "buildCommand": "npm run build",
-  "outputDirectory": "dist"
+  "outputDirectory": "apps/web/dist",
+  "github": {
+    "enabled": false
+  },
+  "routes": [
+    { "handle": "filesystem" },
+    { "src": "/.*", "dest": "/index.html" }
+  ]
 }
