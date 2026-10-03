@@ -1,0 +1,7 @@
+{
+  "name": "@balanced/data",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": "./src/index.ts",
+  "dependencies": { "@balanced/domain": "*", "@supabase/supabase-js": "^2.76.0", "zod": "^4.1.0" }
+}

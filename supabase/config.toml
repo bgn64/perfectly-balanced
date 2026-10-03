@@ -1,31 +1,35 @@
-project_id = "web-app"
+project_id = "perfectly-balanced"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 17
+
+[studio]
+enabled = true
+port = 54323
+api_url = "http://127.0.0.1"
+
+[local_smtp]
+enabled = true
+port = 54324
 
 [auth]
-site_url = "http://localhost:5173"
+enabled = true
+site_url = "http://127.0.0.1:5173"
 additional_redirect_urls = ["http://127.0.0.1:5173"]
-enable_signup = false
+enable_signup = true
 
 [auth.email]
 enable_signup = true
 enable_confirmations = false
 
-[functions.plaid-create-link-token]
-verify_jwt = true
-
-[functions.plaid-import-transactions]
-verify_jwt = true
-
-[functions.plaid-transactions-webhook]
-verify_jwt = false
-
-[functions.plaid-disconnect-item]
-verify_jwt = true
-
-[functions.plaid-delete-disconnected-history]
-verify_jwt = true
-
-[functions.plaid-complete-item-update]
-verify_jwt = true
-
-[functions.plaid-retry-item-sync]
-verify_jwt = true
+[analytics]
+enabled = false

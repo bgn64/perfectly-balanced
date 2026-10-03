@@ -1,45 +1,29 @@
-# Working on perfectly-balanced
+# Working on Perfectly Balanced
 
-perfectly-balanced is an invite-only, keyboard-first personal finance app built
-with Vite, React, TypeScript, Supabase, and Plaid. The UI uses a Tokyo Night
-terminal visual system and is designed mockup-first.
-
-## Always
-
-- Use Node.js 22 and npm. Keep changes compatible with `package.json` and
-  `package-lock.json`.
-- Before delivery, run `npm test`, `npm run lint`, `npm run build`, and
-  `git diff --check`.
-- Work on a focused branch named `bgn64/<topic>` from the latest `origin/main`.
-- Ask before committing or pushing unless the user explicitly requested a
-  commit, pull request, or full delivery. Add the trailer
-  `Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>`.
-
-## Local development
-
-- `npm run dev` starts or reuses the Docker-backed local Supabase stack,
-  generates `.env.development.local`, and serves the app at
-  `http://localhost:5173`.
-- The seeded local account is `dev@example.test` with password
-  `local-dev-password`. It exercises real Auth, JWT, RLS, and RPC behavior.
-- Use `npm run local:reset` after migrations or seed changes and
-  `npm run local:down` when local services are no longer needed.
-- Run mockups with `npm run mockup`; to serve them beside the app, use
-  `npm run mockup -- --port 4174 --strictPort`.
-
-## User-facing UI
-
-- Load `.github/skills/mockup-contract/SKILL.md` before every visible UI change.
-  Its reconciliation, approval, and separate-commit gates are mandatory.
-- Canonical mockups live under `mockup/surfaces/<surface>/`; the catalog is
-  `mockup/index.html`. Existing top-level mockup pages are legacy references and
-  migrate only when their surface is touched.
-
-## Backend changes
-
-- Get explicit permission before writing migrations, RPCs, RLS policies, Edge
-  Functions, seed behavior, or Plaid integration changes.
-- Add a new timestamped migration; never edit a migration that may have been
-  deployed. Validate backend changes with a clean local reset.
-- Never put a Supabase service-role key, Plaid credential, access token, or
-  other secret in a `VITE_*` value.
+- Use Node.js 24 and npm workspaces. The web app is in `apps/web`; shared domain
+  and data contracts are in `packages`.
+- Preserve existing user changes. Keep work on a focused branch and ask before
+  committing, pushing, merging, or deploying.
+- Validate changes with the relevant tests, `npm run lint`, `npm run build`, and
+  `git diff --check`. Authentication/hosting changes also need
+  `npm run test:hosting`; financial workflows need local Supabase integration
+  and browser checks.
+- Local development uses Docker-backed Supabase. Do not point tests or preview
+  deployments at production financial data. Never reset an existing database
+  to make a rehearsal easier.
+- Production is private: signup is disabled server-side and in production UI.
+  Local signup is intentional for local accounts and tests.
+- Never place privileged credentials in `VITE_*`, source, logs, or deployment
+  artifacts. Financial exports and SQL backups belong in private, gitignored
+  directories, not the repository history.
+- Do not edit previously deployed migrations. The legacy-to-new schema
+  replacement is a separate, explicitly approved maintenance operation:
+  verified backups, local replacement/rollback rehearsal, stopped legacy writers,
+  provider disconnection, exact reconciliation, and preserved Auth identity are
+  mandatory prerequisites.
+- The production Actions workflow is manual and must not execute the one-time
+  replacement implicitly. Native Vercel Git deployment stays disabled. Do not
+  set `BUDGET_SCHEMA_READY=true` until production reconciliation succeeds.
+- Plaid is deliberately not part of this implementation. Imported Plaid history
+  is frozen history, not a live connection. Do not reintroduce legacy features
+  merely to achieve feature parity.
