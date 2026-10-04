@@ -1,5 +1,6 @@
 import Papa from "papaparse";
 import { z } from "zod";
+export * from "./plaid.ts";
 
 export const MAX_CENTS = 100_000_000_000;
 export const centsSchema = z.number().int().min(-MAX_CENTS).max(MAX_CENTS);
@@ -49,6 +50,9 @@ export const transactionSchema = z.object({
   amount_cents: centsSchema, original_date: dateSchema,
   effective_date: dateSchema, date_override: dateSchema.nullable(),
   excluded: z.boolean(), source: z.string(), allocations: z.array(allocationSchema),
+  provider_removed: z.boolean().default(false),
+  revision: z.number().int().default(0),
+  bank_accounts: z.array(z.object({ institution:z.string(),name:z.string(),mask:z.string().nullable() })).default([]),
 });
 export const monthSchema = z.object({
   sections: z.array(sectionSchema), categories: z.array(categorySchema),
@@ -125,7 +129,7 @@ export function reports(data: MonthData, kind: "income" | "spending", planned: b
     for (const c of data.budget_categories) add(c.category_id, c.planned_cents);
   } else {
     for (const t of data.transactions) {
-      if (t.excluded) continue;
+      if (t.excluded || t.provider_removed) continue;
       validateSplit(t.amount_cents, t.allocations);
       for (const a of t.allocations) {
         const c = a.category_id ? categoryMap.get(a.category_id) : undefined;
@@ -141,7 +145,7 @@ export function reports(data: MonthData, kind: "income" | "spending", planned: b
   return ordered;
 }
 export function categoryActual(data: MonthData, id: string): number {
-  return sum(data.transactions.filter(t => !t.excluded).flatMap(t =>
+  return sum(data.transactions.filter(t => !t.excluded && !t.provider_removed).flatMap(t =>
     t.allocations.filter(a => a.category_id === id).map(a => a.amount_cents)));
 }
 export function canPie(buckets: Bucket[]): boolean {
@@ -155,7 +159,7 @@ export function recommend(target: Pick<Transaction, "merchant" | "description">,
   for (const field of ["merchant", "description"] as const) {
     const key = normalize(target[field]);
     if (!key) continue;
-    const matches = history.filter(t => !t.excluded && normalize(t[field]) === key);
+    const matches = history.filter(t => !t.excluded && !t.provider_removed && normalize(t[field]) === key);
     const scores = new Map<string, { count: number; recent: string }>();
     for (const t of matches) {
       const ids = new Set(t.allocations.map(a => a.category_id));

@@ -24,7 +24,7 @@ port = 54324
 [auth]
 enabled = true
 site_url = "http://127.0.0.1:5173"
-additional_redirect_urls = ["http://127.0.0.1:5173"]
+additional_redirect_urls = ["http://127.0.0.1:5173", "https://127.0.0.1:5174"]
 enable_signup = true
 
 [auth.email]
@@ -33,3 +33,12 @@ enable_confirmations = false
 
 [analytics]
 enabled = false
+
+[functions.plaid-api]
+verify_jwt = false
+
+[functions.plaid-webhook]
+verify_jwt = false
+
+[functions.plaid-worker]
+verify_jwt = false

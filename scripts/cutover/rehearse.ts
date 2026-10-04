@@ -2,6 +2,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { assertImported, importSql, transformLegacy, verificationSql } from "./legacy.ts";
+import { isCutoverMigration } from "./replacement.ts";
 
 const snapshotPath = process.argv[2];
 if (!snapshotPath || process.argv.length !== 3) {
@@ -34,7 +35,7 @@ $$;
 grant usage on schema auth to anon,authenticated;
 grant execute on function auth.uid() to anon,authenticated;
 insert into auth.users(id) values ('${plan.user_id}');`);
-  const migrations = readdirSync(resolve("supabase/migrations")).filter(f => /^\d{14}_[a-z_]+\.sql$/.test(f)).sort();
+  const migrations = readdirSync(resolve("supabase/migrations")).filter(isCutoverMigration).sort();
   if (!migrations.length) throw new Error("New schema migrations are missing.");
   for (const migration of migrations) sql(readFileSync(resolve("supabase/migrations", migration), "utf8"));
   sql(importSql(plan));

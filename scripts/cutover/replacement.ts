@@ -44,10 +44,13 @@ const privateFunctions = [
   "require_user()", "month_date(text)", "ensure_month(uuid,date)", "put_transaction(uuid,jsonb,text,text)",
 ];
 export type MigrationFile = { filename: string; sql: string };
+export function isCutoverMigration(filename: string): boolean {
+  return /^\d{14}_[a-z_]+\.sql$/.test(filename) && filename.slice(0,14)<="20261002000500";
+}
 
 export function replacementSql(plan: MigrationPlan, legacyVersions: string[], migrations: MigrationFile[]): string {
   if (!legacyVersions.length || !legacyVersions.every(v => /^\d{14}$/.test(v))) throw new Error("Invalid legacy migration ledger.");
-  if (!migrations.length || !migrations.every(m => /^\d{14}_[a-z_]+\.sql$/.test(m.filename))) throw new Error("Invalid replacement migration files.");
+  if (!migrations.length || !migrations.every(m => isCutoverMigration(m.filename))) throw new Error("Invalid replacement migration files; cutover must use its frozen schema, not live ingestion migrations.");
   const allowedNames = [...new Set(legacyFunctions.map(f => f.split("(")[0])), "rls_auto_enable"];
   const ledger = legacyVersions.map(literal).sort().join(",");
   return [

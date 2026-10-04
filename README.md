@@ -1,8 +1,9 @@
 # Perfectly Balanced
 
 A budgeting web app with monthly budgets, efficient transaction categorization,
-and drill-down income/spending reports. USD only. Live Plaid is intentionally
-deferred; no bank credentials are required.
+and drill-down income/spending reports. USD only. Optional Plaid connections
+automatically ingest transactions through a trusted backend; manual and CSV
+workflows do not require bank credentials.
 
 ## Requirements
 
@@ -147,11 +148,13 @@ owner to protect copies and imports. Errors are shown with user input retained
 for retry, and relevant cached reads are invalidated after successful writes.
 
 The source ingestion contract is separate from user-owned category assignments,
-exclusions, and date overrides. A future Plaid adapter should normalize provider
-records to this contract, storing secrets/tokens and executing calls/webhooks on
-a trusted backend. Provider updates must preserve user edits. Pending-to-posted
-reconciliation, removed transactions, and sync cursors remain explicit future
-work; this version does not pretend to synchronize bank data.
+exclusions, and date overrides. Plaid Edge Functions normalize provider records
+and execute calls/webhooks on the trusted backend. Tokens are encrypted in Vault;
+provider state, cursors, staged pages, durable jobs and review decisions are not
+browser-writable. Pending activity and ambiguous duplicates are kept outside
+financial totals. Financial conflicts keep the last accepted version until
+review. Accepted bank removals are retained separately from user exclusions and
+can be undone from transaction details.
 
 Local development uses real Supabase, not browser-only/mock persistence. It is
 not offline-first. Shared households, multi-currency,
@@ -192,6 +195,10 @@ https://perfectly-balanced.vercel.app/. No second hosted backend is required.
 - Do not point preview builds or local test suites at production financial data.
 
 ## Legacy data cutover tooling
+
+Cutover rehearsals/replacement remain pinned to the frozen initial schema
+through migration `20261002000500`; later live-ingestion migrations are separate
+additive upgrades. Do not rerun replacement against an already cut-over app.
 
 `npm run cutover` provides administrator-only export, preparation, and local
 verification. It **never applies production SQL**. It uses saved Supabase CLI
@@ -269,10 +276,172 @@ token references. The allowlisted operations do not drop Auth, Vault, managed
 event triggers, or the public schema. A fresh frozen backup and a separate approval
 are still required before production execution.
 
-Imported history retains source `plaid` and its stable provider IDs, but no live
-connection. CSV duplicate IDs are scoped to the CSV source and do **not**
-automatically deduplicate against migrated Plaid records. Choose a nonoverlapping
-CSV date range or explicitly review overlaps.
+Imported history retains source `plaid` and provider IDs, but no live
+connection or assumed account mapping. Fresh bank authorization is required.
+CSV duplicate IDs remain scoped to the CSV source; CSV imports do **not**
+automatically deduplicate against Plaid. Bank ingestion holds likely overlaps
+against existing history for review rather than silently merging equal-looking
+purchases.
+
+## Plaid connections
+
+**Connections** supports Transactions for selected depository and credit
+accounts. Balances, investments, liabilities, transfers and automatic category
+assignment are not included. Bank credentials are entered only in Plaid/bank
+authorization, never in the app. Production stays private and signup-disabled.
+
+Choose an inclusive import start date before connecting. New connections default
+to today's date in your local time zone. Choose an earlier date to include past
+activity or fill a gap in your existing history. Possible duplicates wait for
+review rather than silently entering your totals. Plaid
+requests up to 730 days; institution availability may be shorter. Data outside
+the start date is staged but does not create new financial transactions.
+Date boundaries use provider calendar dates.
+
+After authorization, select eligible accounts to start sync. Selecting another
+account can ingest its available staged history under the same start-date and
+review rules; deselection retains existing transactions. Pending activity is
+shown separately, outside budgets/reports. Posted transactions enter uncategorized.
+Pending-to-posted identity is reconciled across all pages. Migrated pending
+records remain accepted history unless explicitly reconciled.
+
+Exact provider identities are idempotent. Fresh authorization can change IDs;
+similar date/amount/payee matches are **candidates, not proof**. Review held
+activity as an existing transaction, a separate purchase, or do not import.
+Amount changes on assigned/split transactions and removed posted transactions
+retain accepted totals until reviewed. Changed amounts require allocations
+that sum exactly, while preserving category assignments, date overrides and
+exclusions. Metadata-only provider updates preserve user edits. Conflicting
+provider/user versions must be refreshed before resolving.
+
+Disconnect revokes Plaid access, removes the Vault token and fences running
+workers while keeping accepted financial history. Failures remain visible and
+retryable. Reconnect repairs an existing Item through Link update mode; an
+already disconnected Item needs new bank authorization.
+
+### Local Sandbox setup
+
+Use your **Sandbox** credentials only. Local configuration rejects Production
+and remote production Supabase; production configuration rejects Sandbox.
+Credentials, tokens and worker secrets must never be `VITE_*` values.
+
+```bash
+npm run plaid:setup
+# Edit supabase/.env.local: set PLAID_CLIENT_ID and PLAID_SECRET.
+# The setup command generates a private random PLAID_WORKER_SECRET.
+npm run plaid:serve
+```
+
+The file is gitignored and created with 0600 permissions; setup refuses to
+overwrite it. The default HTTP app supports non-OAuth Sandbox banks without a
+redirect URI. **Plaid requires HTTPS for OAuth redirects even in Sandbox.**
+Do not configure an HTTP redirect URI.
+
+For local OAuth testing, `npm run plaid:setup:https` generates private, short-lived
+self-signed localhost certificates (requires OpenSSL), adds the HTTPS app origin
+to the backend allowlist, and sets its redirect URI. It refuses to overwrite
+existing certificates. Register `https://127.0.0.1:5174/connections` in the
+Sandbox Plaid Dashboard, trust the certificate locally, restart the functions,
+and use `npm run dev:https` at `https://127.0.0.1:5174`. Sign in on that origin
+before connecting; browser sessions are origin-specific. Local Supabase stays
+Docker-backed. Do not use a production backend or real bank credentials.
+
+In a separate terminal, schedule the local worker:
+
+```bash
+npm run plaid:schedule:local
+```
+
+The worker runs once a minute, taking one bounded page/job with a fenced lease.
+Paginated changes are staged; the accepted cursor and all financial changes
+commit atomically only after the complete update. Pagination mutation errors
+discard staged progress and restart from the original cursor. Failed jobs
+back off and stop automatic retries after eight failures, with visible status;
+manual retry resets the attempt count. New connections catch up frequently
+while history loads, then periodically check for missed webhooks.
+
+Plaid cannot send webhooks to localhost. Local scheduled/manual catch-up works
+without a public tunnel; history-completion flags remain explicitly unconfirmed
+without a webhook. An optional controlled Sandbox-only HTTPS tunnel can test
+signed webhook delivery. The worker does not call the billable
+`/transactions/refresh`; “Sync now” reads updates Plaid already has, not an
+instant bank refresh.
+
+For Sandbox tests, First Platypus Bank (`ins_109508`) supports non-OAuth testing;
+`user_transactions_dynamic` with a nonblank test password provides pending/
+posted scenarios. In Link, continue without a phone number, search for First
+Platypus Bank, then select the associated institution without "OAuth" in its
+name. The OAuth variants require the HTTPS setup above.
+Sandbox uses Plaid's real authorization interface but **does
+not accept your real bank login** or connect to real accounts. The Connections
+page shows test-bank instructions only in development; production does not show
+Sandbox instructions or one-time migration guidance. For existing test activity,
+choose an earlier import date (for example, thirty days ago); today's default
+imports new activity only. Also test an OAuth Sandbox institution. Never use real bank
+credentials in local tests. Automated tests use synthetic provider/Link data
+against real local persistence, not Production.
+
+### Production activation and operations
+
+The existing frontend workflow remains manual. **Deploy Plaid backend** is a
+separate manual Production-environment workflow requiring `main`,
+`deploy-plaid`, and `BUDGET_SCHEMA_READY=true`. It applies additive migrations,
+deploys the three functions, configures secrets and schedules sync. It never
+performs the legacy schema replacement or restores old tokens.
+
+Before explicitly approving/running it:
+
+- Verify the new-schema migration ledger, backups and local checks.
+- Configure Production environment secrets: `SUPABASE_ACCESS_TOKEN`,
+  `SUPABASE_DB_PASSWORD`, `SUPABASE_SERVICE_ROLE_KEY`, `PLAID_CLIENT_ID`,
+  `PLAID_SECRET`, and a random `PLAID_WORKER_SECRET` of at least 32 characters.
+- Confirm Plaid Production Transactions access, billing, institution/OAuth
+  registration and `https://perfectly-balanced.vercel.app/connections` redirect.
+- Use the exact hosted webhook URL:
+  `https://hqeoxulnpkksxvoyxlvq.supabase.co/functions/v1/plaid-webhook`.
+- Review origins and secrets before backend activation, then deploy the matching
+  frontend separately. Authorize banks only after checking status/errors.
+
+User endpoints validate Supabase sessions directly; the external webhook validates
+ES256, Plaid verification keys, freshness and the raw-body digest; the worker
+requires a fresh, one-use HMAC-signed dispatch from its dedicated Vault secret.
+The signing secret is never copied into HTTP headers or scheduler request queues.
+Gateway JWT checks are disabled **only because**
+these endpoints implement their respective authentication. Vault and private
+ingestion tables are not client-readable. Supabase-managed `pg_net` queue grants
+can be broad; queued payloads contain only short-lived signatures, never reusable
+credentials, and replay receipts prevent reuse. Logs contain sanitized error codes, not
+provider request bodies/access tokens.
+
+Monitor connection errors, Edge Function logs, `cron.job_run_details` and
+`net._http_response` as an administrator. Successful cron SQL is not proof of
+successful HTTP sync. Inspect last successful sync and unresolved review/invalid
+data counts too. Retried/coalesced webhook deliveries do not create duplicate
+accepted transactions. Unsupported currency, zero amounts and invalid records
+are durable visible issues rather than silently skipped.
+
+To stop background dispatch, an administrator can run
+`select cron.unschedule('plaid-sync-worker');`. This stops dispatch, not consent:
+disconnect Items in the app to revoke access and stop ingestion. Existing
+transactions must not be removed/reset as a rollback technique. Rotate the worker
+secret in Edge Function configuration and the scheduler Vault entry together.
+For local rotation, run `node scripts/plaid/rotate-local-worker.ts`, restart
+functions, then run `npm run plaid:schedule:local`.
+
+Backend validation:
+
+```bash
+npm run test:plaid
+npm run check:functions
+npm run test:functions
+npm run test:sandbox   # Opt-in real Sandbox smoke; isolated local test user/Item
+npm run test:sandbox:link # Real Link authorization and automatic local ingestion; requires web/functions/scheduler
+```
+
+The Link browser smoke uses an isolated local user and the non-OAuth Sandbox
+test bank, selects an eligible account, and verifies that scheduled sync imports
+posted transactions. It disconnects its authorized Sandbox Item and deletes
+the test user afterward. No real bank credentials or production data are used.
 
 ## Validation
 

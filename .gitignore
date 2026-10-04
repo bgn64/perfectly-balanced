@@ -10,3 +10,4 @@ playwright-report/
 .vercel/
 backups/
 .env.*.local
+supabase/.env.local

@@ -338,7 +338,7 @@ input::placeholder { color: #697862; }
   .sidebar-label, .account-avatar, .account-area > div { display: none; }
   .account-area { border: 0; padding: 0; margin: 0; display: block; grid-column: 2; grid-row: 1; }
   .sidebar nav { flex-direction: row; grid-column: 1 / -1; margin-top: 15px; gap: 0; }
-  .sidebar nav a { justify-content: center; flex: 1; padding: 10px 5px; font-size: 12px; border-radius: 7px 7px 0 0; gap: 6px; }
+  .sidebar nav a { justify-content: center; flex: 1; min-width: 0; flex-direction: column; padding: 10px 3px; font-size: 11px; border-radius: 7px 7px 0 0; gap: 4px; }
   .sidebar nav a svg { width: 15px; }
   .workspace { padding: 21px 16px 35px; }
   .workspace-header { margin-bottom: 17px; }
@@ -430,4 +430,57 @@ input::placeholder { color: #697862; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+.connections-view { display: grid; gap: 22px; max-width: 960px; }
+.bank-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px; }
+.connections-view section[aria-label="Bank connections"] { display: grid; gap: 12px; }
+.bank-card h2, .bank-card h3 { margin-top: 0; }
+.bank-card-header, .bank-institution, .bank-introduction { display: flex; align-items: center; gap: 12px; }
+.bank-card-header { justify-content: space-between; margin-bottom: 15px; flex-wrap: wrap; }
+.bank-card-header h3 { margin: 0; font-size: 15px; overflow-wrap: anywhere; }
+.bank-connect { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 290px); gap: 18px 30px; }
+.bank-connect > p, .bank-connect > .feedback { grid-column: 1 / -1; margin: 0; }
+.bank-introduction { align-items: flex-start; }
+.bank-introduction p:last-child { margin-bottom: 0; }
+.bank-symbol { display: grid; place-items: center; width: 42px; height: 42px; flex-shrink: 0; border-radius: 9px; background: var(--accent-soft); color: var(--accent); }
+.bank-security { font-size: 11px; color: var(--muted); }
+.bank-connect-form { display: grid; gap: 9px; }
+.bank-connect-form p { font-size: 11px; margin: 0; }
+.bank-connect-form button { margin-top: 3px; }
+.bank-status { border-radius: 20px; background: var(--accent-soft); color: var(--accent); padding: 4px 9px; font-size: 11px; font-weight: 600; }
+.bank-status-error, .bank-status-needs_reconnect { color: #954726; background: #fff0df; }
+.bank-status-disconnected, .bank-status-disconnecting { color: var(--muted); background: #f1f3ef; }
+.bank-metadata { display: flex; flex-wrap: wrap; gap: 5px 24px; font-size: 11px; color: var(--muted); margin-bottom: 14px; }
+.bank-metadata strong { font-weight: 500; color: var(--ink); }
+.bank-accounts { list-style: none; padding: 0; margin: 0 0 16px; }
+.bank-accounts li { display: flex; justify-content: space-between; gap: 16px; border-top: 1px solid var(--border); padding: 10px 0; font-size: 12px; }
+.bank-accounts small { color: var(--muted); font-size: 10px; }
+.bank-attention, .bank-sandbox { padding: 13px 16px; border: 1px solid #ead9bf; background: #fff9ef; border-radius: 8px; margin-bottom: 14px; }
+.bank-attention p, .bank-sandbox p { margin: 6px 0 0; }
+.bank-sandbox { margin: 0; }
+.bank-sandbox strong { font-size: 12px; }
+.bank-sandbox code { overflow-wrap: anywhere; }
+.bank-details { font-size: 11px; color: var(--muted); margin: 8px 0; }
+.bank-details summary { cursor: pointer; }
+.bank-details p { font-size: 11px; overflow-wrap: anywhere; margin: 6px 0; }
+.bank-empty { color: var(--muted); padding: 16px 0 0; margin: 0; border-top: 1px solid var(--border); }
+.bank-pending-title { display: flex; align-items: center; gap: 8px; }
+.bank-card label { display: grid; gap: .5rem; margin: 1rem 0; }
+.bank-card .bank-connect-form label { margin: 0; }
+.bank-actions { display: flex; gap: .75rem; flex-wrap: wrap; }
+.bank-account { display: flex; align-items: center; gap: .75rem; margin: 1rem 0; }
+.bank-account small { display: block; }
+.bank-account input[type=checkbox] { width: auto; flex-shrink: 0; }
+.bank-review { display: flex; gap: 14px; justify-content: space-between; align-items: center; padding: 14px 0; border-top: 1px solid var(--border); font-size: 12px; }
+.bank-review > div { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.bank-review strong { font-weight: 550; }
+.bank-review button { flex-shrink: 0; }
+.bank-comparison { border: 1px solid var(--border, #ddd); padding: 1rem; margin-top: 1rem; }
+.bank-comparison label { display: grid; gap: .5rem; margin: .75rem 0; }
+@media (max-width: 700px) {
+  .bank-connect { grid-template-columns: minmax(0, 1fr); }
+  .bank-card { padding: 17px; }
+  .bank-review { flex-wrap: wrap; gap: 8px; }
+  .bank-review > div { flex-basis: 60%; }
+  .bank-actions { gap: 8px; }
 }
