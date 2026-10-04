@@ -24,6 +24,12 @@
 - The production Actions workflow is manual and must not execute the one-time
   replacement implicitly. Native Vercel Git deployment stays disabled. Do not
   set `BUDGET_SCHEMA_READY=true` until production reconciliation succeeds.
-- Plaid is deliberately not part of this implementation. Imported Plaid history
-  is frozen history, not a live connection. Do not reintroduce legacy features
-  merely to achieve feature parity.
+- Plaid credentials and access tokens remain backend-only; access tokens use
+  Supabase Vault. Local development uses Sandbox only, against local Supabase.
+  Imported history has no assumed live account mapping. Preserve UUIDs, splits,
+  exclusions and date overrides; ambiguous overlaps and financial conflicts
+  need explicit review. Pending records stay outside financial totals.
+- Plaid backend changes also require `npm run check:functions`,
+  `npm run test:functions`, local database tests and browser checks. Production
+  backend deployment/activation needs separate explicit approval; never restore
+  disconnected legacy Items or restart legacy writers.

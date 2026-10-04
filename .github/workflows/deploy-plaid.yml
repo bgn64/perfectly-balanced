@@ -1,0 +1,66 @@
+name: Deploy Plaid backend
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Enter deploy-plaid after reviewing migrations, secrets, OAuth and webhook configuration"
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: plaid-backend-deployment
+  cancel-in-progress: false
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main' && inputs.confirmation == 'deploy-plaid'
+    runs-on: ubuntu-latest
+    environment: Production
+    env:
+      BUDGET_SCHEMA_READY: ${{ vars.BUDGET_SCHEMA_READY }}
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      SUPABASE_URL: https://hqeoxulnpkksxvoyxlvq.supabase.co
+      PLAID_ENVIRONMENT: production
+      PLAID_CLIENT_ID: ${{ secrets.PLAID_CLIENT_ID }}
+      PLAID_SECRET: ${{ secrets.PLAID_SECRET }}
+      PLAID_WORKER_SECRET: ${{ secrets.PLAID_WORKER_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Require completed cutover and secrets
+        run: |
+          node --input-type=module -e '
+          if (process.env.BUDGET_SCHEMA_READY !== "true") throw new Error("Database cutover is not verified.");
+          for (const name of ["SUPABASE_ACCESS_TOKEN","SUPABASE_DB_PASSWORD","SUPABASE_SERVICE_ROLE_KEY","PLAID_CLIENT_ID","PLAID_SECRET","PLAID_WORKER_SECRET"]) {
+            if (!process.env[name]) throw new Error("Missing production secret: " + name);
+          }'
+      - run: npm ci
+      - run: npm run test:unit
+      - run: npm run check:functions
+      - run: npm run test:functions
+      - run: npm run lint
+      - run: npm run build
+      - name: Apply additive migrations to the cut-over project
+        run: |
+          npx supabase link --project-ref hqeoxulnpkksxvoyxlvq
+          npx supabase db push --linked --yes
+      - name: Configure trusted backend secrets
+        run: |
+          npx supabase secrets set --project-ref hqeoxulnpkksxvoyxlvq \
+            APP_DEPLOYMENT_ENV=production PLAID_ENVIRONMENT=production \
+            APP_ALLOWED_ORIGINS=https://perfectly-balanced.vercel.app \
+            PLAID_REDIRECT_URI=https://perfectly-balanced.vercel.app/connections \
+            PLAID_WEBHOOK_URL=https://hqeoxulnpkksxvoyxlvq.supabase.co/functions/v1/plaid-webhook \
+            PLAID_CLIENT_ID="$PLAID_CLIENT_ID" PLAID_SECRET="$PLAID_SECRET" PLAID_WORKER_SECRET="$PLAID_WORKER_SECRET"
+      - name: Deploy independently authenticated functions
+        run: |
+          npx supabase functions deploy plaid-api --project-ref hqeoxulnpkksxvoyxlvq
+          npx supabase functions deploy plaid-webhook --project-ref hqeoxulnpkksxvoyxlvq
+          npx supabase functions deploy plaid-worker --project-ref hqeoxulnpkksxvoyxlvq
+      - name: Schedule durable background sync
+        run: node scripts/plaid/schedule.ts

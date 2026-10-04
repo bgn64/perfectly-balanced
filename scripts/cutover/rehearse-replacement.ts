@@ -3,7 +3,7 @@ import { readFileSync, readdirSync, writeFileSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import { assertImported, transformLegacy, verificationSql, snapshotSchema } from "./legacy.ts";
-import { replacementSql, rollbackSql } from "./replacement.ts";
+import { replacementSql, rollbackSql, isCutoverMigration } from "./replacement.ts";
 
 const directory = process.argv[2];
 if (!directory || process.argv.length !== 3) {
@@ -15,7 +15,7 @@ const snapshot = snapshotSchema.parse(JSON.parse(readFileSync(resolve(directory,
 const plan = transformLegacy(snapshot);
 const schema = readFileSync(resolve(directory, "legacy-schema.sql"), "utf8");
 const data = readFileSync(resolve(directory, "legacy-data.sql"), "utf8");
-const migrations = readdirSync(resolve("supabase/migrations")).filter(f => /^\d{14}_[a-z_]+\.sql$/.test(f)).sort()
+const migrations = readdirSync(resolve("supabase/migrations")).filter(isCutoverMigration).sort()
   .map(filename => ({ filename, sql: readFileSync(resolve("supabase/migrations", filename), "utf8") }));
 const replacement = replacementSql(plan, snapshot.migration_versions, migrations);
 const rollback = rollbackSql(plan, schema, data);

@@ -5,6 +5,7 @@ import {
   recommend, type MonthData, type Transaction, type AllocationInput, type SourceInput,
 } from "@balanced/domain";
 import type { Database } from "./database.types";
+import { bankingSchema, bankRequestSchema, type BankRequest, type AllocationInput as BankAllocation } from "@balanced/domain";
 
 export type Command =
   | { action: "section_add"; month: string; name: string }
@@ -43,6 +44,49 @@ export function makeClient(url: string, key: string) {
 }
 export class SupabaseRepository implements BudgetRepository {
   constructor(readonly client: SupabaseClient<Database>) {}
+  async banking(offset = 0) {
+    const { data, error } = await this.client.rpc("app_banking", { p_offset: offset });
+    if (error) throw new Error(error.message);
+    return bankingSchema.parse(data);
+  }
+  async restoreBankTransaction(id: string, revision: number) {
+    const { error } = await this.client.rpc("app_bank_restore", { p_id: id, p_revision: revision });
+    if (error) throw new Error(error.message);
+  }
+  async bank(request: BankRequest): Promise<unknown> {
+    bankRequestSchema.parse(request);
+    const { data, error } = await this.client.functions.invoke("plaid-api", { body: request });
+    if (error) {
+      const messages: Record<string, string> = {
+        AUTHENTICATION_REQUIRED: "Sign in to manage connections.", SESSION_EXPIRED: "Your session expired. Sign in again.",
+        DATABASE_OPERATION_FAILED: "This connection could not be updated. Refresh the page and try again.",
+        ITEM_LOGIN_REQUIRED: "Your bank needs authorization again. Use Reconnect.",
+        ACCOUNT_SELECTION_INVALID: "Select accounts currently available at this bank.",
+        ITEM_CLEANUP_REQUIRED: "Bank authorization could not be completed. Contact the app administrator before connecting again.",
+        BACKEND_CONFIGURATION_MISSING: "Bank connections are not available yet. Contact the app administrator.",
+        UNSAFE_ENVIRONMENT: "Bank connections are temporarily unavailable. Contact the app administrator.",
+        INVALID_REDIRECT_URI: "Bank authorization is temporarily unavailable. Contact the app administrator.",
+        INVALID_WEBHOOK_URL: "Bank connections are temporarily unavailable. Contact the app administrator.",
+        RATE_LIMITED: "Too many connection requests. Wait a moment before trying again.",
+        ITEM_STILL_NEEDS_REPAIR: "Your bank still needs authorization. Please reconnect and complete all sign-in steps.",
+        INSTITUTION_DOWN: "Your bank is temporarily unavailable. Please try again later.",
+        INSTITUTION_NOT_RESPONDING: "Your bank isn't responding right now. Please try again later.",
+      };
+      if ("context" in error && error.context instanceof Response) {
+        const payload: unknown = await error.context.json();
+        const parsed = z.object({ error: z.string() }).safeParse(payload);
+        if (parsed.success) throw new Error(messages[parsed.data.error] ?? `We couldn't complete this bank request. Please try again later. Reference: ${parsed.data.error}.`);
+      }
+      throw new Error("Cannot reach the bank-connection backend. Check your connection and retry.");
+    }
+    return data;
+  }
+  async resolveBank(id: string, version: number, decision: string, transaction?: string, allocations?: BankAllocation[], revision?: number) {
+    const { error } = await this.client.rpc("app_bank_resolve", {
+      p_id: id, p_version: version, p_decision: decision, p_transaction: transaction, p_allocations: allocations, p_revision: revision,
+    });
+    if (error) throw new Error(error.message);
+  }
   async month(month: string) {
     const { data, error } = await this.client.rpc("app_month", { p_month: month });
     if (error) throw new Error(error.message);

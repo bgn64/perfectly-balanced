@@ -5,6 +5,7 @@ import { z } from "zod";
 import { makeClient, SupabaseRepository } from "@balanced/data";
 import type { Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+import type { Json } from "../../packages/data/src/database.types";
 
 const config = z.object({ API_URL: z.string(), ANON_KEY: z.string(), SERVICE_ROLE_KEY: z.string() })
   .parse(JSON.parse(execFileSync("npx", ["supabase", "status", "-o", "json"], { encoding: "utf8" })));
@@ -45,6 +46,78 @@ async function checkAccessibility(page: Page) {
   const results = await new AxeBuilder({ page }).analyze();
   expect(results.violations.map(v => ({ id: v.id, targets: v.nodes.map(n => n.target) }))).toEqual([]);
 }
+
+test("bank connections, pending totals, overlap review and retained disconnection", async ({ page, user }, testInfo) => {
+  const repo = await testRepository(user);
+  const auth = await repo.client.auth.getUser();
+  if (auth.error || !auth.data.user) throw new Error("Test authentication unavailable.");
+  const uid = auth.data.user.id;
+  async function op(action: string, payload: Json) {
+    const result = await admin.rpc("plaid_admin",{ p_action:action,p_payload:payload });
+    if (result.error) throw new Error(result.error.message);
+    return result.data;
+  }
+  const intent = z.string().parse(await op("intent",{ owner_id:uid,import_start:"2026-10-04" }));
+  await op("exchange_claim",{ owner_id:uid,intent_id:intent });
+  const account={ account_id:"e2e-checking",name:"Test checking",mask:"1234",type:"depository",subtype:"checking" };
+  const id=z.string().parse(await op("create",{ owner_id:uid,intent_id:intent,item_id:`e2e-${uid}`,
+    access_token:`fixture-${uid}`,environment:"sandbox",institution_name:"Test bank",accounts:[account] }));
+  await page.route("**/functions/v1/plaid-api",async route => {
+    const headers={ "Access-Control-Allow-Origin":"http://127.0.0.1:5173","Access-Control-Allow-Headers":"authorization, apikey, x-client-info, content-type","Access-Control-Allow-Methods":"POST, OPTIONS" };
+    if (route.request().method()==="OPTIONS") return route.fulfill({ status:204,headers });
+    const body=route.request().postDataJSON();
+    if (body.action==="accounts") await op("accounts",{ owner_id:uid,id,accounts:body.accounts });
+    else if (body.action==="disconnect") {
+      await op("disconnect_start",{ owner_id:uid,id });
+      await op("disconnect_finish",{ owner_id:uid,id });
+    } else return route.fulfill({ status:503,headers,contentType:"application/json",body:JSON.stringify({ error:"BACKEND_CONFIGURATION_MISSING" }) });
+    await route.fulfill({ status:200,headers,contentType:"application/json",body:JSON.stringify({ queued:true }) });
+  });
+  await page.getByRole("link",{ name:"Connections",exact:true }).click();
+  await expect(page.getByRole("heading",{ name:"Your bank connections" })).toBeVisible();
+  await expect(page.getByLabel("Selected month")).toHaveCount(0);
+  await expect(page.getByRole("complementary", { name: "Sandbox test instructions" })).toBeVisible();
+  await expect(page.getByText("user_transactions_dynamic", { exact: true })).toBeVisible();
+  await expect(page.getByText(/Cutover finished|October 3, 2026|local catch-up/)).toHaveCount(0);
+  await expect(page.getByRole("heading",{ name:"Test bank" })).toBeVisible();
+  await page.getByRole("button",{ name:"Connect a bank" }).click();
+  await expect(page.getByRole("alert")).toContainText("Bank connections are not available yet");
+  await page.getByRole("button",{ name:"Select accounts",exact:true }).click();
+  await page.getByLabel("Test checking").check();
+  await page.getByRole("button",{ name:"Save accounts and start sync" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await repo.mutate({ action:"manual",description:"E2E overlap",merchant:"E2E overlap",amount_cents:-1234,original_date:"2026-10-04" });
+  const claimed=z.object({ lease:z.string() }).parse(await op("claim",{ id,environment:"sandbox" }));
+  const value={ transaction_id:"e2e-posted",account_id:account.account_id,pending_transaction_id:null,pending:false,
+    original_date:"2026-10-04",amount_cents:-1234,description:"E2E overlap",merchant:"E2E overlap" };
+  await op("stage",{ id,lease:claimed.lease,changes:[
+    { source_id:value.transaction_id,value,removed:false,error:null },
+    { source_id:"e2e-pending",value:{ ...value,transaction_id:"e2e-pending",pending:true,description:"E2E pending" },removed:false,error:null },
+  ],next_cursor:"e2e-cursor",has_more:false });
+  await page.reload();
+  await expect(page.getByRole("heading",{ name:"Review activity (1)" })).toBeVisible();
+  await expect(page.getByRole("heading",{ name:"Pending activity (1)" })).toBeVisible();
+  expect((await repo.month("2026-10")).transactions).toHaveLength(1);
+  await page.getByRole("button",{ name:"Review",exact:true }).click();
+  await checkAccessibility(page);
+  await page.getByRole("button",{ name:"Match existing transaction" }).click();
+  await expect(page.getByRole("heading",{ name:"Review activity (0)" })).toBeVisible();
+  expect((await repo.month("2026-10")).transactions).toHaveLength(1);
+  await page.getByRole("link",{ name:"Transactions",exact:true }).click();
+  await page.getByRole("button",{ name:"Open E2E overlap details" }).click();
+  await expect(page.getByText("Test bank - Test checking (...1234)",{ exact:true })).toBeVisible();
+  await page.getByRole("button",{ name:"Close Transaction details" }).click();
+  await page.getByRole("link",{ name:"Connections",exact:true }).click();
+  await page.setViewportSize({ width:390,height:844 });
+  await checkAccessibility(page);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
+  await page.screenshot({ path:testInfo.outputPath("connections-mobile.png"),fullPage:true });
+  await page.getByRole("button",{ name:"Disconnect",exact:true }).click();
+  await page.getByRole("alertdialog").getByRole("button",{ name:"Disconnect bank" }).click();
+  await expect(page.getByText("Disconnected",{ exact:true })).toBeVisible();
+  expect((await repo.month("2026-10")).transactions).toHaveLength(1);
+  expect((await repo.banking()).pending).toEqual([]);
+});
 
 test("categorize, split, exclude, restore, drill down, move dates and persist", async ({ page }, testInfo) => {
   await page.getByRole("button", { name: "Budget actions" }).click();

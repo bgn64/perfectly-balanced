@@ -4,7 +4,7 @@ import { canPie, categoryActual, money, parseCsv, parseMoney, recommend, reports
 const transaction = (amount: number, category: string | null): Transaction => ({
   id: `${amount}`, description: "Coffee shop", merchant: "Cafe", amount_cents: amount,
   original_date: "2026-10-01", effective_date: "2026-10-01", date_override: null,
-  excluded: false, source: "manual", allocations: [{ id: `${amount}`, category_id: category, amount_cents: amount }],
+  excluded: false, provider_removed: false, revision: 0, bank_accounts: [], source: "manual", allocations: [{ id: `${amount}`, category_id: category, amount_cents: amount }],
 });
 const data = (): MonthData => ({
   sections: [{ id: "spend", name: "Living", kind: "spending", archived: false, position: 1 }, { id: "income", name: "Income", kind: "income", archived: false, position: 0 }],

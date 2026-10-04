@@ -158,13 +158,13 @@ isOneToOne: false
                   ]
                 },"transactions": {
                   Row: {
-                    "amount_cents": number,"created_at": string,"currency": string,"date_override": string | null,"description": string,"effective_date": string | null,"excluded": boolean,"id": string,"merchant": string,"original_date": string,"owner_id": string,"source": string,"source_id": string | null
+                    "amount_cents": number,"created_at": string,"currency": string,"date_override": string | null,"description": string,"effective_date": string | null,"excluded": boolean,"id": string,"merchant": string,"original_date": string,"owner_id": string,"provider_removed": boolean,"revision": number,"source": string,"source_id": string | null
                   }
                   Insert: {
-                    "amount_cents": number,"created_at"?: string,"currency"?: string,"date_override"?: string | null,"description": string,"effective_date"?: never,"excluded"?: boolean,"id"?: string,"merchant"?: string,"original_date": string,"owner_id": string,"source": string,"source_id"?: string | null
+                    "amount_cents": number,"created_at"?: string,"currency"?: string,"date_override"?: string | null,"description": string,"effective_date"?: never,"excluded"?: boolean,"id"?: string,"merchant"?: string,"original_date": string,"owner_id": string,"provider_removed"?: boolean,"revision"?: number,"source": string,"source_id"?: string | null
                   }
                   Update: {
-                    "amount_cents"?: number,"created_at"?: string,"currency"?: string,"date_override"?: string | null,"description"?: string,"effective_date"?: never,"excluded"?: boolean,"id"?: string,"merchant"?: string,"original_date"?: string,"owner_id"?: string,"source"?: string,"source_id"?: string | null
+                    "amount_cents"?: number,"created_at"?: string,"currency"?: string,"date_override"?: string | null,"description"?: string,"effective_date"?: never,"excluded"?: boolean,"id"?: string,"merchant"?: string,"original_date"?: string,"owner_id"?: string,"provider_removed"?: boolean,"revision"?: number,"source"?: string,"source_id"?: string | null
                   }
                   Relationships: [
 
@@ -175,7 +175,25 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            "app_demo":
+            "app_bank_resolve":
+{ Args: { "p_allocations"?: Json,"p_decision": string,"p_id": string,"p_revision"?: number,"p_transaction"?: string,"p_version": number }; Returns: undefined
+                           },
+"app_bank_resolve_internal":
+{ Args: { "p_allocations"?: Json,"p_decision": string,"p_id": string,"p_transaction"?: string,"p_version": number }; Returns: undefined
+                           },
+"app_bank_restore":
+{ Args: { "p_id": string,"p_revision": number }; Returns: undefined
+                           },
+"app_banking":
+{ Args: { "p_offset"?: number }; Returns: Json
+                           },
+"app_banking_internal":
+{ Args: { "p_offset"?: number }; Returns: Json
+                           },
+"app_banking_versioned":
+{ Args: { "p_offset"?: number }; Returns: Json
+                           },
+"app_demo":
 { Args: { "p_month": string }; Returns: undefined
                            },
 "app_history":
@@ -192,6 +210,39 @@ isOneToOne: false
                            },
 "app_page":
 { Args: { "p_category"?: string,"p_excluded"?: string,"p_month": string,"p_offset"?: number,"p_search"?: string,"p_sort"?: string,"p_uncategorized"?: boolean }; Returns: Json
+                           },
+"plaid_admin":
+{ Args: { "p_action": string,"p_payload": Json }; Returns: Json
+                           },
+"plaid_admin_catchup":
+{ Args: { "p_action": string,"p_payload": Json }; Returns: Json
+                           },
+"plaid_admin_guarded":
+{ Args: { "p_action": string,"p_payload": Json }; Returns: Json
+                           },
+"plaid_admin_hardened":
+{ Args: { "p_action": string,"p_payload": Json }; Returns: Json
+                           },
+"plaid_admin_internal":
+{ Args: { "p_action": string,"p_payload": Json }; Returns: Json
+                           },
+"plaid_admin_ready":
+{ Args: { "p_action": string,"p_payload": Json }; Returns: Json
+                           },
+"plaid_admin_scoped":
+{ Args: { "p_action": string,"p_payload": Json }; Returns: Json
+                           },
+"plaid_admin_selected":
+{ Args: { "p_action": string,"p_payload": Json }; Returns: Json
+                           },
+"plaid_rate":
+{ Args: { "p_owner": string }; Returns: undefined
+                           },
+"plaid_schedule":
+{ Args: { "p_url": string,"p_worker_secret": string }; Returns: undefined
+                           },
+"plaid_worker_receipt":
+{ Args: { "p_nonce": string }; Returns: boolean
                            }
           }
           Enums: {

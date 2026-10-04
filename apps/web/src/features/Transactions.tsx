@@ -15,14 +15,14 @@ function CategorySelect({ value, onChange, label, disabled = false }: { value: s
 }
 function useSuggestion(transaction: Transaction) {
   const { repo, data, uid } = useBudget();
-  return useQuery({ queryKey: ["balanced", uid, "suggestion", transaction.id], queryFn: () => repo.suggest(transaction, data), enabled: !transaction.excluded && transaction.allocations.some(a => !a.category_id) });
+  return useQuery({ queryKey: ["balanced", uid, "suggestion", transaction.id], queryFn: () => repo.suggest(transaction, data), enabled: !transaction.excluded && !transaction.provider_removed && transaction.allocations.some(a => !a.category_id) });
 }
 function Suggestion({ transaction, allocationIndex }: { transaction: Transaction; allocationIndex: number }) {
   const { data, command } = useBudget();
   const query = useSuggestion(transaction);
   const op = useOperation();
   const allocation = transaction.allocations[allocationIndex];
-  if (!allocation || allocation.category_id || transaction.excluded) return null;
+  if (!allocation || allocation.category_id || transaction.excluded || transaction.provider_removed) return null;
   return <div className="recommendation">
     {query.data && <button className="suggestion" title={query.data.reason} disabled={op.pending} onClick={() => void op.run(() => command({
       action: "split", id: transaction.id, allocations: transaction.allocations.map((a, i) => ({ amount_cents: a.amount_cents, category_id: i === allocationIndex ? query.data!.category_id : a.category_id })),
@@ -59,7 +59,7 @@ function SplitEditor({ transaction, close }: { transaction: Transaction; close: 
   </Modal>;
 }
 function TransactionSheet({ transaction: t, close }: { transaction: Transaction; close: () => void }) {
-  const { command } = useBudget();
+  const { command, repo, refresh } = useBudget();
   const [split, setSplit] = useState(false);
   const op = useOperation();
   const suggestion = useSuggestion(t);
@@ -73,7 +73,9 @@ function TransactionSheet({ transaction: t, close }: { transaction: Transaction;
       <ActionForm key={t.effective_date} label="Change effective date" task={async f => { const date = text(f, "date"); await command({ action: "date", id: t.id, date: date === t.original_date ? null : date }); }}><label>Effective date<input name="date" type="date" defaultValue={t.effective_date} required /></label></ActionForm>
       <div className="original-date"><small>Original date: {t.original_date}</small>{t.date_override && <button className="link" disabled={op.pending} onClick={() => void op.run(() => command({ action: "date", id: t.id, date: null }))}>Reset to original</button>}</div>
     </section>
-    <section className="detail-section"><h3>Budget visibility</h3><p className="muted">{t.excluded ? "This transaction contributes nothing to budgets or reports. Restore it whenever you're ready." : "Exclude activity that isn't representative of the spending you want to see. You can restore it later."}</p><button className="secondary" disabled={op.pending} onClick={() => void op.run(() => command({ action: "exclude", id: t.id, excluded: !t.excluded }))}>{t.excluded ? "Restore to budget & reports" : "Exclude from budget & reports"}</button></section>
+    <section className="detail-section"><h3>Budget visibility</h3>{t.provider_removed && <p className="feedback">Bank removal accepted. Retained for history, outside budgets and reports independently of your exclusion choice.</p>}<p className="muted">{t.excluded ? "This transaction contributes nothing to budgets or reports. Restore it whenever you're ready." : "Exclude activity that isn't representative of the spending you want to see. You can restore it later."}</p><button className="secondary" disabled={op.pending || t.provider_removed} onClick={() => void op.run(() => command({ action: "exclude", id: t.id, excluded: !t.excluded }))}>{t.excluded ? "Restore to budget & reports" : "Exclude from budget & reports"}</button></section>
+    {t.provider_removed && <button className="secondary" disabled={op.pending} onClick={() => void op.run(async () => { await repo.restoreBankTransaction(t.id,t.revision); await refresh(); close(); }, "Bank removal undone. Your exclusion choice is unchanged.")}>Undo accepted bank removal</button>}
+    {(t.source==="plaid" || t.bank_accounts.length>0) && <section className="detail-section"><h3>Bank source</h3>{t.bank_accounts.length ? t.bank_accounts.map(a => <p key={`${a.institution}:${a.name}:${a.mask}`}>{a.institution} - {a.name}{a.mask ? ` (...${a.mask})` : ""}</p>) : <p className="muted">Imported history; no live bank account mapping has been established.</p>}</section>}
     <div className="detail-provenance"><span>Source</span><strong>{t.source}</strong><span>Currency</span><strong>USD</strong></div>{op.feedback}
     {split && <SplitEditor transaction={t} close={() => setSplit(false)} />}
   </Modal>;
@@ -83,9 +85,9 @@ function TransactionRow({ transaction: t, open }: { transaction: Transaction; op
   const op = useOperation();
   const multiple = t.allocations.length > 1;
   const unassigned = t.allocations.filter(a => !a.category_id);
-  return <tr className={`transaction-row ${t.excluded ? "is-excluded" : ""}`} data-transaction-id={t.id}>
+  return <tr className={`transaction-row ${t.excluded || t.provider_removed ? "is-excluded" : ""}`} data-transaction-id={t.id}>
     <td className="transaction-date"><time dateTime={t.effective_date}>{t.effective_date.slice(5).replace("-", "/")}</time></td>
-    <td className="transaction-description"><button className="description-button" onClick={open}>{t.description}</button><small>{t.merchant || "Manual activity"}{t.excluded && <span className="badge">Excluded</span>}</small></td>
+    <td className="transaction-description"><button className="description-button" onClick={open}>{t.description}</button><small>{t.merchant || "Manual activity"}{t.excluded && <span className="badge">Excluded</span>}{t.provider_removed && <span className="badge">Bank removed</span>}</small></td>
     <td className="transaction-category">{multiple ? <button className="split-category" onClick={open}><Scissors size={13} />{t.allocations.length} allocations{unassigned.length > 0 && <small>{money(unassigned.reduce((n, a) => n + a.amount_cents, 0))} uncategorized</small>}</button> :
       <CategorySelect label={`Category for ${t.description}`} value={t.allocations[0].category_id} disabled={op.pending} onChange={category_id => void op.run(() => command({ action: "split", id: t.id, allocations: [{ amount_cents: t.amount_cents, category_id }] }))} />}
       {t.allocations.map((a, i) => !a.category_id && <Suggestion key={a.id} transaction={t} allocationIndex={i} />)}{op.feedback}
@@ -154,7 +156,7 @@ export function Transactions() {
     const timer = window.setTimeout(() => setParams(old => { const next = new URLSearchParams(old); if (search) next.set("search", search); else next.delete("search"); next.delete("offset"); return next; }, { replace: true }), 250);
     return () => window.clearTimeout(timer);
   }, [search, searchParam, setParams]);
-  const query = useQuery({ queryKey: ["balanced", uid, "page", month, filters], queryFn: () => repo.page(month, filters), placeholderData: keepPreviousData });
+  const query = useQuery({ queryKey: ["balanced", uid, "page", month, filters], queryFn: () => repo.page(month, filters), placeholderData: keepPreviousData, refetchInterval: 30000 });
   const current = query.data?.items.find(t => t.id === selected);
   useEffect(() => { setSelected(null); }, [month, filters.search, filters.category, filters.uncategorized, filters.excluded, filters.offset, filters.sort]);
   useEffect(() => { if (selected && !query.isFetching && !current) { setSelected(null); searchInput.current?.focus(); } }, [selected, query.isFetching, current]);
