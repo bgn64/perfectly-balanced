@@ -34,7 +34,7 @@ function BankLink({ state, complete, exit }: { state: LinkState; complete: (toke
   });
   useEffect(() => { if (ready && !opened.current) { opened.current = true; open(); } }, [ready, open]);
   useEffect(() => { if (error) exit("Plaid Link could not load. Check your connection and retry."); }, [error, exit]);
-  return <p role="status">Opening secure Plaid authorization...</p>;
+  return <p role="status">Opening Plaid...</p>;
 }
 function AccountSelection({ connection, save, close }: {
   connection: Banking["connections"][number]; save: (accounts: string[]) => Promise<void>; close: () => void;
@@ -43,12 +43,12 @@ function AccountSelection({ connection, save, close }: {
   const op = useOperation();
   const dirty=JSON.stringify([...selected].sort())!==JSON.stringify(connection.accounts.filter(a => a.selected).map(a => a.account_id).sort());
   useDraft(dirty,op.pending);
-  return <Modal title="Select bank accounts" description="Import transactions from the checking, savings and credit accounts you select. Deselecting an account keeps its existing transactions." onClose={close} pending={op.pending} dirty={dirty}>
+  return <Modal title="Select bank accounts" description="Existing transactions are kept." onClose={close} pending={op.pending} dirty={dirty}>
     <form onSubmit={e => { e.preventDefault(); void op.run(async () => { await save(selected); close(); }); }}>
       <fieldset disabled={op.pending}>{connection.accounts.map(a => <label className="bank-account" key={a.account_id}>
         <input type="checkbox" checked={selected.includes(a.account_id)} disabled={!["depository", "credit"].includes(a.type)}
           onChange={e => setSelected(old => e.target.checked ? [...old, a.account_id] : old.filter(id => id !== a.account_id))} />
-        <span>{a.name}{a.mask ? ` (ending in ${a.mask})` : ""}<small>{["depository", "credit"].includes(a.type) ? a.subtype?.replaceAll("_", " ") || (a.type === "credit" ? "Credit account" : "Bank account") : "Transaction imports are not available for this account"}</small></span>
+        <span>{a.name}{a.mask ? ` (ending in ${a.mask})` : ""}<small>{["depository", "credit"].includes(a.type) ? a.subtype?.replaceAll("_", " ") || (a.type === "credit" ? "Credit account" : "Bank account") : "Import unavailable"}</small></span>
       </label>)}<button disabled={!selected.length}>{op.pending ? "Saving..." : "Save accounts and start sync"}</button></fieldset>
     </form>{op.feedback}
   </Modal>;
@@ -68,16 +68,17 @@ function Review({ review, resolve, close }: {
     const allocations = changedAmount ? existing.allocations.map((a, i) => ({ category_id: a.category_id, amount_cents: parseMoney(amounts[i]) })) : undefined;
     await resolve(decision, candidate || undefined, allocations, existing?.revision); close();
   });
-  return <Modal title="Review bank activity" onClose={close} pending={op.pending} dirty={dirty} description="Activity awaiting review does not affect your totals. Existing transactions stay unchanged until you accept an update.">
+  return <Modal title="Review bank activity" onClose={close} pending={op.pending} dirty={dirty} description="Not in totals">
     <p><strong>{reviewReason[review.reason]}</strong></p>
     {incoming && <p>{bankDate(incoming.original_date)} - {incoming.description} - {money(incoming.amount_cents)}</p>}
     {review.error && <><p role="alert">{bankIssueMessage(review.error)}</p><details className="bank-details"><summary>Technical details</summary><p>{review.error}</p></details></>}
     {review.candidates.length>0 && <label>Existing transaction<select value={candidate} disabled={review.reason !== "overlap"} onChange={e => {
       setCandidate(e.target.value); setAmounts(review.candidates.find(c => c.id === e.target.value)!.allocations.map(a => dollars(a.amount_cents)));
     }}>{review.candidates.map(c => <option value={c.id} key={c.id}>{c.original_date} - {c.description} - {money(c.amount_cents)}</option>)}</select></label>}
-    {existing && <div className="bank-comparison"><p>Current amount: {money(existing.amount_cents)}. {existing.excluded ? "Excluded from budgets by you." : ""}</p>
-      <p>{existing.date_override ? `Your custom date: ${bankDate(existing.date_override)}` : `Original date: ${bankDate(existing.original_date)}`}. Your categories and splits are kept.</p>
-      {changedAmount && <><p>Adjust your category splits to total {money(incoming.amount_cents)} before accepting the new amount. Your assigned categories stay the same.</p>
+    {existing && <div className="bank-comparison"><dl className="bank-comparison-facts"><dt>Current amount</dt><dd className="number">{money(existing.amount_cents)}</dd>
+      <dt>{existing.date_override ? "Custom date" : "Original date"}</dt><dd>{bankDate(existing.date_override ?? existing.original_date)}</dd></dl>
+      {existing.excluded && <span className="badge">Excluded</span>}<span className="badge">Categories and splits kept</span>
+      {changedAmount && <><p>Splits must total {money(incoming.amount_cents)}.</p>
         {existing.allocations.map((a, i) => <label key={i}>Split {i+1} ({a.category_id ? "assigned category" : "uncategorized"})
           <input aria-label={`New amount for split ${i+1}`} value={amounts[i]} inputMode="decimal" onChange={e => setAmounts(old => old.map((v, j) => i===j ? e.target.value : v))} /></label>)}</>}
     </div>}
@@ -124,17 +125,17 @@ export function Connections({ uid }: { uid: string }) {
     sessionStorage.setItem("balanced-plaid-link", JSON.stringify(state)); setLink(state); setMessage("");
   });
   return <div className="connections-view">
-    {import.meta.env.DEV && <aside className="bank-sandbox" aria-label="Sandbox test instructions"><strong>Local testing: Plaid Sandbox</strong>
-      <p>Use a test bank, not your real bank login. Continue without a phone number, search for <strong>First Platypus Bank</strong> and choose the option without "OAuth". Enter <code>user_transactions_dynamic</code> as the username and any nonblank test password.</p>
-      <p>Test transactions are saved to local Supabase. OAuth test banks require the optional local HTTPS setup; no real money or bank accounts are connected.</p>
+    {import.meta.env.DEV && <aside className="bank-sandbox" aria-label="Sandbox test instructions"><strong>Plaid Sandbox</strong>
+      <p>Sandbox only - use test credentials.</p>
+      <details className="bank-details"><summary>Sandbox setup</summary>
+        <p>Continue without a phone number, search for <strong>First Platypus Bank</strong> and choose the option without "OAuth". Enter <code>user_transactions_dynamic</code> as the username and any nonblank test password.</p>
+        <p>Transactions are saved to local Supabase. OAuth test banks require local HTTPS.</p>
+      </details>
     </aside>}
-    <section className="bank-card bank-connect"><div className="bank-introduction"><span className="bank-symbol"><ShieldCheck size={24} aria-hidden="true" /></span><div><h2>Connect a bank securely</h2>
-      <p className="muted">Link your bank through Plaid to automatically import transactions. You choose which accounts to include; new transactions arrive uncategorized.</p>
-      <p className="bank-security">Your bank login is handled by Plaid and your bank, never by this app.</p></div></div>
+    <section className="bank-card bank-connect"><div className="bank-introduction"><span className="bank-symbol"><ShieldCheck size={24} aria-hidden="true" /></span><div><h2>Connect a bank</h2><span className="muted">Via Plaid</span></div></div>
       <form className="bank-connect-form" onSubmit={e => { e.preventDefault(); void begin(); }}>
-        <label htmlFor="bank-import-start">Import transactions starting</label>
-        <input id="bank-import-start" type="date" value={start} max={importStartDate()} onChange={e => setStart(e.target.value)} required aria-describedby="bank-import-help" />
-        <p id="bank-import-help" className="muted">Choose an earlier date to include past activity. Possible duplicates wait for your review before affecting totals.</p>
+        <label htmlFor="bank-import-start">Import from</label>
+        <input id="bank-import-start" type="date" value={start} max={importStartDate()} onChange={e => setStart(e.target.value)} required />
         <button disabled={op.pending || !!link || !start}><Landmark size={16} aria-hidden="true" />{op.pending ? "Connecting..." : "Connect a bank"}</button>
       </form>
       {message && <p role={restored.error === message ? "alert" : "status"}>{message}</p>}{op.feedback}
@@ -145,29 +146,28 @@ export function Connections({ uid }: { uid: string }) {
           if (!link.intent) throw new Error("Connection intent missing.");
           await repo.bank({ action: "exchange", intent_id: link.intent, public_token: token });
         }
-        clearLink(); await refresh(); setMessage(link.repair ? "Bank reconnected. Transactions will update shortly." : "Bank connected. Select accounts below to start importing transactions.");
+        clearLink(); await refresh(); setMessage(link.repair ? "Bank reconnected." : "Bank connected. Select accounts to import.");
       }).then(success => { if (!success) { clearLink(); void query.refetch(); setMessage("Authorization could not be completed. Check the connection list before trying again."); } }); }} exit={error => { clearLink(); setMessage(error); }} />}
     </section>
     {query.isPending ? <p role="status">Loading connections...</p> : query.error ? <div role="alert">{query.error.message}<button onClick={() => void query.refetch()}>Retry</button></div> : query.data && <>
-      <section aria-label="Bank connections"><h2>Your connections</h2>{query.data.connections.length===0 && <div className="bank-card"><EmptyState icon={Landmark} title="No banks connected yet">Connect a bank above, then choose the accounts you want to import.</EmptyState></div>}
-        {query.data.connections.map(c => <article className="bank-card" key={c.id}><header className="bank-card-header"><div className="bank-institution"><span className="bank-symbol"><Landmark size={20} aria-hidden="true" /></span><h3>{c.institution_name}</h3></div><span className={`bank-status bank-status-${c.status}`}>{connectionStatus[c.status]}</span></header>
+      <section aria-label="Bank connections"><h2>Your connections</h2>{query.data.connections.length===0 && <div className="bank-card"><EmptyState icon={Landmark} title="No banks connected yet" /></div>}
+        {query.data.connections.map(c => <article className="bank-card" key={c.id}><header className="bank-card-header"><div className="bank-institution"><span className="bank-symbol"><Landmark size={20} aria-hidden="true" /></span><h3>{c.institution_name}</h3></div><span className={`bank-status bank-status-${c.status}`}>{c.status === "syncing" && !c.historical_complete ? "Importing history" : connectionStatus[c.status]}</span></header>
           <div className="bank-metadata"><span>Import start <strong>{bankDate(c.import_start)}</strong></span><span>Last updated <strong>{c.last_synced_at ? new Date(c.last_synced_at).toLocaleString() : "Not yet"}</strong></span></div>
-          {c.status==="syncing" && !c.historical_complete && <p className="muted">Your bank is preparing transaction history. Available activity will appear automatically.</p>}
           {c.error_code && <div className="bank-attention"><p role="alert">{c.status==="needs_reconnect" ? "Your bank needs you to sign in again. Reconnect to continue importing transactions." : c.status==="disconnecting" ? "We couldn't finish disconnecting this bank. Retry to revoke access." : "We couldn't update this bank. Try syncing again, or reconnect if the problem continues."}</p><details className="bank-details"><summary>Technical details</summary><p>{c.error_code}</p></details></div>}
           <ul className="bank-accounts">{c.accounts.map(a => <li key={a.account_id}><span>{a.name}{a.mask && <small>Ending in {a.mask}</small>}</span><span className="muted">{["disconnecting","disconnected"].includes(c.status) ? "Imports stopped" : a.selected ? "Included" : "Not included"}</span></li>)}</ul>
           {c.status !== "disconnected" && <div className="bank-actions">
             <button className="secondary" disabled={op.pending || !!link || c.status==="disconnecting"} onClick={() => setAccounts(c)}>Select accounts</button>
-            <button className="secondary" disabled={op.pending || !!link || ["select_accounts","needs_reconnect","disconnecting"].includes(c.status)} onClick={() => void op.run(async () => { await repo!.bank({ action: "sync", id: c.id }); await refresh(); }, "Checking for available transactions. Updates may take a few moments.")}><RefreshCw size={14} aria-hidden="true" />Sync now</button>
+            <button className="secondary" disabled={op.pending || !!link || ["select_accounts","needs_reconnect","disconnecting"].includes(c.status)} onClick={() => void op.run(async () => { await repo!.bank({ action: "sync", id: c.id }); await refresh(); }, "Sync requested.")}><RefreshCw size={14} aria-hidden="true" />Sync now</button>
             <button className="secondary" disabled={op.pending || !!link || c.status==="disconnecting"} onClick={() => void begin(c.id)}>Reconnect</button>
             <button className="secondary" disabled={op.pending || !!link} onClick={() => setDisconnect(c)}>{c.status==="disconnecting" ? "Retry disconnect" : "Disconnect"}</button>
           </div>}
         </article>)}
       </section>
-      <section className="bank-card"><h2>Review activity ({query.data.review_total})</h2><p className="muted">Check possible duplicates and bank changes before they affect your totals. Existing transactions stay unchanged until you decide.</p>
-        {!query.data.review_total && <p className="bank-empty">You're all caught up. No activity needs review.</p>}
+      <section className="bank-card"><header className="bank-card-header"><h2>Review activity ({query.data.review_total})</h2>{query.data.review_total > 0 && <span className="badge">Not in totals</span>}</header>
+        {!query.data.review_total && <p className="bank-empty">No activity to review.</p>}
         {query.data.reviews.map(r => <div className="bank-review" key={r.id}><div><strong>{r.record?.description ?? "Bank transaction"}</strong><small className="muted">{reviewReason[r.reason]}{r.record ? ` - ${bankDate(r.record.original_date)}` : ""}</small></div>{r.record && <span className="number">{money(r.record.amount_cents)}</span>}<button className="secondary" onClick={() => setReview(r)}>Review</button></div>)}
       </section>
-      <section className="bank-card"><h2 className="bank-pending-title"><Clock size={17} aria-hidden="true" />Pending activity ({query.data.pending_total})</h2><p className="muted">Not included in budgets or reports until posted. Final dates and amounts may change.</p>
+      <section className="bank-card"><header className="bank-card-header"><h2 className="bank-pending-title"><Clock size={17} aria-hidden="true" />Pending activity ({query.data.pending_total})</h2>{query.data.pending_total > 0 && <span className="badge">Not in totals</span>}</header>
         {!query.data.pending_total && <p className="bank-empty">No pending transactions.</p>}
         {query.data.pending.map(p => <div className="bank-review" key={`${p.connection_id}:${p.transaction_id}`}><div><strong>{p.description}</strong><small className="muted">{bankDate(p.original_date)}</small></div><span className="number">{money(p.amount_cents)}</span></div>)}
       </section>
@@ -175,7 +175,7 @@ export function Connections({ uid }: { uid: string }) {
         <button className="secondary" disabled={offset+30>=Math.max(query.data.review_total,query.data.pending_total)} onClick={() => setOffset(n => n+30)}>Next activity</button></div>}
     </>}
     {accounts && <AccountSelection connection={accounts} close={() => setAccounts(null)} save={async selected => { await repo!.bank({ action: "accounts", id: accounts.id, accounts: selected }); await refresh(); }} />}
-    {disconnect && <Confirm title="Disconnect this bank?" description="Stop importing new transactions and revoke this connection's Plaid access. Your existing transactions and categories stay unchanged. To connect again, you'll need to authorize your bank."
+    {disconnect && <Confirm title="Disconnect this bank?" description="Revoke bank access and stop imports. Existing transactions and categories are kept."
       confirmLabel="Disconnect bank" onCancel={() => setDisconnect(null)} onConfirm={async () => { await repo!.bank({ action: "disconnect", id: disconnect.id }); await refresh(); setDisconnect(null); }} />}
     {review && <Review review={review} close={() => setReview(null)} resolve={async (decision, transaction, allocations, revision) => {
       await repo!.resolveBank(review.id, review.version, decision, transaction, allocations, revision); await refresh();
