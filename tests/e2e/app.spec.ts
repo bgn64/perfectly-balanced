@@ -6,6 +6,7 @@ import { makeClient, SupabaseRepository } from "@balanced/data";
 import type { Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import type { Json } from "../../packages/data/src/database.types";
+import { categoryActual, money } from "@balanced/domain";
 
 const config = z.object({ API_URL: z.string(), ANON_KEY: z.string(), SERVICE_ROLE_KEY: z.string() })
   .parse(JSON.parse(execFileSync("npx", ["supabase", "status", "-o", "json"], { encoding: "utf8" })));
@@ -77,7 +78,16 @@ test("bank connections, pending totals, overlap review and retained disconnectio
   await expect(page.getByRole("heading",{ name:"Your bank connections" })).toBeVisible();
   await expect(page.getByLabel("Selected month")).toHaveCount(0);
   await expect(page.getByRole("complementary", { name: "Sandbox test instructions" })).toBeVisible();
+  await expect(page.getByText("Sandbox only - use test credentials.", { exact: true })).toBeVisible();
+  await expect(page.getByText("user_transactions_dynamic", { exact: true })).not.toBeVisible();
+  const sandboxSetup = page.locator(".bank-sandbox summary");
+  await sandboxSetup.focus();
+  await sandboxSetup.press("Enter");
   await expect(page.getByText("user_transactions_dynamic", { exact: true })).toBeVisible();
+  await sandboxSetup.press("Enter");
+  await expect(page.getByText("user_transactions_dynamic", { exact: true })).not.toBeVisible();
+  await expect(page.locator(".bank-introduction p, .bank-connect-form p")).toHaveCount(0);
+  await expect(page.getByLabel("Import from", { exact: true })).toBeVisible();
   await expect(page.getByText(/Cutover finished|October 3, 2026|local catch-up/)).toHaveCount(0);
   await expect(page.getByRole("heading",{ name:"Test bank" })).toBeVisible();
   await page.getByRole("button",{ name:"Connect a bank" }).click();
@@ -97,8 +107,14 @@ test("bank connections, pending totals, overlap review and retained disconnectio
   await page.reload();
   await expect(page.getByRole("heading",{ name:"Review activity (1)" })).toBeVisible();
   await expect(page.getByRole("heading",{ name:"Pending activity (1)" })).toBeVisible();
+  await expect(page.getByText("Not in totals", { exact: true })).toHaveCount(2);
   expect((await repo.month("2026-10")).transactions).toHaveLength(1);
   await page.getByRole("button",{ name:"Review",exact:true }).click();
+  const review = page.getByRole("dialog", { name: "Review bank activity" });
+  await expect(review.locator(".bank-comparison-facts")).toContainText("Current amount");
+  await expect(review.locator(".bank-comparison-facts")).toContainText("-$12.34");
+  await expect(review.locator(".bank-comparison-facts")).toContainText("Original date");
+  await expect(review.getByText("Categories and splits kept", { exact: true })).toBeVisible();
   await checkAccessibility(page);
   await page.getByRole("button",{ name:"Match existing transaction" }).click();
   await expect(page.getByRole("heading",{ name:"Review activity (0)" })).toBeVisible();
@@ -155,10 +171,21 @@ test("categorize, split, exclude, restore, drill down, move dates and persist", 
   await page.keyboard.press("Enter");
   await spending.getByRole("button", { name: /Groceries.*145.59/ }).focus();
   await page.keyboard.press("Enter");
-  await expect(spending.getByRole("heading", { name: "Groceries transactions" })).toBeVisible();
-  await expect(spending.getByRole("link", { name: "Demo: More groceries" })).toBeVisible();
-  await expect(spending.locator("tfoot")).toContainText("$145.59");
-  await page.getByLabel("Include uncategorized transactions in actual totals").uncheck();
+  const activity = page.getByRole("dialog", { name: "Groceries transactions" });
+  await expect(activity).toBeVisible();
+  await expect(activity.getByRole("button", { name: "Open Demo: More groceries details" })).toBeVisible();
+  await expect(activity.locator(".activity-summary")).toContainText("$145.59");
+  await expect(activity.locator(".activity-summary p")).toHaveCount(0);
+  await expect(activity.getByText("Includes excluded", { exact: true })).toHaveCount(0);
+  const splitActivity = activity.locator(".activity-open").filter({ hasText: "Demo: More groceries" });
+  await expect(splitActivity).toContainText("Transaction total -$65.75");
+  await expect(splitActivity).toContainText("2 splits");
+  await expect(splitActivity.locator(".activity-value")).toContainText("$75.75");
+  const singleActivity = activity.locator(".activity-open").filter({ hasText: "Demo: Weekly groceries" });
+  await expect(singleActivity).not.toContainText("Transaction total");
+  await expect(singleActivity.locator(".activity-value")).toContainText("Category amount");
+  await activity.getByRole("button", { name: "Close Groceries transactions" }).click();
+  await page.getByLabel("Include uncategorized in actual totals").uncheck();
   await expect(income.getByRole("heading", { level: 2 })).toHaveText("$4,200.00");
   await page.getByRole("link", { name: "Transactions", exact: true }).click();
   await page.getByLabel("Search", { exact: true }).fill("More groceries");
@@ -206,6 +233,10 @@ test("manual budgets, CSV validation/import, copy and mobile navigation", async 
   await page.getByRole("dialog").getByRole("button", { name: "Add transaction", exact: true }).click();
   await expect(page.getByRole("button", { name: "Manual coffee", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Import CSV" }).click();
+  const importDialog = page.getByRole("dialog", { name: "Import transactions" });
+  await expect(importDialog.locator(".import-instructions p")).toHaveCount(0);
+  await expect(importDialog.getByRole("link", { name: "Download CSV template" })).toBeVisible();
+  await expect(importDialog.locator(".import-instructions")).toContainText("1,000 rows");
   await page.getByLabel("Choose CSV").setInputFiles({
     name: "invalid.csv", mimeType: "text/csv",
     buffer: Buffer.from("date,description,amount\n2026-02-30,Invalid,-1.00"),
@@ -226,7 +257,7 @@ test("manual budgets, CSV validation/import, copy and mobile navigation", async 
   await page.getByRole("combobox", { name: "Category", exact: true }).selectOption("");
   await expect(row).toBeVisible();
   await page.getByRole("link", { name: "Budget", exact: true }).click();
-  const food = page.getByRole("row").filter({ has: page.getByRole("link", { name: "Food", exact: true }) });
+  const food = page.getByRole("row").filter({ has: page.getByRole("button", { name: "Food", exact: true }) });
   await expect(food).toContainText("$94.75");
   await page.getByLabel("Selected month").fill("2026-11");
   await page.getByRole("button", { name: "Budget actions" }).click();
@@ -234,7 +265,7 @@ test("manual budgets, CSV validation/import, copy and mobile navigation", async 
   await page.getByLabel("Copy from month").fill("2026-10");
   await page.getByRole("button", { name: "Copy budget", exact: true }).click();
   await expect(page.getByRole("button", { name: "Edit planned Food" })).toHaveText("$100.00");
-  await expect(page.getByRole("row").filter({ has: page.getByRole("link", { name: "Food", exact: true }) })).toContainText("$100.00");
+  await expect(page.getByRole("row").filter({ has: page.getByRole("button", { name: "Food", exact: true }) })).toContainText("$100.00");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.screenshot({ path: testInfo.outputPath("budget-mobile.png"), fullPage: true });
 });
@@ -341,7 +372,7 @@ test("menu management and accessible draft dialogs", async ({ page, user }) => {
   await page.getByRole("alertdialog").getByRole("button", { name: "Cancel" }).click();
   await expect(name).toHaveValue("Food shopping");
   await rename.getByRole("button", { name: "Save name" }).click();
-  await expect(page.getByRole("link", { name: "Food shopping", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Food shopping", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Manage category Food shopping" }).click();
   await page.getByRole("menuitem", { name: "Remove from month" }).click();
   await page.getByRole("alertdialog").getByRole("button", { name: "Remove category" }).click();
@@ -358,10 +389,10 @@ test("menu management and accessible draft dialogs", async ({ page, user }) => {
   await expect(page.getByLabel("Permanent Income section")).toBeVisible();
   await expect(page.getByRole("button", { name: "Manage section Income" })).toHaveCount(0);
   const essentials = page.locator(".budget-section").filter({ has: page.getByRole("heading", { name: "Essentials", exact: true }) });
-  const initialOrder = await essentials.getByRole("link").allTextContents();
+  const initialOrder = await essentials.locator(".category-inspect").allTextContents();
   await page.getByRole("button", { name: "Manage category Food shopping" }).click();
   await page.getByRole("menuitem", { name: initialOrder[0] === "Food shopping" ? "Move down" : "Move up", exact: true }).click();
-  await expect(essentials.getByRole("link")).toHaveText([...initialOrder].reverse());
+  await expect(essentials.locator(".category-inspect")).toHaveText([...initialOrder].reverse());
   await page.getByRole("button", { name: "Manage category Food shopping" }).click();
   await page.getByRole("menuitem", { name: "Archive category", exact: true }).click();
   await page.getByRole("alertdialog").getByRole("button", { name: "Archive category", exact: true }).click();
@@ -411,7 +442,7 @@ test("desktop density and responsive financial visibility", async ({ page, user 
     await page.getByRole("link", { name: "Budget", exact: true }).click();
     await expect(page.getByRole("button", { name: "Edit planned Groceries" })).toBeVisible();
     const visibleBalances = await page.locator(".budget-row").evaluateAll(rows => rows.every(row => {
-      const name = row.querySelector("a")?.getBoundingClientRect(), balance = row.querySelector(".budget-remaining")?.getBoundingClientRect();
+      const name = row.querySelector(".category-inspect")?.getBoundingClientRect(), balance = row.querySelector(".budget-remaining")?.getBoundingClientRect();
       return !!name && !!balance && name.left >= 0 && name.right <= window.innerWidth && balance.left >= 0 && balance.right <= window.innerWidth;
     }));
     expect(visibleBalances).toBe(true);
@@ -459,9 +490,24 @@ test("signed report fallbacks, overspending and mobile transaction sheets", asyn
   await expect(page.getByRole("region", { name: "Actual income", exact: true })).toContainText("No activity to report");
   await checkAccessibility(page);
   await page.screenshot({ path: testInfo.outputPath("signed-reports-mobile.png"), fullPage: true });
-  await spending.getByRole("button", { name: /Refunds.*-.*50.00/ }).click();
+  const refunds = spending.getByRole("button", { name: /Refunds.*-.*50.00/ });
+  await refunds.scrollIntoViewIfNeeded();
+  const beforeSigned = await spending.boundingBox();
+  const beforePlan = (await page.locator(".report-group").last().boundingBox())!.y + await page.evaluate(() => window.scrollY);
+  const beforeScroll = await page.evaluate(() => window.scrollY);
+  await refunds.click();
+  expect((await spending.boundingBox())?.height).toBe(beforeSigned?.height);
+  expect((await page.locator(".report-group").last().boundingBox())!.y + await page.evaluate(() => window.scrollY)).toBe(beforePlan);
+  expect(await page.evaluate(() => window.scrollY)).toBe(beforeScroll);
   await spending.getByRole("button", { name: /Store credit.*-.*50.00/ }).click();
-  await expect(spending.locator("tfoot")).toContainText("-$50.00");
+  const activity = page.getByRole("dialog", { name: "Store credit transactions" });
+  await expect(activity.locator(".activity-summary")).toContainText("-$50.00");
+  await activity.getByRole("button", { name: "Open Returned purchase details" }).click();
+  await page.getByRole("dialog", { name: "Transaction details", exact: true }).getByLabel("Category for Returned purchase split 1").selectOption("");
+  await expect(page.getByRole("dialog", { name: "Transaction details", exact: true })).toHaveCount(0);
+  await expect(activity).toBeVisible();
+  await expect(activity.getByText("No transactions in this view", { exact: true })).toBeVisible();
+  await activity.getByRole("button", { name: "Close Store credit transactions" }).click();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await repo.mutate({ action: "category_add", month: "2026-10", section_id: sections.find(s => s.kind === "income")!.id, name: "Net zero income", planned_cents: 0 });
   await repo.mutate({ action: "manual", original_date: "2026-10-12", description: "Income adjustment in", merchant: "", amount_cents: 5000 });
@@ -469,8 +515,249 @@ test("signed report fallbacks, overspending and mobile transaction sheets", asyn
   state = await repo.month("2026-10");
   for (const transaction of state.transactions.filter(t => t.description.startsWith("Income adjustment"))) await repo.mutate({ action: "split", id: transaction.id, allocations: [{ category_id: state.categories.find(c => c.name === "Net zero income")!.id, amount_cents: transaction.amount_cents }] });
   await page.reload();
+  await page.getByLabel("Include uncategorized in actual totals").uncheck();
   const income = page.getByRole("region", { name: "Actual income", exact: true });
   await expect(income.getByRole("heading", { level: 2 })).toHaveText("$0.00");
   await expect(income.locator(".chart")).toHaveCount(0);
   await expect(income.locator(".chart-explanation")).toContainText("Zero total");
+  const zeroHeight = (await income.boundingBox())?.height;
+  await income.getByRole("button", { name: /Income.*0.00/ }).click();
+  expect((await income.boundingBox())?.height).toBe(zeroHeight);
+  await income.getByRole("button", { name: /Net zero income/ }).click();
+  const zeroActivity = page.getByRole("dialog", { name: "Net zero income transactions" });
+  await expect(zeroActivity.locator(".activity-summary")).toContainText("$0.00");
+  await expect(zeroActivity.locator(".activity-list > li")).toHaveCount(2);
+  await zeroActivity.getByRole("button", { name: "Close Net zero income transactions" }).click();
+});
+
+test("category inspection preserves context, exact details, drafts and focus after edits", async ({ page, user }, testInfo) => {
+  await loadDemo(page);
+  const repo = await testRepository(user);
+  const initial = await repo.month("2026-10");
+  await repo.mutate({ action: "split", id: initial.transactions.find(t => t.description === "Demo: More groceries")!.id, allocations: [{ category_id: initial.categories.find(c => c.name === "Groceries")!.id, amount_cents: -6575 }] });
+  await page.reload();
+  const launcher = page.getByRole("button", { name: "Groceries", exact: true });
+  await launcher.focus();
+  const url = page.url();
+  const scroll = await page.evaluate(() => window.scrollY);
+  await launcher.press("Enter");
+  const activity = page.getByRole("dialog", { name: "Groceries transactions" });
+  await expect(activity).toBeVisible();
+  await expect(activity.locator(".activity-summary p")).toHaveCount(0);
+  await expect(activity.getByText("Includes excluded", { exact: true })).toBeVisible();
+  await expect(page).toHaveURL(url);
+  await checkAccessibility(page);
+  await activity.getByRole("button", { name: "Open Demo: More groceries details" }).click();
+  const details = page.getByRole("dialog", { name: "Transaction details", exact: true });
+  await details.getByRole("button", { name: "Edit splits" }).click();
+  const split = page.getByRole("dialog", { name: "Split transaction", exact: true });
+  await split.getByLabel("Amount for split 1").fill("-1.00");
+  await split.press("Escape");
+  await expect(page.getByRole("alertdialog")).toBeVisible();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Cancel" }).click();
+  await expect(split).toBeVisible();
+  await split.getByRole("button", { name: "Close Split transaction" }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Discard changes" }).click();
+  await details.getByRole("button", { name: "Exclude from budget & reports" }).click();
+  await expect(details.getByText("Excluded from budget & reports", { exact: true })).toBeVisible();
+  await details.getByRole("button", { name: "Close Transaction details" }).click();
+  await expect(activity.getByText("Excluded", { exact: true })).toBeVisible();
+  await activity.getByRole("button", { name: "Close Groceries transactions" }).click();
+  await expect(launcher).toBeFocused();
+  expect(await page.evaluate(() => window.scrollY)).toBe(scroll);
+  await page.getByRole("link", { name: "Reports", exact: true }).click();
+  const spending = page.getByRole("region", { name: "Actual spending", exact: true });
+  await spending.getByRole("button", { name: /Essentials/ }).click();
+  await spending.getByRole("button", { name: /Groceries/ }).click();
+  await expect(activity).toBeVisible();
+  await expect(activity.getByRole("button", { name: "Open Demo: More groceries details" })).toHaveCount(0);
+  await activity.getByRole("button", { name: "Open Demo: Weekly groceries details" }).click();
+  await details.getByLabel("Category for Demo: Weekly groceries split 1").selectOption("");
+  await expect(details).toHaveCount(0);
+  await expect(activity).toBeVisible();
+  await expect(activity.getByRole("status").filter({ hasText: "no longer matches" })).toBeVisible();
+  await expect(activity.locator(".results-heading")).toBeFocused();
+  await expect(activity.getByRole("button", { name: "Open Demo: Weekly groceries details" })).toHaveCount(0);
+  await activity.getByRole("button", { name: "Close Groceries transactions" }).click();
+  await expect(spending.locator(".breadcrumbs")).toContainText("Essentials");
+  await page.screenshot({ path: testInfo.outputPath("context-preserving-reports.png"), fullPage: true });
+  await repo.mutate({ action: "exclude", id: initial.transactions.find(t => t.description === "Demo: More groceries")!.id, excluded: false });
+  await repo.mutate({ action: "date", id: initial.transactions.find(t => t.description === "Demo: More groceries")!.id, date: "2026-11-01" });
+  await page.getByRole("link", { name: "Budget", exact: true }).click();
+  await page.getByLabel("Selected month").fill("2026-11");
+  const unplanned = page.locator(".unplanned-panel");
+  await unplanned.getByRole("button", { name: "Groceries", exact: true }).click();
+  await expect(activity).toBeVisible();
+  await activity.getByRole("button", { name: "Close Groceries transactions" }).click();
+  await expect(unplanned.getByRole("button", { name: "Groceries", exact: true })).toBeFocused();
+});
+
+test("category panel paginates full allocation totals and recovers errors and depleted pages", async ({ page, user }, testInfo) => {
+  test.setTimeout(90000);
+  await loadDemo(page);
+  const repo = await testRepository(user);
+  const state = await repo.month("2026-10");
+  const categoryId = state.categories.find(c => c.name === "Groceries")!.id;
+  await repo.import(crypto.randomUUID().replaceAll("-", "").repeat(2), Array.from({ length: 31 }, (_, i) => ({
+    original_date: "2026-10-20", description: "Identical shop", merchant: "Shop", amount_cents: -(i + 1) * 100, external_id: crypto.randomUUID(),
+  })));
+  const imported = (await repo.month("2026-10")).transactions.filter(t => t.description === "Identical shop");
+  for (const t of imported) await repo.mutate({ action: "split", id: t.id, allocations: [{ category_id: categoryId, amount_cents: t.amount_cents }] });
+  await page.reload();
+  const net = money(-categoryActual(await repo.month("2026-10"), categoryId));
+  const launcher = page.getByRole("button", { name: "Groceries", exact: true });
+  await page.route("**/rest/v1/rpc/app_page", route => route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ message: "Inspection temporarily unavailable" }) }));
+  await launcher.click();
+  const activity = page.getByRole("dialog", { name: "Groceries transactions" });
+  await expect(activity.getByRole("alert")).toContainText("Inspection temporarily unavailable", { timeout: 15000 });
+  await page.unroute("**/rest/v1/rpc/app_page");
+  await activity.getByRole("button", { name: "Retry", exact: true }).click();
+  await expect(activity.locator(".activity-list > li")).toHaveCount(30);
+  await expect(activity.locator(".activity-summary")).toContainText(net);
+  const firstId = await activity.locator(".activity-list > li").first().getAttribute("data-transaction-id");
+  const expected = imported.find(t => t.id === firstId)!;
+  await activity.getByRole("button", { name: "Open Identical shop details", exact: true }).first().click();
+  const details = page.getByRole("dialog", { name: "Transaction details", exact: true });
+  await expect(details.locator(".detail-amount")).toHaveText(money(expected.amount_cents));
+  await details.getByRole("button", { name: "Close Transaction details" }).click();
+  await activity.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(activity.locator(".activity-list > li")).toHaveCount(3);
+  for (let i = 0; i < 3; i++) {
+    await activity.locator(".activity-open").last().click();
+    await details.getByLabel("Effective date").fill("2026-11-01");
+    await details.getByRole("button", { name: "Change effective date" }).click();
+    await expect(details).toHaveCount(0);
+  }
+  await expect(activity.locator(".pagination")).toContainText("1-30 of 30");
+  await expect(activity.locator(".activity-list > li")).toHaveCount(30);
+  await page.setViewportSize({ width: 360, height: 800 });
+  await checkAccessibility(page);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.screenshot({ path: testInfo.outputPath("category-transactions-mobile.png"), fullPage: true });
+  await activity.getByRole("button", { name: "Close Groceries transactions" }).click();
+  await page.getByLabel("Selected month").fill("2026-11");
+  await page.getByLabel("Selected month").fill("2026-10");
+  await expect(activity).toHaveCount(0);
+});
+
+test("report drill-down keeps chart and lower cards stable across responsive layouts", async ({ page, user }, testInfo) => {
+  test.setTimeout(90000);
+  await loadDemo(page);
+  const repo = await testRepository(user);
+  const sectionId = (await repo.month("2026-10")).sections.find(s => s.name === "Essentials")!.id;
+  for (let i = 0; i < 12; i++) await repo.mutate({ action: "category_add", month: "2026-10", section_id: sectionId, name: `Long household category name for layout testing ${i}`, planned_cents: 100 });
+  await repo.mutate({ action: "manual", description: "Long breakdown fixture", merchant: "", amount_cents: -1200, original_date: "2026-10-01" });
+  const state = await repo.month("2026-10");
+  await repo.mutate({ action: "split", id: state.transactions.find(t => t.description === "Long breakdown fixture")!.id, allocations: state.categories.filter(c => c.name.startsWith("Long household")).map(c => ({ category_id: c.id, amount_cents: -100 })) });
+  await page.reload();
+  await page.getByRole("link", { name: "Reports", exact: true }).click();
+  const spending = page.getByRole("region", { name: "Actual spending", exact: true });
+  const plan = page.getByRole("region", { name: "Planned spending", exact: true });
+  async function geometry() {
+    const card = await spending.boundingBox(), chart = await spending.locator(".chart").boundingBox(), lower = await page.locator(".report-group").last().boundingBox();
+    if (!card || !chart || !lower) throw new Error("Report geometry unavailable.");
+    return { card, chart, lower };
+  }
+  for (const width of [1440, 1280, 768, 390, 360]) {
+    await page.setViewportSize({ width, height: 900 });
+    await spending.getByRole("button", { name: "All sections", exact: true }).click();
+    const before = await geometry();
+    await spending.getByRole("button", { name: /Essentials/ }).click();
+    const after = await geometry();
+    for (const key of ["card", "chart", "lower"] as const) {
+      for (const dimension of ["x", "y", "width", "height"] as const) expect(Math.abs(before[key][dimension] - after[key][dimension])).toBeLessThanOrEqual(1);
+    }
+    expect(await spending.locator(".legend").evaluate(el => el.scrollHeight > el.clientHeight)).toBe(true);
+    const category = spending.getByRole("button", { name: /Groceries/ });
+    await category.scrollIntoViewIfNeeded();
+    const categoryScroll = await page.evaluate(() => window.scrollY);
+    const legendScroll = await spending.locator(".legend").evaluate(el => el.scrollTop);
+    await category.click();
+    const activity = page.getByRole("dialog", { name: "Groceries transactions" });
+    await expect(activity).toBeVisible();
+    await activity.getByRole("button", { name: "Close Groceries transactions" }).click();
+    await expect(category).toBeFocused();
+    expect(await page.evaluate(() => window.scrollY)).toBe(categoryScroll);
+    expect(await spending.locator(".legend").evaluate(el => el.scrollTop)).toBe(legendScroll);
+    const closed = await geometry();
+    expect(Math.abs(closed.lower.y - before.lower.y)).toBeLessThanOrEqual(1);
+    await spending.getByRole("button", { name: "All sections", exact: true }).click();
+    const returned = await geometry();
+    expect(Math.abs(returned.chart.y - before.chart.y)).toBeLessThanOrEqual(1);
+    await plan.getByRole("button", { name: /Essentials/ }).click();
+    await plan.getByRole("button", { name: /Groceries/ }).click();
+    const planned = page.getByRole("dialog", { name: "Groceries planned amount" });
+    await expect(planned.locator(".planned-detail")).toContainText("Planned");
+    await expect(planned.locator(".planned-detail strong")).toHaveText("$450.00");
+    await expect(planned.locator(".modal-body p")).toHaveCount(0);
+    await planned.getByRole("button", { name: "Close Groceries planned amount" }).click();
+    await plan.getByRole("button", { name: "All sections", exact: true }).click();
+    await checkAccessibility(page);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    await page.screenshot({ path: testInfo.outputPath(`stable-reports-${width}.png`), fullPage: true });
+  }
+  async function clickWedge() {
+    const wedge = spending.locator(".recharts-pie-sector path").first();
+    await wedge.scrollIntoViewIfNeeded();
+    const point = await wedge.evaluate(el => {
+      if (!(el instanceof SVGGeometryElement)) throw new Error("Pie wedge geometry unavailable.");
+      const bounds = el.getBBox(), matrix = el.getScreenCTM();
+      if (!matrix) throw new Error("Pie wedge transform unavailable.");
+      for (let x = bounds.x + 5; x < bounds.x + bounds.width; x += 5) {
+        for (let y = bounds.y + 5; y < bounds.y + bounds.height; y += 5) {
+          if (el.isPointInFill(new DOMPoint(x, y))) {
+            const screen = new DOMPoint(x, y).matrixTransform(matrix);
+            return { x: screen.x, y: screen.y };
+          }
+        }
+      }
+      throw new Error("No clickable point inside pie wedge.");
+    });
+    await page.mouse.click(point.x, point.y);
+  }
+  await clickWedge();
+  await expect(spending.locator(".breadcrumbs")).not.toContainText("Overview");
+  await clickWedge();
+  await expect(page.getByRole("dialog")).toBeVisible();
+});
+
+test("signed-in screens use concise labels and actions instead of instructional paragraphs", async ({ page }, testInfo) => {
+  await expect(page.getByRole("heading", { name: "No budget yet" })).toBeVisible();
+  await expect(page.locator(".empty-state p")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Add your first section" })).toBeVisible();
+  await loadDemo(page);
+  await expect(page.locator(".workspace-header p.muted, .feature-toolbar > span")).toHaveCount(0);
+  await page.getByRole("button", { name: "Groceries", exact: true }).click();
+  const activity = page.getByRole("dialog", { name: "Groceries transactions" });
+  await expect(activity.locator(".activity-summary")).toContainText("Net spent");
+  await expect(activity.locator(".activity-summary")).toContainText("$69.84");
+  await expect(activity.locator(".activity-summary p")).toHaveCount(0);
+  await activity.getByRole("button", { name: "Open Demo: Weekly groceries details" }).click();
+  const details = page.getByRole("dialog", { name: "Transaction details", exact: true });
+  await expect(details.locator(".detail-section > p.muted")).toHaveCount(0);
+  await expect(details.getByLabel("Effective date", { exact: true })).toBeVisible();
+  await expect(details.getByRole("button", { name: "Exclude from budget & reports", exact: true })).toBeVisible();
+  await expect(details.getByRole("button", { name: "Edit splits" })).toBeVisible();
+  await details.getByRole("button", { name: "Close Transaction details" }).click();
+  await checkAccessibility(page);
+  await page.screenshot({ path: testInfo.outputPath("concise-category-panel.png"), fullPage: true });
+  await activity.getByRole("button", { name: "Close Groceries transactions" }).click();
+  await page.getByRole("link", { name: "Transactions", exact: true }).click();
+  await expect(page.locator(".workspace-header p.muted, .feature-toolbar > span")).toHaveCount(0);
+  await page.getByRole("button", { name: "Add transaction", exact: true }).click();
+  const manual = page.getByRole("dialog", { name: "Add transaction", exact: true });
+  await expect(manual).toContainText("Money in (+), money out (-).");
+  await expect(manual.getByLabel("Signed dollars")).toBeVisible();
+  await manual.getByRole("button", { name: "Close Add transaction" }).click();
+  await page.getByRole("link", { name: "Reports", exact: true }).click();
+  await expect(page.locator(".report-hint, .report-footnote, .report-group-header > span")).toHaveCount(0);
+  await expect(page.getByLabel("Include uncategorized in actual totals")).toBeVisible();
+  await page.getByRole("link", { name: "Connections", exact: true }).click();
+  await expect(page.locator(".bank-introduction p, .bank-connect-form p, .bank-card .empty-state p")).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "No banks connected yet" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Connect a bank", exact: true })).toBeVisible();
+  await expect(page.getByText("Sandbox only - use test credentials.", { exact: true })).toBeVisible();
+  await expect(page.getByText("user_transactions_dynamic", { exact: true })).not.toBeVisible();
+  await checkAccessibility(page);
+  await page.screenshot({ path: testInfo.outputPath("concise-connections.png"), fullPage: true });
 });

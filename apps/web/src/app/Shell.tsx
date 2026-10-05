@@ -13,10 +13,10 @@ const Transactions = lazy(() => import("../features/Transactions").then(m => ({ 
 const Reports = lazy(() => import("../features/Reports").then(m => ({ default: m.Reports })));
 const Connections = lazy(() => import("../features/Connections").then(m => ({ default: m.Connections })));
 const routes = [
-  { path: "budget", label: "Budget", icon: LayoutDashboard, title: "Your monthly budget", description: "A plan for what matters." },
-  { path: "transactions", label: "Transactions", icon: ArrowLeftRight, title: "Your transactions", description: "Organize your monthly activity." },
-  { path: "reports", label: "Reports", icon: ChartPie, title: "Your spending, in perspective", description: "Follow the money, from overview to detail." },
-  { path: "connections", label: "Connections", icon: Landmark, title: "Your bank connections", description: "Securely bring your bank activity into your budget." },
+  { path: "budget", label: "Budget", icon: LayoutDashboard, title: "Your monthly budget" },
+  { path: "transactions", label: "Transactions", icon: ArrowLeftRight, title: "Your transactions" },
+  { path: "reports", label: "Reports", icon: ChartPie, title: "Your spending, in perspective" },
+  { path: "connections", label: "Connections", icon: Landmark, title: "Your bank connections" },
 ];
 function shiftMonth(month: string, direction: number) {
   const [year, m] = month.split("-").map(Number);
@@ -60,7 +60,7 @@ export function Shell({ session }: { session: Session }) {
       </div>
     </aside>
     <main id="main-content" className="workspace" tabIndex={-1}>
-      <header className="workspace-header"><div><p className="overline">{route.label === "Budget" ? "MONTHLY PLAN" : route.label === "Transactions" ? "MONTHLY ACTIVITY" : route.path === "connections" ? "CONNECTED ACCOUNTS" : "MONTHLY INSIGHTS"}</p><h1>{route.title}</h1><p className="muted">{route.description}</p></div>
+      <header className="workspace-header"><div><p className="overline">{route.label === "Budget" ? "MONTHLY PLAN" : route.label === "Transactions" ? "MONTHLY ACTIVITY" : route.path === "connections" ? "CONNECTED ACCOUNTS" : "MONTHLY INSIGHTS"}</p><h1>{route.title}</h1></div>
         {route.path !== "connections" && <div className="month-control"><button className="icon-button" aria-label="Previous month" disabled={month === "0001-01"} onClick={() => changeMonth(shiftMonth(month, -1))}><ChevronLeft size={17} /></button><input aria-label="Selected month" type="month" value={month} min="0001-01" max="9999-12" onChange={e => { if (e.target.value) changeMonth(e.target.value); }} /><button className="icon-button" aria-label="Next month" disabled={month === "9999-12"} onClick={() => changeMonth(shiftMonth(month, 1))}><ChevronRight size={17} /></button></div>}
       </header>{op.feedback}
       {route.path === "connections" ? <Suspense fallback={<p role="status">Loading connections...</p>}><Connections uid={session.user.id} /></Suspense> : query.isPending ? <div className="loading-state" role="status"><span className="loading-line" /><span className="loading-line" /><span>Loading your month...</span></div> : query.error ? <div className="error-state"><h2>Couldn't load this month</h2><p role="alert">{query.error.message}</p><button onClick={() => void query.refetch()}>Retry</button></div> : repository && query.data &&
@@ -69,10 +69,10 @@ export function Shell({ session }: { session: Session }) {
           await repository.mutate(command); await refresh();
           let text = "Budget updated.";
           const important = ["split", "date", "exclude"].includes(command.action);
-          if (command.action === "split") text = "Category updated. Transactions that no longer match your filters leave the list.";
-          if (command.action === "date") text = `Date saved${command.date ? `: ${command.date}` : ": original date restored"}. Assignments are retained; activity outside this month leaves the list.`;
-          if (command.action === "exclude") text = command.excluded ? "Excluded from budget & reports. Find it in the excluded filter to restore." : "Transaction restored to budget & reports.";
-          if (command.action === "manual") text = "Transaction added to its dated month.";
+          if (command.action === "split") text = "Category updated.";
+          if (command.action === "date") text = command.date ? `Date saved: ${command.date}.` : "Original date restored.";
+          if (command.action === "exclude") text = command.excluded ? "Excluded from budget & reports." : "Restored to budget & reports.";
+          if (command.action === "manual") text = "Transaction added.";
           setNotice({ text, id: Date.now(), important });
         } }}>
           <Suspense fallback={<div className="loading-state" role="status">Loading view...</div>}><Routes>

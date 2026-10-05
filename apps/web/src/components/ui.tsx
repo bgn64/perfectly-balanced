@@ -36,18 +36,18 @@ export function DraftProvider({ children }: { children: ReactNode }) {
     if (drafts.size) setAction(() => task);
     else void task();
   } }}>{children}
-    {blocker.state === "blocked" && <Confirm title="Discard unsaved changes?" description="Your financial edits have not been saved. Stay here to finish editing, or discard them and continue." confirmLabel="Discard and continue" onCancel={() => blocker.reset()} onConfirm={async () => {
+    {blocker.state === "blocked" && <Confirm title="Discard unsaved changes?" description="Your changes have not been saved." confirmLabel="Discard and continue" onCancel={() => blocker.reset()} onConfirm={async () => {
       if ([...drafts.values()].some(Boolean)) throw new Error("Wait for saving to finish before leaving.");
       setGeneration(n => n + 1); setDrafts(new Map()); blocker.proceed();
     }} />}
-    {action && <Confirm title="Discard unsaved changes?" description="Your edits have not been saved. Discard them before continuing?" confirmLabel="Discard and continue" onCancel={() => setAction(null)} onConfirm={async () => {
+    {action && <Confirm title="Discard unsaved changes?" description="Your changes have not been saved." confirmLabel="Discard and continue" onCancel={() => setAction(null)} onConfirm={async () => {
       if ([...drafts.values()].some(Boolean)) throw new Error("Wait for saving to finish before continuing.");
       setGeneration(n => n + 1); setDrafts(new Map()); await action(); setAction(null);
     }} />}
   </DraftContext.Provider>;
 }
 export function useGuardedAction() { return useContext(DraftContext).requestAction; }
-function useReturnFocus() {
+function useReturnFocus(fallback?: RefObject<HTMLElement | null>) {
   const { launcher } = useContext(DraftContext);
   const parentReturn = useContext(FocusReturnContext);
   const active = document.activeElement;
@@ -55,9 +55,10 @@ function useReturnFocus() {
   useEffect(() => { launcher.current = null; }, [launcher]);
   return (event: Event) => {
     event.preventDefault();
-    if (target.current?.isConnected) target.current.focus();
+    if (target.current?.isConnected) target.current.focus({ preventScroll: true });
+    else if (fallback?.current?.isConnected) fallback.current.focus({ preventScroll: true });
     else if (parentReturn) parentReturn(event);
-    else document.getElementById("main-content")?.focus();
+    else document.getElementById("main-content")?.focus({ preventScroll: true });
   };
 }
 export function useDraft(dirty: boolean, pending = false) {
@@ -70,14 +71,15 @@ export function useDraft(dirty: boolean, pending = false) {
   }, [register, modalRegister, id, dirty, pending]);
   return generation;
 }
-export function Modal({ title, description, children, onClose, dirty = false, pending = false, sheet = false, wide = false }: {
+export function Modal({ title, description, children, onClose, dirty = false, pending = false, sheet = false, wide = false, returnFocusRef }: {
   title: string; description?: string; children: ReactNode; onClose: () => void;
   dirty?: boolean; pending?: boolean; sheet?: boolean; wide?: boolean;
+  returnFocusRef?: RefObject<HTMLElement | null>;
 }) {
   const [discard, setDiscard] = useState(false);
   const depth = useContext(ModalDepthContext);
   const content = useRef<HTMLDivElement>(null);
-  const returnFocus = useReturnFocus();
+  const returnFocus = useReturnFocus(returnFocusRef);
   const [drafts, setDrafts] = useState<Map<string, boolean>>(new Map());
   const register = useCallback((id: string, dirty: boolean, saving: boolean) => setDrafts(old => {
     if (old.has(id) === (dirty || saving) && (!old.has(id) || old.get(id) === saving)) return old;
@@ -168,6 +170,6 @@ export function MoneyCell({ value, name, save }: { value: number; name: string; 
     </div>{op.feedback}
   </form>;
 }
-export function EmptyState({ icon: Icon, title, children, action }: { icon: LucideIcon; title: string; children: ReactNode; action?: ReactNode }) {
-  return <div className="empty-state"><span className="empty-icon"><Icon size={25} /></span><h3>{title}</h3><p className="muted">{children}</p>{action}</div>;
+export function EmptyState({ icon: Icon, title, children, action }: { icon: LucideIcon; title: string; children?: ReactNode; action?: ReactNode }) {
+  return <div className="empty-state"><span className="empty-icon"><Icon size={25} /></span><h3>{title}</h3>{children != null && children !== false && <p className="muted">{children}</p>}{action}</div>;
 }

@@ -87,7 +87,7 @@ npm run types
   income/spending classification are immutable to preserve historical meaning.
 - Remove a monthly category only after reassigning all its transactions for
   that month, including excluded ones. Clicking its name opens the relevant
-  transaction filter. Sections must be emptied before monthly removal. Archiving
+  transaction side panel, including clearly marked excluded activity. Sections must be emptied before monthly removal. Archiving
   catalog entries preserves history but hides them from new assignments.
 - Charts retain signed net values. Negative buckets use a signed list with the
   same drill-down controls rather than taking absolute values. Empty or
@@ -97,6 +97,24 @@ npm run types
   portions of split transactions. Planned reports show only planned amounts.
 - There is one Income section, so its section-level pie is normally one slice
   (plus uncategorized income, if enabled); drill into it to see income categories.
+
+### In-place category inspection
+
+Budget category names (including unplanned activity) and actual report categories
+open the same transaction side panel without navigating away. Reports show only
+contributing allocations; Budget also includes excluded records for review.
+Category amounts and full net totals are separate from signed parent transaction
+amounts, so splits are never double counted. Long transaction lists paginate.
+
+Open a transaction to categorize, split, exclude, or change its effective date
+using the same controls as Transactions. If it leaves the current category view,
+the detail sheet closes back to that list with an explanation. Closing the panel
+returns focus to its launcher; the originating page and report level stay in place.
+
+Report cards reserve their layout during section drill-down, with persistent
+breadcrumbs and independently scrollable long breakdowns. Signed and zero-total
+fallbacks retain accurate amounts. Planned category inspection shows its planned
+amount in a panel rather than showing transactions or replacing the chart.
 
 ## Transactions and import
 
