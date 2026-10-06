@@ -53,8 +53,8 @@ jobs:
         run: |
           npx supabase secrets set --project-ref hqeoxulnpkksxvoyxlvq \
             APP_DEPLOYMENT_ENV=production PLAID_ENVIRONMENT=production \
-            APP_ALLOWED_ORIGINS=https://perfectly-balanced.vercel.app \
-            PLAID_REDIRECT_URI=https://perfectly-balanced.vercel.app/connections \
+            APP_ALLOWED_ORIGINS=https://perfectly-balanced.bgalindo.dev \
+            PLAID_REDIRECT_URI=https://perfectly-balanced.bgalindo.dev/connections \
             PLAID_WEBHOOK_URL=https://hqeoxulnpkksxvoyxlvq.supabase.co/functions/v1/plaid-webhook \
             PLAID_CLIENT_ID="$PLAID_CLIENT_ID" PLAID_SECRET="$PLAID_SECRET" PLAID_WORKER_SECRET="$PLAID_WORKER_SECRET"
       - name: Deploy independently authenticated functions

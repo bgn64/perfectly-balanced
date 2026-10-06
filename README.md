@@ -184,7 +184,7 @@ the legacy cutover require the production configuration below.
 
 The existing deployment uses GitHub repository `bgn64/perfectly-balanced`,
 Supabase project `hqeoxulnpkksxvoyxlvq`, and
-https://perfectly-balanced.vercel.app/. No second hosted backend is required.
+https://perfectly-balanced.bgalindo.dev/. No second hosted backend is required.
 
 - Vercel's root directory is the repository root. `vercel.json` installs the
   npm workspaces, runs the root build, and serves `apps/web/dist`. Its filesystem
@@ -211,6 +211,29 @@ https://perfectly-balanced.vercel.app/. No second hosted backend is required.
   organization-team recipients and has tight limits; use custom SMTP if delivery
   is blocked. Email/password login does not itself require sending email.
 - Do not point preview builds or local test suites at production financial data.
+
+### Custom domain configuration
+
+Attach `perfectly-balanced.bgalindo.dev` to the existing Vercel project's
+Production environment. In Cloudflare, configure the `perfectly-balanced` CNAME
+with the exact target shown by Vercel and **DNS only** (not proxied). Leave the
+domain's nameservers and other apps' DNS records unchanged.
+
+In hosted Supabase Auth, set the Site URL and add the exact recovery redirect
+`https://perfectly-balanced.bgalindo.dev`. Register
+`https://perfectly-balanced.bgalindo.dev/connections` in Plaid's Allowed redirect
+URIs. The hosted Edge Function settings must match:
+`APP_ALLOWED_ORIGINS=https://perfectly-balanced.bgalindo.dev` and
+`PLAID_REDIRECT_URI=https://perfectly-balanced.bgalindo.dev/connections`.
+Keep these URLs consistent with `.github/workflows/deploy-plaid.yml`, which
+sets them during backend deployment.
+
+Attaching the domain and updating these hosted URL settings do not require
+redeploying the app, reconnecting banks, or changing the webhook URL. Do not run
+the Plaid deployment workflow merely to change a domain: it also applies
+migrations, deploys functions, and schedules sync. Sign in again on the new
+domain; browser sessions and in-progress bank authorization do not transfer
+between origins.
 
 ## Legacy data cutover tooling
 
@@ -414,7 +437,7 @@ Before explicitly approving/running it:
   `SUPABASE_DB_PASSWORD`, `SUPABASE_SERVICE_ROLE_KEY`, `PLAID_CLIENT_ID`,
   `PLAID_SECRET`, and a random `PLAID_WORKER_SECRET` of at least 32 characters.
 - Confirm Plaid Production Transactions access, billing, institution/OAuth
-  registration and `https://perfectly-balanced.vercel.app/connections` redirect.
+  registration and `https://perfectly-balanced.bgalindo.dev/connections` redirect.
 - Use the exact hosted webhook URL:
   `https://hqeoxulnpkksxvoyxlvq.supabase.co/functions/v1/plaid-webhook`.
 - Review origins and secrets before backend activation, then deploy the matching
