@@ -6,7 +6,7 @@ import type { Filters } from "@balanced/data";
 import { useBudget } from "../app/context";
 import { EmptyState, Modal } from "../components/ui";
 import { TransactionSheet } from "./TransactionDetails";
-import { categoryRows, groupActivity, type ActivityRow } from "./categoryActivity";
+import { categoryRows, groupActivity, type ActivityRow } from "./activityScope";
 
 export type ActivityScope =
   | { source: "budget"; categoryId: string; name: string; sectionName: string; income: boolean }

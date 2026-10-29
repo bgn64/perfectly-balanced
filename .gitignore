@@ -11,3 +11,7 @@ playwright-report/
 backups/
 .env.*.local
 supabase/.env.local
+.next/
+*.tsbuildinfo
+/data/
+.env.container

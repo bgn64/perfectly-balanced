@@ -2,7 +2,6 @@ import { Suspense, lazy, useEffect, useState } from "react";
 import { ArrowLeftRight, ChartPie, ChevronLeft, ChevronRight, Landmark, LayoutDashboard, LogOut, Scale, X } from "lucide-react";
 import { Link, Navigate, NavLink, Route, Routes, useLocation, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import type { Session } from "@supabase/supabase-js";
 import { localMonth } from "@balanced/domain";
 import { repository } from "./backend";
 import { BudgetContext, useOperation } from "./context";
@@ -23,7 +22,7 @@ function shiftMonth(month: string, direction: number) {
   const next = year * 12 + m - 1 + direction;
   return `${String(Math.floor(next / 12)).padStart(4, "0")}-${String(next % 12 + 1).padStart(2, "0")}`;
 }
-export function Shell({ session }: { session: Session }) {
+export function Shell({ session }: { session: { user: { id: string; email: string } } }) {
   const [params, setParams] = useSearchParams();
   const rawMonth = params.get("month");
   const month = rawMonth && /^\d{4}-(0[1-9]|1[0-2])$/.test(rawMonth) && Number(rawMonth.slice(0, 4)) > 0 ? rawMonth : localMonth();
@@ -53,9 +52,9 @@ export function Shell({ session }: { session: Session }) {
       <div className="account-area"><div className="account-avatar">{session.user.email?.slice(0, 1).toUpperCase() ?? "P"}</div><div><strong>Personal budget</strong><small title={session.user.email}>{session.user.email}</small></div>
         <button className="icon-button" aria-label="Sign out" disabled={op.pending} onClick={() => guardedAction(async () => { await op.run(async () => {
           if (!repository) throw new Error("Backend configuration missing.");
-          const { error } = await repository.client.auth.signOut();
-          if (error) throw new Error(error.message);
+          await repository.signOut();
           cache.clear();
+          window.location.assign("/");
         }); })}><LogOut size={17} /></button>
       </div>
     </aside>

@@ -1,9 +1,10 @@
 import { createContext, useContext, useState, type ReactNode } from "react";
-import type { Command, SupabaseRepository } from "@balanced/data";
+import type { Command } from "@balanced/data";
+import type { HttpRepository } from "@balanced/data/http";
 import type { MonthData } from "@balanced/domain";
 
 export type BudgetContextValue = {
-  month: string; data: MonthData; repo: SupabaseRepository; uid: string;
+  month: string; data: MonthData; repo: HttpRepository; uid: string;
   command: (command: Command) => Promise<void>; refresh: () => Promise<void>;
   notify: (message: string, important?: boolean) => void;
 };

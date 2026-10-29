@@ -1,0 +1,10 @@
+import { spawn } from "node:child_process";
+import { createRequire } from "node:module";
+import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
+process.env.DATABASE_PATH = resolve(process.env.DATABASE_PATH ?? "./data/perfectly-balanced.sqlite");
+const require = createRequire(new URL("../../apps/web/package.json", import.meta.url));
+const child = spawn(process.execPath, [require.resolve("next/dist/bin/next"), "dev", fileURLToPath(new URL("../../apps/web", import.meta.url)), "--hostname", "127.0.0.1", ...process.argv.slice(2)], { stdio: "inherit" });
+process.on("SIGINT", () => child.kill("SIGINT"));
+process.on("SIGTERM", () => child.kill("SIGTERM"));
+child.on("exit", code => { process.exitCode = code ?? 1; });
