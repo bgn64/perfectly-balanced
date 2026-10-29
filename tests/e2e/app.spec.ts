@@ -388,13 +388,29 @@ test("desktop density and responsive financial visibility", async ({ page, user 
   await expect(page.getByRole("button", { name: "Edit planned Groceries" })).toBeVisible();
   await checkAccessibility(page);
   await page.screenshot({ path: testInfo.outputPath("budget-desktop.png"), fullPage: true });
+  const recommendationResponses = Promise.all((await repo.month("2026-10")).transactions
+    .filter(t => t.description.startsWith("Neighborhood purchase "))
+    .map(t => page.waitForResponse(response => {
+      if (!response.url().endsWith("/api/budget") || response.request().method() !== "POST") return false;
+      const body = response.request().postDataJSON();
+      return body.operation === "suggest" && body.id === t.id;
+    })));
   await page.getByRole("link", { name: "Transactions", exact: true }).click();
   await expect(page.locator(".transaction-row")).toHaveCount(19);
+  for (const response of await recommendationResponses) {
+    expect(response.ok()).toBe(true);
+    expect(await response.json()).toBeNull();
+  }
   await checkAccessibility(page);
-  const visible = await page.locator(".transaction-row").evaluateAll(rows => rows.filter(row => {
-    const rect = row.getBoundingClientRect(); return rect.top >= 0 && rect.bottom <= window.innerHeight;
-  }).length);
-  expect(visible).toBeGreaterThanOrEqual(8);
+  await expect(page.locator(".recommendation .compact-error")).toHaveCount(0);
+  const density = await page.locator(".transaction-row").evaluateAll(rows => {
+    const bounds = rows.map(row => {
+      const { top, bottom, height } = row.getBoundingClientRect();
+      return { top, bottom, height };
+    });
+    return { viewportHeight: window.innerHeight, rows: bounds.slice(0, 8), visible: bounds.filter(row => row.top >= 0 && row.bottom <= window.innerHeight).length };
+  });
+  expect(density.visible, JSON.stringify(density)).toBeGreaterThanOrEqual(8);
   await page.screenshot({ path: testInfo.outputPath("transactions-desktop.png"), fullPage: true });
   for (const viewport of [{ width: 1440, height: 900 }, { width: 768, height: 1024 }, { width: 390, height: 844 }, { width: 360, height: 800 }]) {
     await page.setViewportSize(viewport);

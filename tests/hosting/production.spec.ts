@@ -27,6 +27,15 @@ test("login, real financial APIs, browser reports, private refresh and logout", 
     expect(r.ok(), await r.text()).toBe(true);
   };
   await mutate({ action: "manual", description: "Container browser purchase", merchant: "Test market", original_date: "2026-10-05", amount_cents: -1234 });
+  const monthResponse = await page.request.post("/api/budget", { headers: { Origin: baseURL! }, data: { operation: "month", month: "2026-10" } });
+  expect(monthResponse.ok()).toBe(true);
+  const month = await monthResponse.json();
+  const transaction = month.transactions.find((t: { description: string }) => t.description === "Container browser purchase");
+  expect(transaction).toBeDefined();
+  const suggestion = await page.request.post("/api/budget", { headers: { Origin: baseURL! }, data: { operation: "suggest", id: transaction.id, month: "2026-10" } });
+  expect(suggestion.ok()).toBe(true);
+  expect(await suggestion.json()).toBeNull();
+  expect(suggestion.headers()["cache-control"]).toBe("no-store");
   await page.getByRole("link", { name: "Transactions", exact: true }).click();
   await expect(page.getByText("Container browser purchase", { exact: true })).toBeVisible();
   await page.reload();

@@ -73,7 +73,7 @@ export async function POST(request: Request) {
       case "resolve": bank.resolve(input.id, input.version, input.decision, input.transaction, input.allocations, input.revision); break;
       case "restore": bank.restore(input.id, input.revision); break;
     }
-    return json(result ?? { ok: true });
+    return json(result === undefined ? { ok: true } : result);
   } catch (error) {
     console.error("Budget request failed", error instanceof Error ? error.name : "UnknownError");
     if (error instanceof z.ZodError || error instanceof SyntaxError) return json({ error: "Invalid request. Check the supplied fields." }, 400);
