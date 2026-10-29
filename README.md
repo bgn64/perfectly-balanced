@@ -13,9 +13,14 @@ guards are retained inside a server-authenticated Next.js shell.
 Install/start Docker Desktop with Linux containers. From PowerShell:
 
 ```powershell
-Copy-Item .env.example .env
+if (!(Test-Path compose.yaml)) { Copy-Item compose.yaml.example compose.yaml }
+if (!(Test-Path .env)) { Copy-Item .env.example .env }
 node -e "console.log(require('node:crypto').randomBytes(32).toString('base64'))"
 ```
+
+Only `compose.yaml.example` and `.env.example` are tracked. Their local copies,
+`compose.yaml` and `.env`, are ignored and must not be overwritten on updates.
+Customize networking/ports in your local Compose file, as with tee-time.
 
 Put that random value in `BETTER_AUTH_SECRET` in `.env`. Leave Plaid disabled
 initially. Keep `BETTER_AUTH_URL=http://localhost:3000` and visit exactly that
@@ -46,6 +51,8 @@ migration fails. Keep verified backups before image upgrades.
 
 See [the cutover guide](docs/container-cutover.md) for Supabase export/import,
 exact reconciliation, local rehearsal, Caddy, server deployment and rollback.
+If updating a checkout that still tracks `compose.yaml`, first follow
+[the one-time configuration preservation procedure](docs/container-cutover.md#updating-an-existing-checkout-with-a-tracked-compose-file).
 
 ## Development and validation
 
@@ -72,6 +79,10 @@ npm run test:hosting
 git diff --check
 docker compose build
 ```
+
+For template validation without a local configuration, CI uses
+`docker compose -f compose.yaml.example config --quiet` with disposable
+authentication settings. Do not copy real deployment configuration into CI.
 
 `test:hosting` starts an isolated temporary SQLite database, provisions a
 fictional account, and exercises the production application in Chromium.

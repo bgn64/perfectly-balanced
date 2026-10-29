@@ -44,6 +44,17 @@ INSERT-based exports must be re-exported using `--use-copy`.
 
 ## 2. Inspect, provision and rehearse
 
+On a new checkout, create the ignored local configuration without overwriting
+existing files:
+
+```powershell
+if (!(Test-Path compose.yaml)) { Copy-Item compose.yaml.example compose.yaml }
+if (!(Test-Path .env)) { Copy-Item .env.example .env }
+```
+
+Set the authentication secret and origin in `.env` before starting. Keep Plaid
+disabled during import. Only the `.example` files belong in Git.
+
 Use a new local Compose project name so its volume is isolated:
 
 ```powershell
@@ -166,8 +177,29 @@ second production Plaid worker alongside the original.
 
 ## 6. Server and Caddy
 
-Move the tested source/image and consistent database backup using a private
-channel. Use a separate server `.env`, stable volume and the canonical HTTPS
+Clone the tested source and build on the server with Docker Compose, or move
+the tested image using a private channel. Transfer financial backups separately.
+On a new server checkout, copy `compose.yaml.example` to `compose.yaml` and
+`.env.example` to `.env` only when those local files do not already exist:
+
+```sh
+test -e compose.yaml || cp compose.yaml.example compose.yaml
+test -e .env || cp .env.example .env
+chmod 600 .env
+```
+
+Both local files are ignored, as in tee-time; customize the local `compose.yaml`
+rather than editing the tracked template or needing an override. Keep the same
+Compose project name on every update so the database volume does not change:
+
+```sh
+docker compose -p perfectly-balanced up --build -d
+docker compose -p perfectly-balanced ps
+```
+
+These startup commands assume the environment and local networking have already
+been configured. They do not authorize production import or Plaid activation.
+Use a separate server `.env`, stable volume and the canonical HTTPS
 origin, e.g. `BETTER_AUTH_URL=https://perfectly-balanced.bgalindo.dev`.
 The image contains no machine-specific hostname, secrets or financial data.
 
@@ -179,12 +211,41 @@ perfectly-balanced.bgalindo.dev {
 }
 ```
 
-For Caddy in Docker, attach Caddy and `app` to an explicitly shared private
-Docker network, omit published app ports in the server Compose configuration,
-and proxy to `app:3000` using a unique network alias if necessary. Container
-loopback does not refer to the host. Do not bind the app to all LAN interfaces
-just to make the proxy work. Keep trusted origin/forwarded-header handling at
-the controlled Caddy boundary.
+For Caddy in Docker on the existing external `proxy` network, remove the
+`ports` block from the ignored local `compose.yaml`. Add `networks` under
+`services.app`, and the top-level network declaration alongside `volumes`:
+
+```yaml
+services:
+  app:
+    # Keep the existing build, environment, volumes, healthcheck, etc.
+    networks:
+      proxy:
+        aliases:
+          - perfectly-balanced
+
+networks:
+  proxy:
+    external: true
+```
+
+This is a networking fragment, not a replacement for the complete Compose file.
+Use the actual shared network name if different. Caddy should proxy to the
+unique alias and the internal container port:
+
+```caddyfile
+perfectly-balanced.bgalindo.dev {
+    reverse_proxy perfectly-balanced:3000
+}
+```
+
+Validate with `docker compose -p perfectly-balanced config --quiet` before
+recreating the service. Internal port 3000 does not collide with tee-time's
+internal port 3000; containers have separate network namespaces. `APP_PORT`
+only controls a published host port and is irrelevant when `ports` is removed.
+Container loopback does not refer to the host. Do not bind the app to all LAN
+interfaces just to make the proxy work. Keep trusted origin/forwarded-header
+handling at the controlled Caddy boundary.
 
 Cloudflare DNS should resolve only the intended application hostname to your
 LAN server address (DNS only). Keep other records unchanged; no WAN port
@@ -196,6 +257,44 @@ Cloudflare API token in the app container.
 Compose runs non-root with dropped capabilities, health checks and explicit
 restart/graceful-shutdown behavior. Keep the SQLite volume on local disk, not
 SMB/NFS. Match the image architecture to the server and verify file permissions.
+
+### Updating an existing checkout with a tracked Compose file
+
+The initial cutover mistakenly tracked `compose.yaml`. Pulling its removal can
+either delete an unchanged copy or conflict with your server edits. Preserve
+the working file **before pulling this change**, even if Git currently reports
+it as unmodified. No container shutdown or volume removal is needed.
+
+From the existing Linux server checkout, run these steps, stopping on any error:
+
+```sh
+umask 077
+mkdir -p backups/config
+backup="backups/config/compose.before-template.$(date +%Y%m%d-%H%M%S).yaml"
+cp -i compose.yaml "$backup"
+# Preserve any tracked Compose edits while allowing Git to remove its old copy.
+git stash push -m "Preserve server Compose before template migration" -- compose.yaml
+git pull --ff-only origin main
+cp "$backup" compose.yaml
+docker compose -p perfectly-balanced config --quiet
+git check-ignore compose.yaml
+```
+
+Use the same shell so `$backup` stays set. Keep the private backup and any
+created stash until configuration is verified. Do **not** apply/pop that stash:
+the working configuration has already been restored as an ignored file.
+If the pull fails, stop and resolve it without discarding changes; the backup
+still holds the working configuration. This procedure only handles Compose;
+other local tracked edits must be reviewed separately.
+
+Retain an existing `compose.override.yaml` if you already use it; it is also
+ignored. It still combines with `compose.yaml`, so do not unknowingly duplicate
+conflicting networking or port settings between them.
+
+For later updates, take a database backup, pull `main`, review any relevant
+template changes, and rebuild using the same project name. Do not recopy the
+template over the local file or run `docker compose down -v`. Neither `.env` nor
+the named database volume is changed by the template migration.
 
 ## 7. Final maintenance and rollback
 

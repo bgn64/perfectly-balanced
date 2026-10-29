@@ -15,3 +15,7 @@ supabase/.env.local
 *.tsbuildinfo
 /data/
 .env.container
+# Local deployment configuration; commit only the template.
+/compose.yaml
+/compose.server.yaml
+/compose.override.yaml

@@ -1,3 +1,4 @@
+# Copy to compose.yaml once, then customize that ignored file for this machine.
 services:
   app:
     build: .
