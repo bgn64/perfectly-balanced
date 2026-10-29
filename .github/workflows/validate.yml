@@ -17,6 +17,11 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - name: Validate Compose template without deployment secrets
+        run: docker compose -f compose.yaml.example config --quiet
+        env:
+          BETTER_AUTH_URL: http://localhost:3000
+          BETTER_AUTH_SECRET: ci-template-validation-only-not-a-runtime-secret
       - run: npm run test:unit
       - run: npm run lint
       - run: npm run build

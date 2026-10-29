@@ -6,6 +6,9 @@
 .env
 .env.*
 **/.env*
+compose.yaml
+compose.server.yaml
+compose.override.yaml
 data
 backups
 **/*.sqlite*
