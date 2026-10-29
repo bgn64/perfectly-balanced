@@ -1,0 +1,33 @@
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+import { spawn } from "node:child_process";
+import { once } from "node:events";
+import { randomBytes } from "node:crypto";
+import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
+import { getMigrations } from "better-auth/db/migration";
+import { openDatabase, migrate } from "../../apps/web/src/server/database.ts";
+import { authOptions } from "../../apps/web/src/server/auth.ts";
+import { createAccount } from "./account.ts";
+const directory = process.env.TEST_DATABASE_PATH ? dirname(process.env.TEST_DATABASE_PATH) : mkdtempSync(join(tmpdir(), "balanced-hosting-"));
+process.env.DATABASE_PATH = process.env.TEST_DATABASE_PATH ?? join(directory, "hosting.sqlite");
+process.env.BETTER_AUTH_URL = "http://127.0.0.1:5175";
+process.env.BETTER_AUTH_SECRET ||= randomBytes(32).toString("base64");
+process.env.APP_ENV = "local";
+process.env.PLAID_ENABLED = "false";
+const db = openDatabase();
+await (await getMigrations(authOptions(db))).runMigrations(); migrate(db);
+await createAccount(db, { name: "Browser test", email: "browser@example.test", password: "browser-test-password-12345" });
+db.close();
+const require = createRequire(new URL("../../apps/web/package.json", import.meta.url));
+const next = require.resolve("next/dist/bin/next");
+const child = spawn(process.execPath, [next, "start", fileURLToPath(new URL("../../apps/web", import.meta.url)), "--hostname", "127.0.0.1", "--port", "5175"], { stdio: "inherit", env: process.env });
+if (!child.pid) throw new Error("Browser-test application failed to start.");
+writeFileSync(join(directory, "server.pid"), String(child.pid), { flag: "wx" });
+process.on("SIGTERM", () => child.kill("SIGTERM"));
+process.on("SIGINT", () => child.kill("SIGTERM"));
+try {
+  const [code] = await once(child, "exit");
+  if (code !== 0 && code !== null) process.exitCode = Number(code);
+} finally { rmSync(directory, { recursive: true, force: true }); }

@@ -1,34 +1,29 @@
-import { execFileSync } from "node:child_process";
-import { createClient } from "@supabase/supabase-js";
 import { test as base, expect } from "@playwright/test";
-import { z } from "zod";
-import { makeClient, SupabaseRepository } from "@balanced/data";
 import type { Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-import type { Json } from "../../packages/data/src/database.types";
 import { categoryActual, money } from "@balanced/domain";
+import { openDatabase } from "../../apps/web/src/server/database";
+import { BankService } from "../../apps/web/src/server/plaid";
+import { createAccount, resetPassword } from "../../scripts/container/account";
 
-const config = z.object({ API_URL: z.string(), ANON_KEY: z.string(), SERVICE_ROLE_KEY: z.string() })
-  .parse(JSON.parse(execFileSync("npx", ["supabase", "status", "-o", "json"], { encoding: "utf8" })));
-const admin = createClient(config.API_URL, config.SERVICE_ROLE_KEY, { auth: { persistSession: false } });
-async function cleanupUser(id: string) {
-  const cleanup = await admin.auth.admin.deleteUser(id);
-  if (cleanup.error) throw new Error(cleanup.error.message);
-}
-const test = base.extend<{ user: { email: string; password: string } }>({
+const connections = new Map<string, ReturnType<typeof openDatabase>>();
+const test = base.extend<{ user: { id: string; email: string; password: string } }>({
   user: async ({ browserName: _browserName }, use) => {
+    if (!process.env.TEST_DATABASE_PATH) throw new Error("Financial browser tests require the isolated SQLite test-server harness.");
+    const db = openDatabase(process.env.TEST_DATABASE_PATH);
+    db.prepare('DELETE FROM "rateLimit"').run();
     const email = `e2e-${crypto.randomUUID()}@example.test`, password = `test-${crypto.randomUUID()}`;
-    const { data, error } = await admin.auth.admin.createUser({ email, password, email_confirm: true });
-    if (error || !data.user) throw new Error(error?.message ?? "Test account creation failed");
-    try { await use({ email, password }); }
-    finally { await cleanupUser(data.user.id); }
+    const user = await createAccount(db, { name: "Financial test", email, password });
+    connections.set(email, db);
+    try { await use({ id: user.id, email, password }); }
+    finally { connections.delete(email); db.close(); }
   },
 });
 test.beforeEach(async ({ page, user }) => {
   await page.goto("/budget?month=2026-10");
   await page.getByLabel("Email", { exact: true }).fill(user.email);
   await page.getByLabel("Password", { exact: true }).fill(user.password);
-  await page.getByRole("button", { name: "Welcome back", exact: true }).click();
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Your monthly budget" })).toBeVisible();
 });
 async function loadDemo(page: Page) {
@@ -37,11 +32,10 @@ async function loadDemo(page: Page) {
   await page.getByRole("alertdialog").getByRole("button", { name: "Load demo data" }).click();
   await expect(page.getByText("Demo data loaded.", { exact: true })).toBeVisible();
 }
-async function testRepository(user: { email: string; password: string }) {
-  const client = makeClient(config.API_URL, config.ANON_KEY);
-  const { error } = await client.auth.signInWithPassword(user);
-  if (error) throw new Error(error.message);
-  return new SupabaseRepository(client);
+async function testRepository(user: { id: string; email: string; password: string }) {
+  const db = connections.get(user.email);
+  if (!db) throw new Error("Isolated test database unavailable.");
+  return new BankService(db, user.id);
 }
 async function checkAccessibility(page: Page) {
   const results = await new AxeBuilder({ page }).analyze();
@@ -50,60 +44,46 @@ async function checkAccessibility(page: Page) {
 
 test("bank connections, pending totals, overlap review and retained disconnection", async ({ page, user }, testInfo) => {
   const repo = await testRepository(user);
-  const auth = await repo.client.auth.getUser();
-  if (auth.error || !auth.data.user) throw new Error("Test authentication unavailable.");
-  const uid = auth.data.user.id;
-  async function op(action: string, payload: Json) {
-    const result = await admin.rpc("plaid_admin",{ p_action:action,p_payload:payload });
-    if (result.error) throw new Error(result.error.message);
-    return result.data;
-  }
-  const intent = z.string().parse(await op("intent",{ owner_id:uid,import_start:"2026-10-04" }));
-  await op("exchange_claim",{ owner_id:uid,intent_id:intent });
+  const uid = user.id;
   const account={ account_id:"e2e-checking",name:"Test checking",mask:"1234",type:"depository",subtype:"checking" };
-  const id=z.string().parse(await op("create",{ owner_id:uid,intent_id:intent,item_id:`e2e-${uid}`,
-    access_token:`fixture-${uid}`,environment:"sandbox",institution_name:"Test bank",accounts:[account] }));
-  await page.route("**/functions/v1/plaid-api",async route => {
-    const headers={ "Access-Control-Allow-Origin":"http://127.0.0.1:5173","Access-Control-Allow-Headers":"authorization, apikey, x-client-info, content-type","Access-Control-Allow-Methods":"POST, OPTIONS" };
-    if (route.request().method()==="OPTIONS") return route.fulfill({ status:204,headers });
-    const body=route.request().postDataJSON();
-    if (body.action==="accounts") await op("accounts",{ owner_id:uid,id,accounts:body.accounts });
+  const id = crypto.randomUUID();
+  repo.run("INSERT INTO bank_connections(id,owner_id,item_id,environment,institution_name,import_start,status,connected_at) VALUES(?,?,?,'sandbox','Test bank','2026-10-04','select_accounts',?)", id, uid, `e2e-${uid}`, new Date().toISOString());
+  repo.snapshot(id, { accounts: [account] });
+  await page.route("**/api/budget",async route => {
+    const request = route.request().postDataJSON();
+    if (request.operation !== "bank") return route.continue();
+    const body = request.request;
+    if (body.action==="accounts") {
+      repo.run("UPDATE bank_accounts SET selected=1 WHERE connection_id=?", id);
+      repo.run("UPDATE bank_connections SET status='syncing' WHERE id=?", id);
+    }
     else if (body.action==="disconnect") {
-      await op("disconnect_start",{ owner_id:uid,id });
-      await op("disconnect_finish",{ owner_id:uid,id });
-    } else return route.fulfill({ status:503,headers,contentType:"application/json",body:JSON.stringify({ error:"BACKEND_CONFIGURATION_MISSING" }) });
-    await route.fulfill({ status:200,headers,contentType:"application/json",body:JSON.stringify({ queued:true }) });
+      repo.run("UPDATE bank_connections SET status='disconnected',token=NULL WHERE id=?", id);
+    } else return route.fulfill({ status:503,contentType:"application/json",body:JSON.stringify({ error:"Bank connections are not available yet" }) });
+    await route.fulfill({ status:200,contentType:"application/json",body:JSON.stringify({ queued:true }) });
   });
   await page.getByRole("link",{ name:"Connections",exact:true }).click();
   await expect(page.getByRole("heading",{ name:"Your bank connections" })).toBeVisible();
   await expect(page.getByLabel("Selected month")).toHaveCount(0);
-  await expect(page.getByRole("complementary", { name: "Sandbox test instructions" })).toBeVisible();
-  await expect(page.getByText("Sandbox only - use test credentials.", { exact: true })).toBeVisible();
-  await expect(page.getByText("user_transactions_dynamic", { exact: true })).not.toBeVisible();
-  const sandboxSetup = page.locator(".bank-sandbox summary");
-  await sandboxSetup.focus();
-  await sandboxSetup.press("Enter");
-  await expect(page.getByText("user_transactions_dynamic", { exact: true })).toBeVisible();
-  await sandboxSetup.press("Enter");
-  await expect(page.getByText("user_transactions_dynamic", { exact: true })).not.toBeVisible();
+  await expect(page.getByRole("complementary", { name: "Sandbox test instructions" })).toHaveCount(0);
   await expect(page.locator(".bank-introduction p, .bank-connect-form p")).toHaveCount(0);
   await expect(page.getByLabel("Import from", { exact: true })).toBeVisible();
   await expect(page.getByText(/Cutover finished|October 3, 2026|local catch-up/)).toHaveCount(0);
   await expect(page.getByRole("heading",{ name:"Test bank" })).toBeVisible();
   await page.getByRole("button",{ name:"Connect a bank" }).click();
-  await expect(page.getByRole("alert")).toContainText("Bank connections are not available yet");
+  await expect(page.getByRole("alert").filter({ hasText: "Bank connections are not available yet" })).toBeVisible();
   await page.getByRole("button",{ name:"Select accounts",exact:true }).click();
   await page.getByLabel("Test checking").check();
   await page.getByRole("button",{ name:"Save accounts and start sync" }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await repo.mutate({ action:"manual",description:"E2E overlap",merchant:"E2E overlap",amount_cents:-1234,original_date:"2026-10-04" });
-  const claimed=z.object({ lease:z.string() }).parse(await op("claim",{ id,environment:"sandbox" }));
   const value={ transaction_id:"e2e-posted",account_id:account.account_id,pending_transaction_id:null,pending:false,
     original_date:"2026-10-04",amount_cents:-1234,description:"E2E overlap",merchant:"E2E overlap" };
-  await op("stage",{ id,lease:claimed.lease,changes:[
-    { source_id:value.transaction_id,value,removed:false,error:null },
-    { source_id:"e2e-pending",value:{ ...value,transaction_id:"e2e-pending",pending:true,description:"E2E pending" },removed:false,error:null },
-  ],next_cursor:"e2e-cursor",has_more:false });
+  for (const v of [value, { ...value, transaction_id: "e2e-pending", pending: true, description: "E2E pending" }]) {
+    const record = crypto.randomUUID();
+    repo.run("INSERT INTO bank_records(id,owner_id,connection_id,source_id,value) VALUES(?,?,?,?,?)", record, uid, id, v.transaction_id, JSON.stringify(v));
+    repo.reconcile(record);
+  }
   await page.reload();
   await expect(page.getByRole("heading",{ name:"Review activity (1)" })).toBeVisible();
   await expect(page.getByRole("heading",{ name:"Pending activity (1)" })).toBeVisible();
@@ -270,41 +250,20 @@ test("manual budgets, CSV validation/import, copy and mobile navigation", async 
   await page.screenshot({ path: testInfo.outputPath("budget-mobile.png"), fullPage: true });
 });
 
-test("sign-up and local password-reset email", async ({ page, user }, testInfo) => {
+test("private signup and administrator password reset", async ({ page, user }, testInfo) => {
   await page.getByRole("button", { name: "Sign out" }).click();
+  await expect(page.getByRole("heading", { name: "Welcome back" })).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath("auth-desktop.png"), fullPage: true });
   await checkAccessibility(page);
   await page.getByRole("button", { name: "Forgot password?" }).click();
-  await page.getByLabel("Email", { exact: true }).fill(user.email);
-  await page.getByRole("button", { name: "Reset your password", exact: true }).click();
-  await expect(page.getByText("Password reset email sent. Open the local Mailpit inbox.")).toBeVisible();
-  const mailbox = z.object({ messages: z.array(z.object({
-    ID: z.string(), To: z.array(z.object({ Address: z.string() })),
-  })) }).parse(await (await page.request.get("http://127.0.0.1:54324/api/v1/messages")).json());
-  const message = mailbox.messages.find(m => m.To.some(to => to.Address === user.email));
-  expect(message).toBeDefined();
-  const content = z.object({ HTML: z.string() }).parse(await (await page.request.get(`http://127.0.0.1:54324/api/v1/message/${message!.ID}`)).json());
-  const recoveryLink = /href="([^"]+)"/.exec(content.HTML)?.[1].replaceAll("&amp;", "&");
-  if (!recoveryLink) throw new Error("Password reset email contains no link.");
-  await page.goto(recoveryLink);
-  await expect(page.getByRole("heading", { name: "Choose a new password" })).toBeVisible();
-  await page.getByLabel("Password", { exact: true }).fill(`reset-${crypto.randomUUID()}`);
-  await page.getByRole("button", { name: "Choose a new password", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Your monthly budget" })).toBeVisible();
-  await page.getByRole("button", { name: "Sign out" }).click();
-  await page.getByRole("button", { name: "Create an account", exact: true }).click();
-  const email = `e2e-signup-${crypto.randomUUID()}@example.test`;
+  await expect(page.getByRole("status")).toContainText("household administrator");
   const password = `test-${crypto.randomUUID()}`;
-  await page.getByLabel("Email", { exact: true }).fill(email);
+  const db = connections.get(user.email)!;
+  await resetPassword(db, user.email, password);
+  await page.getByLabel("Email", { exact: true }).fill(user.email);
   await page.getByLabel("Password", { exact: true }).fill(password);
-  const [response] = await Promise.all([
-    page.waitForResponse(r => r.url().includes("/auth/v1/signup") && r.request().method() === "POST"),
-    page.getByRole("button", { name: "Create your account", exact: true }).click(),
-  ]);
-  const created = z.object({ user: z.object({ id: z.string() }) }).parse(await response.json());
-  try {
-    await expect(page.getByRole("heading", { name: "Your monthly budget" })).toBeVisible();
-  } finally { await cleanupUser(created.user.id); }
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Your monthly budget" })).toBeVisible();
 });
 
 test("explicit money editing, cancellation, errors and unsaved navigation", async ({ page, user }, testInfo) => {
@@ -325,14 +284,14 @@ test("explicit money editing, cancellation, errors and unsaved navigation", asyn
   await trigger.click(); await input.fill("525.00"); await input.press("Enter");
   await expect(trigger).toHaveText("$525.00");
   expect((await repo.month("2026-10")).budget_categories.find(c => c.name === "Groceries")?.planned_cents).toBe(52500);
-  await page.route("**/rest/v1/rpc/app_mutate", route => route.fulfill({ status: 500, json: { message: "Connection interrupted. Please retry." } }));
+  await page.route("**/api/budget", route => route.request().postDataJSON().operation === "mutate" ? route.fulfill({ status: 500, json: { error: "Connection interrupted. Please retry." } }) : route.continue());
   await trigger.click(); await input.fill("550.25"); await input.press("Enter");
-  await expect(page.getByRole("alert")).toContainText("Connection interrupted");
+  await expect(page.getByRole("alert").filter({ hasText: "Connection interrupted" })).toBeVisible();
   await expect(input).toHaveValue("550.25");
   await checkAccessibility(page);
   await page.screenshot({ path: testInfo.outputPath("failed-money-edit-desktop.png"), fullPage: true });
   expect((await repo.month("2026-10")).budget_categories.find(c => c.name === "Groceries")?.planned_cents).toBe(52500);
-  await page.unroute("**/rest/v1/rpc/app_mutate");
+  await page.unroute("**/api/budget");
   await input.press("Escape");
   await trigger.click(); await input.fill("-1.00"); await input.press("Enter");
   await expect(page.getByText("Planned amounts must be nonnegative.")).toBeVisible();
@@ -429,13 +388,29 @@ test("desktop density and responsive financial visibility", async ({ page, user 
   await expect(page.getByRole("button", { name: "Edit planned Groceries" })).toBeVisible();
   await checkAccessibility(page);
   await page.screenshot({ path: testInfo.outputPath("budget-desktop.png"), fullPage: true });
+  const recommendationResponses = Promise.all((await repo.month("2026-10")).transactions
+    .filter(t => t.description.startsWith("Neighborhood purchase "))
+    .map(t => page.waitForResponse(response => {
+      if (!response.url().endsWith("/api/budget") || response.request().method() !== "POST") return false;
+      const body = response.request().postDataJSON();
+      return body.operation === "suggest" && body.id === t.id;
+    })));
   await page.getByRole("link", { name: "Transactions", exact: true }).click();
   await expect(page.locator(".transaction-row")).toHaveCount(19);
+  for (const response of await recommendationResponses) {
+    expect(response.ok()).toBe(true);
+    expect(await response.json()).toBeNull();
+  }
   await checkAccessibility(page);
-  const visible = await page.locator(".transaction-row").evaluateAll(rows => rows.filter(row => {
-    const rect = row.getBoundingClientRect(); return rect.top >= 0 && rect.bottom <= window.innerHeight;
-  }).length);
-  expect(visible).toBeGreaterThanOrEqual(8);
+  await expect(page.locator(".recommendation .compact-error")).toHaveCount(0);
+  const density = await page.locator(".transaction-row").evaluateAll(rows => {
+    const bounds = rows.map(row => {
+      const { top, bottom, height } = row.getBoundingClientRect();
+      return { top, bottom, height };
+    });
+    return { viewportHeight: window.innerHeight, rows: bounds.slice(0, 8), visible: bounds.filter(row => row.top >= 0 && row.bottom <= window.innerHeight).length };
+  });
+  expect(density.visible, JSON.stringify(density)).toBeGreaterThanOrEqual(8);
   await page.screenshot({ path: testInfo.outputPath("transactions-desktop.png"), fullPage: true });
   for (const viewport of [{ width: 1440, height: 900 }, { width: 768, height: 1024 }, { width: 390, height: 844 }, { width: 360, height: 800 }]) {
     await page.setViewportSize(viewport);
@@ -606,11 +581,11 @@ test("category panel paginates full allocation totals and recovers errors and de
   await page.reload();
   const net = money(-categoryActual(await repo.month("2026-10"), categoryId));
   const launcher = page.getByRole("button", { name: "Groceries", exact: true });
-  await page.route("**/rest/v1/rpc/app_page", route => route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ message: "Inspection temporarily unavailable" }) }));
+  await page.route("**/api/budget", route => route.request().postDataJSON().operation === "page" ? route.fulfill({ status: 503, json: { error: "Inspection temporarily unavailable" } }) : route.continue());
   await launcher.click();
   const activity = page.getByRole("dialog", { name: "Groceries transactions" });
   await expect(activity.getByRole("alert")).toContainText("Inspection temporarily unavailable", { timeout: 15000 });
-  await page.unroute("**/rest/v1/rpc/app_page");
+  await page.unroute("**/api/budget");
   await activity.getByRole("button", { name: "Retry", exact: true }).click();
   await expect(activity.locator(".activity-list > li")).toHaveCount(30);
   await expect(activity.locator(".activity-summary")).toContainText(net);
@@ -756,7 +731,7 @@ test("signed-in screens use concise labels and actions instead of instructional 
   await expect(page.locator(".bank-introduction p, .bank-connect-form p, .bank-card .empty-state p")).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "No banks connected yet" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Connect a bank", exact: true })).toBeVisible();
-  await expect(page.getByText("Sandbox only - use test credentials.", { exact: true })).toBeVisible();
+  await expect(page.getByText("Sandbox only - use test credentials.", { exact: true })).toHaveCount(0);
   await expect(page.getByText("user_transactions_dynamic", { exact: true })).not.toBeVisible();
   await checkAccessibility(page);
   await page.screenshot({ path: testInfo.outputPath("concise-connections.png"), fullPage: true });

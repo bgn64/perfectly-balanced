@@ -1,0 +1,32 @@
+services:
+  app:
+    build: .
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 20s
+    ports:
+      - "${APP_BIND_ADDRESS:-127.0.0.1}:${APP_PORT:-3000}:3000"
+    environment:
+      APP_ENV: "${APP_ENV:-local}"
+      BETTER_AUTH_URL: "${BETTER_AUTH_URL:?Set the canonical application origin in .env}"
+      BETTER_AUTH_SECRET: "${BETTER_AUTH_SECRET:?Set a random authentication secret in .env}"
+      DATABASE_PATH: /app/data/perfectly-balanced.sqlite
+      PLAID_ENABLED: "${PLAID_ENABLED:-false}"
+      PLAID_ENVIRONMENT: "${PLAID_ENVIRONMENT:-sandbox}"
+      PLAID_CLIENT_ID: "${PLAID_CLIENT_ID:-}"
+      PLAID_SECRET: "${PLAID_SECRET:-}"
+      PLAID_TOKEN_KEY: "${PLAID_TOKEN_KEY:-}"
+      PLAID_POLL_HOURS: "${PLAID_POLL_HOURS:-6}"
+    volumes:
+      - app-data:/app/data
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test: ["CMD", "node", "scripts/container/health.ts"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+
+volumes:
+  app-data:

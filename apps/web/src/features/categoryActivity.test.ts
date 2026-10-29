@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { categoryActual, reports, sum, transactionSchema, type MonthData } from "@balanced/domain";
-import { categoryRows, groupActivity } from "./categoryActivity";
+import { categoryRows, groupActivity } from "./activityScope";
 
 const transaction = (id: string, excluded = false, removed = false) => transactionSchema.parse({
   id, description: "Same merchant", merchant: "Shop", amount_cents: -1000,

@@ -125,11 +125,11 @@ export function Connections({ uid }: { uid: string }) {
     sessionStorage.setItem("balanced-plaid-link", JSON.stringify(state)); setLink(state); setMessage("");
   });
   return <div className="connections-view">
-    {import.meta.env.DEV && <aside className="bank-sandbox" aria-label="Sandbox test instructions"><strong>Plaid Sandbox</strong>
+    {process.env.NODE_ENV === "development" && <aside className="bank-sandbox" aria-label="Sandbox test instructions"><strong>Plaid Sandbox</strong>
       <p>Sandbox only - use test credentials.</p>
       <details className="bank-details"><summary>Sandbox setup</summary>
         <p>Continue without a phone number, search for <strong>First Platypus Bank</strong> and choose the option without "OAuth". Enter <code>user_transactions_dynamic</code> as the username and any nonblank test password.</p>
-        <p>Transactions are saved to local Supabase. OAuth test banks require local HTTPS.</p>
+        <p>Transactions are saved to local SQLite. OAuth test banks require a registered HTTPS return URL.</p>
       </details>
     </aside>}
     <section className="bank-card bank-connect"><div className="bank-introduction"><span className="bank-symbol"><ShieldCheck size={24} aria-hidden="true" /></span><div><h2>Connect a bank</h2><span className="muted">Via Plaid</span></div></div>
